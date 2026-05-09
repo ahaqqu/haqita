@@ -3,5 +3,5 @@ beautifulsoup4
 Pillow
 numpy
 opencv-python-headless
-paddlepaddle==2.6.1
+paddlepaddle==2.6.2
 paddleocr==2.9.1
