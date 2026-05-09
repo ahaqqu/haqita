@@ -8,12 +8,12 @@ This tool uses Qwen2-VL (via Ollama) to intelligently extract product names and 
    - Download and install from: https://ollama.com/download/windows
    - Ensure `ollama` is added to your system PATH
 
-2. **Pull the Qwen2-VL Model**
+2. **Pull the Qwen2.5VL Model**
    Open a terminal and run:
    ```bash
-   ollama pull qwen2-vl:2b
+   ollama pull qwen2.5vl
    ```
-   *(Note: For higher accuracy on complex promos, you can use `qwen2-vl:7b` if your VRAM allows)*
+   *(Note: For higher accuracy on complex promos, you can use `qwen2.5vl:7b` if your VRAM allows)*
 
 3. **Start Ollama Server**
    Keep this running in a separate terminal window:
