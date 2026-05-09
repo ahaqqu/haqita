@@ -1,1 +1,1 @@
-Nothing needs to be added to the .gitignore file based on the provided changes. The added files (`qwen_ocr_processor.py` and `run_qwen_ocr.bat`) are source code files that should be tracked by Git.
+Nothing needs to be added to .gitignore since only a README markdown file was added, which is a source/config file and should not be ignored.
