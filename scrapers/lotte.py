@@ -61,19 +61,25 @@ def get_paddle_ocr():
     if OCR_ENGINE is None:
         import paddle
         print(f"Paddle version: {paddle.__version__}")
-        paddle.utils.run_check()
+        # Skip run_check() as it can hang during initialization
+        # paddle.utils.run_check()
         import paddleocr
         print(f"PaddleOCR version: {paddleocr.__version__}")
         
         from paddleocr import PaddleOCR
+        print('Initializing PaddleOCR with CPU-only mode...')
         OCR_ENGINE = PaddleOCR(
             lang="id",
-            ocr_version="PP-OCRv5",
-            #enable_mkldnn=False,  # prevents MKLDNN/PIR crash
-            #use_doc_orientation_classify=False,
-            #use_doc_unwarping=False,
-            #use_textline_orientation=False,
+            ocr_version="PP-OCRv4",  # Use more stable v4 instead of v5
+            use_gpu=False,  # Explicitly disable GPU to avoid CUDA/MKLDNN conflicts
+            enable_mkldnn=False,  # Disable MKLDNN to prevent PIR crash
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+            det_model_dir=None,  # Use default models
+            rec_model_dir=None,
         )
+        print('PaddleOCR initialized successfully')
     return OCR_ENGINE
 
 
