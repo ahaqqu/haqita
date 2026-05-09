@@ -13,7 +13,7 @@ import requests
 
 # Ollama API endpoint (default)
 OLLAMA_BASE_URL = "http://localhost:11434"
-MODEL_NAME = "qwen2-vl:2b"  # Use "qwen2-vl:7b" for better accuracy if VRAM allows
+MODEL_NAME = "qwen2.5-vl"  # Use "qwen2.5-vl:7b" for better accuracy if VRAM allows, or "qwen3-vl" for latest
 
 # Prompt optimized for product promo extraction
 PROMPT = """
