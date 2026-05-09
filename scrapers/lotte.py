@@ -92,12 +92,16 @@ def paddle_ocr_text(image_bytes: bytes) -> str:
     print('Completed predict')
     lines = []
     for page in result:
-        print(f'Result for page: {page}')
-        page.print()  
-        page.save_to_img("output")  
-        page.save_to_json("output")  
-        for item in page:
-            lines.append(item[1][0])
+        # Access the det_res (detection results) from the page object
+        if hasattr(page, 'dt_boxes') and hasattr(page, 'rec_res'):
+            for box, rec in zip(page.dt_boxes, page.rec_res):
+                text, confidence = rec
+                lines.append(text)
+        elif isinstance(page, (list, tuple)):
+            # Fallback for older API format
+            for item in page:
+                if len(item) >= 2 and len(item[1]) >= 1:
+                    lines.append(item[1][0])
     return '\n'.join(lines)
 
 
