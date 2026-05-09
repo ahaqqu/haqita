@@ -1,0 +1,7 @@
+requests
+beautifulsoup4
+Pillow
+numpy
+opencv-python-headless
+paddlepaddle
+paddleocr

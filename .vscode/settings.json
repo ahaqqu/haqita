@@ -1,0 +1,10 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "mv": true,
+        "mkdir": true,
+        "md": true,
+        "Test-Path": true,
+        "Rename-Item": true,
+        "docker build": true
+    }
+}

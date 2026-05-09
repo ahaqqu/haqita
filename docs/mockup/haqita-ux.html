@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>HaQita — UX Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white: #ffffff;
+    --off-white: #f9f9f7;
+    --gray-50: #f4f4f2;
+    --gray-100: #e8e8e4;
+    --gray-300: #c0bfb8;
+    --gray-500: #8a8880;
+    --gray-700: #4a4945;
+    --gray-900: #1a1916;
+    --green: #2d7a4f;
+    --green-light: #e8f5ee;
+    --green-mid: #4a9e6a;
+    --red: #c0392b;
+    --red-light: #fdf0ee;
+    --amber: #b45309;
+    --amber-light: #fef3cd;
+    --accent: #2d7a4f;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow: 0 4px 16px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: #e8e6e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+    gap: 48px;
+  }
+
+  /* Page label */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    text-align: center;
+    margin-bottom: -32px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 375px;
+    max-width: 100%;
+    background: var(--white);
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+    border: 8px solid var(--gray-900);
+    position: relative;
+  }
+
+  .phone-notch {
+    background: var(--gray-900);
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .phone-notch::after {
+    content: '';
+    width: 100px;
+    height: 14px;
+    background: var(--gray-900);
+    border-radius: 0 0 12px 12px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .screen {
+    background: var(--off-white);
+    min-height: 720px;
+    overflow: hidden;
+  }
+
+  /* =====================
+     SCREEN 1: HOME / SEARCH
+  ======================== */
+  .s1-header {
+    background: var(--white);
+    padding: 20px 20px 0;
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .s1-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gray-900);
+    letter-spacing: -0.02em;
+  }
+
+  .logo span {
+    color: var(--green);
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--green-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gray-50);
+    border: 1.5px solid var(--gray-100);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .search-bar.active {
+    border-color: var(--green);
+    background: var(--white);
+  }
+
+  .search-icon {
+    color: var(--gray-300);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .search-bar input {
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--gray-900);
+    width: 100%;
+    outline: none;
+  }
+
+  .search-bar input::placeholder { color: var(--gray-300); }
+
+  .category-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 14px;
+    scrollbar-width: none;
+  }
+
+  .cat-chip {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--gray-50);
+    color: var(--gray-500);
+    border: 1.5px solid var(--gray-100);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .cat-chip.active {
+    background: var(--green);
+    color: white;
+    border-color: var(--green);
+  }
+
+  /* Content area */
+  .s1-content {
+    padding: 16px 20px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    margin-bottom: 12px;
+  }
+
+  /* Product card */
+  .product-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-100);
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+
+  .product-card:active {
+    transform: scale(0.98);
+  }
+
+  .product-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .product-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 2px;
+  }
+
+  .product-meta {
+    font-size: 11px;
+    color: var(--gray-500);
+  }
+
+  .price-badge {
+    text-align: right;
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+
+  .price-best {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--green);
+  }
+
+  .price-label {
+    font-size: 10px;
+    color: var(--gray-500);
+    margin-top: 1px;
+  }
+
+  .store-mini-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .store-mini {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--gray-50);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--gray-700);
+  }
+
+  .store-mini .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .dot-indomaret { background: #e74c3c; }
+  .dot-alfamart { background: #e67e22; }
+  .dot-superindo { background: #27ae60; }
+
+  .savings-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--green-light);
+    color: var(--green);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-top: 8px;
+  }
+
+  /* Last update bar */
+  .update-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--amber-light);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    font-size: 11px;
+    color: var(--amber);
+    font-weight: 500;
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    background: var(--white);
+    border-top: 1px solid var(--gray-100);
+    padding: 10px 0 20px;
+    display: flex;
+    justify-content: space-around;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    padding: 4px 16px;
+  }
+
+  .nav-icon { font-size: 20px; }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--gray-300);
+  }
+
+  .nav-item.active .nav-label { color: var(--green); }
+
+  .nav-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--green);
+    margin: -2px auto 0;
+  }
+
+  /* =====================
+     SCREEN 2: SEARCH RESULTS
+  ======================== */
+  .s2-header {
+    background: var(--white);
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .back-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .back-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .search-result-query {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gray-900);
+    letter-spacing: -0.02em;
+  }
+
+  .result-count {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-top: 1px;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .filter-chip {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--gray-50);
+    color: var(--gray-700);
+    border: 1.5px solid var(--gray-100);
+    white-space: nowrap;
+  }
+
+  .filter-chip.active {
+    background: var(--gray-900);
+    color: white;
+    border-color: var(--gray-900);
+  }
+
+  .s2-content { padding: 16px 20px; }
+
+  /* Best deal highlight */
+  .best-deal-card {
+    background: linear-gradient(135deg, var(--green) 0%, #1a5c38 100%);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .best-deal-card::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .best-deal-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 6px;
+  }
+
+  .best-deal-store {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 4px;
+  }
+
+  .best-deal-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 26px;
+    font-weight: 500;
+    color: white;
+    letter-spacing: -0.02em;
+  }
+
+  .best-deal-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 2px;
+  }
+
+  .best-deal-savings {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: center;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+
+  .savings-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: white;
+  }
+
+  .savings-vs {
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+  }
+
+  /* Price comparison list */
+  .compare-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    margin-bottom: 10px;
+  }
+
+  .compare-row {
+    background: var(--white);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    border: 1.5px solid var(--gray-100);
+  }
+
+  .compare-row.cheapest {
+    border-color: var(--green);
+    background: var(--green-light);
+  }
+
+  .compare-store-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .store-dot-lg {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .store-name-lg {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  .store-branch {
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-top: 1px;
+  }
+
+  .compare-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--gray-900);
+    text-align: right;
+  }
+
+  .compare-price.best { color: var(--green); }
+  .compare-price.worst { color: var(--red); }
+
+  .compare-diff {
+    font-size: 10px;
+    text-align: right;
+    margin-top: 2px;
+  }
+
+  .diff-more { color: var(--red); }
+  .diff-best { color: var(--green); font-weight: 600; }
+
+  /* Price history mini */
+  .history-section {
+    margin-top: 16px;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 14px;
+    border: 1px solid var(--gray-100);
+  }
+
+  .history-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    margin-bottom: 12px;
+  }
+
+  .mini-chart {
+    height: 60px;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .chart-bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    background: var(--gray-100);
+    transition: background 0.2s;
+  }
+
+  .chart-bar.current { background: var(--green); }
+  .chart-bar.low { background: var(--green-light); border: 1.5px solid var(--green-mid); }
+
+  .bar-label {
+    font-size: 9px;
+    color: var(--gray-500);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* =====================
+     SCREEN 3: PRODUCT DETAIL
+  ======================== */
+  .s3-header {
+    background: var(--white);
+    padding: 16px 20px 20px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .product-hero {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .product-img-placeholder {
+    width: 72px;
+    height: 72px;
+    background: var(--gray-50);
+    border-radius: 12px;
+    border: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .product-info {}
+
+  .product-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--gray-900);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .product-brand {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-bottom: 8px;
+  }
+
+  .product-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--gray-50);
+    color: var(--gray-500);
+    border: 1px solid var(--gray-100);
+  }
+
+  .s3-content { padding: 16px 20px; }
+
+  .data-freshness {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-bottom: 14px;
+  }
+
+  .fresh-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Brosur upload section */
+  .brosur-card {
+    background: var(--white);
+    border: 1.5px dashed var(--gray-300);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+
+  .brosur-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--green-light);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .brosur-text {}
+  .brosur-title { font-size: 13px; font-weight: 600; color: var(--gray-900); }
+  .brosur-sub { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+
+  /* Updated at chip */
+  .updated-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-100);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 10px;
+    color: var(--gray-500);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 16px;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--gray-100);
+    margin: 14px 0;
+  }
+
+  /* Page label strip */
+  .page-label-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--gray-500);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    background: var(--white);
+    border-top: 1px solid var(--gray-100);
+  }
+
+  .page-indicator {
+    display: flex;
+    gap: 4px;
+  }
+
+  .page-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--gray-300);
+  }
+
+  .page-dot.active {
+    background: var(--green);
+    width: 16px;
+    border-radius: 3px;
+  }
+
+  /* Scan result card */
+  .scan-result {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1.5px solid var(--green);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  .scan-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .scan-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--green-light);
+    color: var(--green);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+  }
+
+  .scan-date {
+    font-size: 10px;
+    color: var(--gray-500);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .scan-items { display: flex; flex-direction: column; gap: 6px; }
+
+  .scan-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-50);
+  }
+
+  .scan-item:last-child { border-bottom: none; }
+
+  .scan-item-name { font-size: 12px; font-weight: 600; color: var(--gray-900); }
+  .scan-item-period { font-size: 10px; color: var(--gray-500); margin-top: 1px; }
+
+  .scan-item-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--green);
+  }
+
+  .scan-item-original {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--gray-300);
+    text-decoration: line-through;
+    text-align: right;
+    margin-top: 1px;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ========================
+     SCREEN 1: HOME
+========================= -->
+<p class="section-label">Layar 1 — Beranda</p>
+
+<div class="phone">
+  <div class="phone-notch"></div>
+  <div class="screen">
+
+    <div class="s1-header">
+      <div class="s1-top">
+        <div class="logo">Ha<span>Qita</span></div>
+        <div class="avatar">R</div>
+      </div>
+
+      <div class="search-bar active">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Cari produk..." value="indomie">
+      </div>
+
+      <div class="category-scroll">
+        <div class="cat-chip active">Semua</div>
+        <div class="cat-chip">Sembako</div>
+        <div class="cat-chip">Detergen</div>
+        <div class="cat-chip">Minuman</div>
+        <div class="cat-chip">Sabun</div>
+        <div class="cat-chip">Snack</div>
+      </div>
+    </div>
+
+    <div class="s1-content">
+
+      <div class="update-bar">
+        🕐 &nbsp;Harga diperbarui tadi malam · Selasa 30 Apr
+      </div>
+
+      <div class="section-title">Produk yang kamu pantau</div>
+
+      <!-- Card 1 -->
+      <div class="product-card">
+        <div class="product-row">
+          <div>
+            <div class="product-name">Indomie Goreng</div>
+            <div class="product-meta">85g · Mie Instan</div>
+          </div>
+          <div class="price-badge">
+            <div class="price-best">Rp 3.200</div>
+            <div class="price-label">termurah</div>
+          </div>
+        </div>
+        <div class="store-mini-row">
+          <div class="store-mini"><div class="dot dot-indomaret"></div> Indomaret 3.200</div>
+          <div class="store-mini"><div class="dot dot-alfamart"></div> Alfamart 3.500</div>
+          <div class="store-mini"><div class="dot dot-superindo"></div> Superindo 3.700</div>
+        </div>
+        <div class="savings-tag">💰 Hemat Rp 500 vs termahal</div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="product-card">
+        <div class="product-row">
+          <div>
+            <div class="product-name">Beras Pandan Wangi</div>
+            <div class="product-meta">5kg · Sembako</div>
+          </div>
+          <div class="price-badge">
+            <div class="price-best">Rp 72.000</div>
+            <div class="price-label">termurah</div>
+          </div>
+        </div>
+        <div class="store-mini-row">
+          <div class="store-mini"><div class="dot dot-superindo"></div> Superindo 72.000</div>
+          <div class="store-mini"><div class="dot dot-indomaret"></div> Indomaret 76.500</div>
+        </div>
+        <div class="savings-tag">💰 Hemat Rp 4.500 vs Indomaret</div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="product-card">
+        <div class="product-row">
+          <div>
+            <div class="product-name">Sunlight Jeruk</div>
+            <div class="product-meta">755ml · Pembersih</div>
+          </div>
+          <div class="price-badge">
+            <div class="price-best">Rp 18.900</div>
+            <div class="price-label">termurah</div>
+          </div>
+        </div>
+        <div class="store-mini-row">
+          <div class="store-mini"><div class="dot dot-alfamart"></div> Alfamart 18.900</div>
+          <div class="store-mini"><div class="dot dot-indomaret"></div> Indomaret 19.500</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-label" style="color:var(--green)">Beranda</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label">Produk</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📷</div>
+        <div class="nav-label">Brosur</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📈</div>
+        <div class="nav-label">Riwayat</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ========================
+     SCREEN 2: SEARCH RESULT
+========================= -->
+<p class="section-label">Layar 2 — Hasil Perbandingan</p>
+
+<div class="phone">
+  <div class="phone-notch"></div>
+  <div class="screen">
+
+    <div class="s2-header">
+      <div class="back-row">
+        <div class="back-btn">←</div>
+        <div>
+          <div class="search-result-query">Minyak Goreng Bimoli</div>
+          <div class="result-count">2L · Ditemukan di 3 toko</div>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-chip active">Termurah</div>
+        <div class="filter-chip">Terdekat</div>
+        <div class="filter-chip">Minimarket</div>
+        <div class="filter-chip">Supermarket</div>
+      </div>
+    </div>
+
+    <div class="s2-content">
+
+      <!-- Best deal highlight -->
+      <div class="best-deal-card">
+        <div class="best-deal-label">🏆 Harga Terbaik Hari Ini</div>
+        <div class="best-deal-store">Indomaret Bintaro Sektor 7</div>
+        <div class="best-deal-price">Rp 34.500</div>
+        <div class="best-deal-sub">per botol 2L · diperbarui semalam</div>
+        <div class="best-deal-savings">
+          <div class="savings-amount">-Rp 4k</div>
+          <div class="savings-vs">vs termahal</div>
+        </div>
+      </div>
+
+      <!-- Compare list -->
+      <div class="compare-title">Perbandingan Semua Toko</div>
+
+      <div class="compare-row cheapest">
+        <div class="compare-store-info">
+          <div class="store-dot-lg dot-indomaret"></div>
+          <div>
+            <div class="store-name-lg">Indomaret</div>
+            <div class="store-branch">Bintaro Sektor 7</div>
+          </div>
+        </div>
+        <div>
+          <div class="compare-price best">Rp 34.500</div>
+          <div class="compare-diff diff-best">✓ Termurah</div>
+        </div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-store-info">
+          <div class="store-dot-lg dot-alfamart"></div>
+          <div>
+            <div class="store-name-lg">Alfamart</div>
+            <div class="store-branch">Bintaro Plaza</div>
+          </div>
+        </div>
+        <div>
+          <div class="compare-price">Rp 36.900</div>
+          <div class="compare-diff diff-more">+Rp 2.400</div>
+        </div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-store-info">
+          <div class="store-dot-lg dot-superindo"></div>
+          <div>
+            <div class="store-name-lg">Superindo</div>
+            <div class="store-branch">Bintaro Jaya</div>
+          </div>
+        </div>
+        <div>
+          <div class="compare-price worst">Rp 38.500</div>
+          <div class="compare-diff diff-more">+Rp 4.000</div>
+        </div>
+      </div>
+
+      <!-- Mini price history -->
+      <div class="history-section">
+        <div class="history-title">Tren Harga · Indomaret (30 hari)</div>
+        <div class="mini-chart">
+          <div class="bar-wrap">
+            <div class="chart-bar" style="height:35px"></div>
+            <div class="bar-label">Apr 1</div>
+          </div>
+          <div class="bar-wrap">
+            <div class="chart-bar" style="height:38px"></div>
+            <div class="bar-label">Apr 8</div>
+          </div>
+          <div class="bar-wrap">
+            <div class="chart-bar low" style="height:28px"></div>
+            <div class="bar-label">Apr 15</div>
+          </div>
+          <div class="bar-wrap">
+            <div class="chart-bar" style="height:32px"></div>
+            <div class="bar-label">Apr 22</div>
+          </div>
+          <div class="bar-wrap">
+            <div class="chart-bar current" style="height:34px"></div>
+            <div class="bar-label">Kini</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-label">Beranda</div>
+      </div>
+      <div class="nav-item active">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label" style="color:var(--green)">Produk</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📷</div>
+        <div class="nav-label">Brosur</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📈</div>
+        <div class="nav-label">Riwayat</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ========================
+     SCREEN 3: BROSUR SCAN
+========================= -->
+<p class="section-label">Layar 3 — Scan Brosur</p>
+
+<div class="phone">
+  <div class="phone-notch"></div>
+  <div class="screen">
+
+    <div class="s1-header">
+      <div class="s1-top">
+        <div>
+          <div style="font-size:17px;font-weight:700;color:var(--gray-900);letter-spacing:-0.02em">Scan Brosur</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:2px">Foto → harga otomatis</div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-500);font-family:'DM Mono',monospace">3 brosur</div>
+      </div>
+    </div>
+
+    <div class="s1-content">
+
+      <!-- Upload area -->
+      <div class="brosur-card">
+        <div class="brosur-icon">📸</div>
+        <div class="brosur-text">
+          <div class="brosur-title">Foto Brosur Baru</div>
+          <div class="brosur-sub">Indomaret · Alfamart · Superindo</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-title">Hasil Scan Sebelumnya</div>
+
+      <!-- Scan result 1 - success -->
+      <div class="scan-result">
+        <div class="scan-header">
+          <div class="scan-badge">✓ AI SCAN</div>
+          <div class="scan-date">Selasa, 29 Apr</div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:8px">📄 Brosur Indomaret — Promo Minggu Ini</div>
+        <div class="scan-items">
+          <div class="scan-item">
+            <div>
+              <div class="scan-item-name">Indomie Goreng 5-pack</div>
+              <div class="scan-item-period">s/d 4 Mei 2025</div>
+            </div>
+            <div>
+              <div class="scan-item-price">Rp 14.900</div>
+              <div class="scan-item-original">Rp 17.500</div>
+            </div>
+          </div>
+          <div class="scan-item">
+            <div>
+              <div class="scan-item-name">Sunlight Jeruk 755ml</div>
+              <div class="scan-item-period">s/d 4 Mei 2025</div>
+            </div>
+            <div>
+              <div class="scan-item-price">Rp 17.500</div>
+              <div class="scan-item-original">Rp 19.500</div>
+            </div>
+          </div>
+          <div class="scan-item">
+            <div>
+              <div class="scan-item-name">Minyak Goreng Bimoli 2L</div>
+              <div class="scan-item-period">s/d 4 Mei 2025</div>
+            </div>
+            <div>
+              <div class="scan-item-price">Rp 33.900</div>
+              <div class="scan-item-original">Rp 36.000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scan result 2 -->
+      <div class="scan-result" style="border-color:var(--gray-100)">
+        <div class="scan-header">
+          <div class="scan-badge" style="background:var(--gray-50);color:var(--gray-500)">✓ AI SCAN</div>
+          <div class="scan-date">Selasa, 22 Apr</div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:8px">📄 Brosur Alfamart — Minggu Lalu</div>
+        <div class="scan-items">
+          <div class="scan-item">
+            <div>
+              <div class="scan-item-name">Rinso Cair 800ml</div>
+              <div class="scan-item-period">Sudah berakhir</div>
+            </div>
+            <div>
+              <div class="scan-item-price" style="color:var(--gray-300)">Rp 22.900</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-label">Beranda</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📋</div>
+        <div class="nav-label">Produk</div>
+      </div>
+      <div class="nav-item active">
+        <div class="nav-icon">📷</div>
+        <div class="nav-label" style="color:var(--green)">Brosur</div>
+        <div class="nav-dot"></div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📈</div>
+        <div class="nav-label">Riwayat</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
