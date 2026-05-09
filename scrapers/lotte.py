@@ -87,17 +87,19 @@ def paddle_ocr_text(image_bytes: bytes) -> str:
     image = Image.open(BytesIO(image_bytes)).convert('RGB')
     print('Initializing paddle...')
     ocr = get_paddle_ocr()
-    print('Starting predict...')
-    result = ocr.predict(np.asarray(image))
-    print('Completed predict')
+    print('Starting ocr...')
+    # Use ocr() method for PaddlePaddle 2.6.x compatibility
+    # Returns list of [box, (text, confidence), ...]
+    result = ocr.ocr(np.asarray(image))
+    print('Completed ocr')
     lines = []
-    for page in result:
-        print(f'Result for page: {page}')
-        page.print()  
-        page.save_to_img("output")  
-        page.save_to_json("output")  
-        for item in page:
-            lines.append(item[1][0])
+    # Handle nested list structure returned by ocr()
+    # result is typically [[[[box], (text, conf)], ...], ...] for each page
+    if result and result[0]:
+        for line_data in result[0]:  # First page
+            if len(line_data) >= 2:
+                text, confidence = line_data[1]
+                lines.append(text)
     return '\n'.join(lines)
 
 
