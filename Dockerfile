@@ -17,6 +17,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Pre-download PaddleOCR models at container startup (first run only)
-# We do this at runtime instead of build time to avoid MKLDNN crashes during docker build
-ENTRYPOINT ["bash", "-c", "python -c \"import os; from scrapers.lotte import get_paddle_ocr; print('Checking models...'); get_paddle_ocr(); print('Models ready.')\" && python scrapers/lotte.py"]
+WORKDIR /app
+
+CMD ["python", "scrapers/lotte.py"]
