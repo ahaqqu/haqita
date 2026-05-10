@@ -1,7 +1,7 @@
 @echo off
 echo ========================================
-echo  Qwen2-VL Product Promo OCR Processor
-echo  Runs on Windows with Ollama + Qwen2-VL
+echo  Qwen2.5VL Product Promo OCR Processor
+echo  Runs on Windows with Ollama + Qwen2.5VL
 echo ========================================
 echo.
 

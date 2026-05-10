@@ -92,7 +92,7 @@ def extract_product_prices(image_path: str) -> List[Dict[str, Any]]:
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json=payload,
-            timeout=120  # 2 minutes timeout for large images
+            timeout=300  # 2 minutes timeout for large images
         )
         
         if response.status_code == 200:
