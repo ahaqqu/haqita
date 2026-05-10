@@ -62,12 +62,13 @@ def check_ollama_running() -> bool:
         return False
 
 
-def extract_product_prices(image_path: str) -> List[Dict[str, Any]]:
+def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict[str, Any]]:
     """
     Extract product-price pairs from an image using Qwen2-VL via Ollama
     
     Args:
         image_path: Path to the image file
+        debug_file: Optional path to save debug info
         
     Returns:
         List of dictionaries with product, price, and unit
@@ -94,6 +95,19 @@ def extract_product_prices(image_path: str) -> List[Dict[str, Any]]:
             json=payload,
             timeout=120  # 2 minutes timeout for large images
         )
+        
+        # Save debug info if requested
+        if debug_file:
+            debug_info = {
+                "image": image_path,
+                "request_payload": payload,
+                "response_status": response.status_code,
+                "response_headers": dict(response.headers),
+                "response_body": response.text,
+                "timestamp": str(__import__('datetime').datetime.now())
+            }
+            with open(debug_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(debug_info, indent=2, ensure_ascii=False) + "\n\n")
         
         if response.status_code == 200:
             result = response.json()
@@ -134,13 +148,14 @@ def extract_product_prices(image_path: str) -> List[Dict[str, Any]]:
         return []
 
 
-def process_promo_images(input_dir: str, output_file: str = "output/product_prices.json"):
+def process_promo_images(input_dir: str, output_file: str = "output/product_prices.json", debug_file: str = None):
     """
     Process all promo images in a directory and extract product-price pairs
     
     Args:
         input_dir: Directory containing promo images
         output_file: Output JSON file path
+        debug_file: Optional debug log file path
     """
     # Check if Ollama is running
     if not check_ollama_running():
@@ -175,7 +190,7 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
     for i, image_path in enumerate(image_files, 1):
         print(f"[{i}/{len(image_files)}] Processing: {os.path.basename(image_path)}")
         
-        products = extract_product_prices(image_path)
+        products = extract_product_prices(image_path, debug_file=debug_file)
         
         # Store relative path as key
         rel_path = os.path.relpath(image_path, input_dir)
@@ -208,13 +223,15 @@ if __name__ == "__main__":
     # Default: process images from data/logs/images
     input_directory = "data/logs/images"
     output_json = "output/product_prices.json"
+    debug_log = "output/qwen_debug.log"  # Debug log file
     
     print("🔍 Qwen2-VL Product Promo OCR")
     print("=" * 50)
     print(f"Model: {MODEL_NAME}")
     print(f"Input: {input_directory}")
     print(f"Output: {output_json}")
+    print(f"Debug Log: {debug_log}")
     print("=" * 50)
     print()
     
-    process_promo_images(input_directory, output_json)
+    process_promo_images(input_directory, output_json, debug_file=debug_log)
