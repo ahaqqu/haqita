@@ -13,7 +13,7 @@ import requests
 
 # Ollama API endpoint (default)
 OLLAMA_BASE_URL = "http://localhost:11434"
-MODEL_NAME = "qwen2.5-vl"  # Use "qwen2.5-vl:7b" for better accuracy if VRAM allows, or "qwen3-vl" for latest
+MODEL_NAME = "qwen2.5vl:3b"  # Use "qwen2.5vl:7b" for better accuracy if VRAM allows, or "qwen3-vl" for latest
 
 # Prompt optimized for product promo extraction
 PROMPT = """
@@ -93,7 +93,7 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json=payload,
-            timeout=120  # 2 minutes timeout for large images
+            timeout=300  # 2 minutes timeout for large images
         )
         
         # Save debug info if requested
