@@ -68,18 +68,33 @@ def encode_image_to_base64(image_path: str) -> str:
 
 
 def resize_image_for_ollama(image_path: str) -> str:
-    """Load image, resize if needed, return base64 string"""
+    """Load image, resize to fit model constraints, return base64 string.
+    Qwen2.5VL requires image dimensions divisible by 14 (patch size).
+    """
     img = Image.open(image_path)
     max_dim = 672
+    patch_size = 14
+
     if img.width > max_dim or img.height > max_dim:
-        img.thumbnail((max_dim, max_dim), Image.LANCZOS)
-        buffer = io.BytesIO()
-        img.save(buffer, format='JPEG', quality=90)
-        return base64.b64encode(buffer.getvalue()).decode("utf-8")
-    return encode_image_to_base64(image_path)
+        ratio = min(max_dim / img.width, max_dim / img.height)
+        w = int(img.width * ratio / patch_size) * patch_size
+        h = int(img.height * ratio / patch_size) * patch_size
+    else:
+        w = (img.width // patch_size) * patch_size
+        h = (img.height // patch_size) * patch_size
+
+    if w < patch_size: w = patch_size
+    if h < patch_size: h = patch_size
+
+    if (w, h) != (img.width, img.height):
+        img = img.resize((w, h), Image.LANCZOS)
+
+    buffer = io.BytesIO()
+    img.save(buffer, format='JPEG', quality=90)
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
-def call_ollama(prompt: str, base64_image: str, timeout: int = 180) -> str:
+def call_ollama(prompt: str, base64_image: str, timeout: int = 300) -> str:
     """Send a prompt + image to Ollama and return the raw response text"""
     payload = {
         "model": MODEL_NAME,
@@ -94,7 +109,7 @@ def call_ollama(prompt: str, base64_image: str, timeout: int = 180) -> str:
         timeout=timeout
     )
     if response.status_code != 200:
-        print(f"[!] Ollama API error ({response.status_code})")
+        print(f"[!] Ollama API error ({response.status_code}): {response.text[:200]}")
         return ""
 
     content = response.json().get("response", "")
