@@ -21,7 +21,7 @@ OLLAMA_BASE_URL = "http://localhost:11434"
 MODEL_NAME = "qwen2.5vl-small:latest"  # Works reliably with GPU. For 7B: ollama pull qwen2.5vl:7b then change this
 
 # Prompt optimized for product promo extraction
-PROMPT = """
+PROMPT_PRODUCTS = """
 Analyze this product promo image and extract all product-price pairs.
 Return ONLY a valid JSON array with this exact structure:
 [
@@ -43,11 +43,68 @@ Other rules:
 - Be precise — extract exactly what is shown in the image
 """
 
+PROMPT_DATE = """
+Look at this product promo image and find the promo validity period or date range.
+Return ONLY a single JSON object:
+{"promo_period": "the date range or validity period as shown"}
+
+Examples:
+- {"promo_period": "25 Maret - 1 April 2026"}
+- {"promo_period": "Berlaku 1-15 Mei 2026"}
+- {"promo_period": "Periode 1 s/d 30 Juni 2026"}
+- {"promo_period": "Valid until 15 May 2026"}
+
+Rules:
+- Look for text like "periode", "berlaku", "valid", "promo", "s/d", "sampai", "sd.", date ranges, or expiry dates
+- If no promo period is found, return {"promo_period": null}
+- Return ONLY the JSON object, nothing else
+"""
+
 
 def encode_image_to_base64(image_path: str) -> str:
     """Encode image to base64 string"""
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
+
+
+def resize_image_for_ollama(image_path: str) -> str:
+    """Load image, resize if needed, return base64 string"""
+    img = Image.open(image_path)
+    max_dim = 672
+    if img.width > max_dim or img.height > max_dim:
+        img.thumbnail((max_dim, max_dim), Image.LANCZOS)
+        buffer = io.BytesIO()
+        img.save(buffer, format='JPEG', quality=90)
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return encode_image_to_base64(image_path)
+
+
+def call_ollama(prompt: str, base64_image: str, timeout: int = 180) -> str:
+    """Send a prompt + image to Ollama and return the raw response text"""
+    payload = {
+        "model": MODEL_NAME,
+        "prompt": prompt,
+        "images": [base64_image],
+        "stream": False,
+        "options": {"num_ctx": 4096}
+    }
+    response = requests.post(
+        f"{OLLAMA_BASE_URL}/api/generate",
+        json=payload,
+        timeout=timeout
+    )
+    if response.status_code != 200:
+        print(f"[!] Ollama API error ({response.status_code})")
+        return ""
+
+    content = response.json().get("response", "")
+    # Strip markdown code fences if present
+    content = content.strip()
+    if content.startswith("```json"):
+        content = content[7:]
+    if content.endswith("```"):
+        content = content[:-3]
+    return content.strip()
 
 
 def check_ollama_running() -> bool:
@@ -87,79 +144,58 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         print(f"[!] Image not found: {image_path}")
         return []
     
-    # Resize large images to fit within context window
-    # Qwen2.5VL uses 14x14 patches — at 672 max dim, ~2880 patches fit in 4096 ctx
-    img = Image.open(image_path)
-    max_dim = 672
-    if img.width > max_dim or img.height > max_dim:
-        img.thumbnail((max_dim, max_dim), Image.LANCZOS)
-        buffer = io.BytesIO()
-        img.save(buffer, format='JPEG', quality=90)
-        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    else:
-        base64_image = encode_image_to_base64(image_path)
+    base64_image = resize_image_for_ollama(image_path)
+    content = call_ollama(PROMPT_PRODUCTS, base64_image)
     
-    # Prepare request for Ollama
-    payload = {
-        "model": MODEL_NAME,
-        "prompt": PROMPT,
-        "images": [base64_image],
-        "stream": False,
-        "options": {
-            "num_ctx": 4096
+    if debug_file:
+        debug_info = {
+            "image": image_path,
+            "prompt": PROMPT_PRODUCTS,
+            "response": content,
+            "timestamp": str(__import__('datetime').datetime.now())
         }
-    }
+        with open(debug_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(debug_info, indent=2, ensure_ascii=False) + "\n\n")
+    
+    if not content:
+        return []
+    
+    products = parse_qwen_response(content)
+    
+    if products:
+        print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
+    else:
+        print(f"[-] No products found in {os.path.basename(image_path)}")
+    
+    return products
+
+
+def extract_promo_date(image_path: str, debug_file: str = None) -> str:
+    """Extract promo validity period/date range from an image"""
+    if not os.path.exists(image_path):
+        return ""
+    
+    base64_image = resize_image_for_ollama(image_path)
+    content = call_ollama(PROMPT_DATE, base64_image)
+    
+    if debug_file:
+        debug_info = {
+            "image": image_path,
+            "prompt": PROMPT_DATE,
+            "response": content,
+            "timestamp": str(__import__('datetime').datetime.now())
+        }
+        with open(debug_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(debug_info, indent=2, ensure_ascii=False) + "\n\n")
+    
+    if not content:
+        return ""
     
     try:
-        response = requests.post(
-            f"{OLLAMA_BASE_URL}/api/generate",
-            json=payload,
-            timeout=180  # 3 minutes timeout for large images
-        )
-        
-        # Save debug info if requested
-        if debug_file:
-            debug_info = {
-                "image": image_path,
-                "request_payload": payload,
-                "response_status": response.status_code,
-                "response_headers": dict(response.headers),
-                "response_body": response.text,
-                "timestamp": str(__import__('datetime').datetime.now())
-            }
-            with open(debug_file, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(debug_info, indent=2, ensure_ascii=False) + "\n\n")
-        
-        if response.status_code == 200:
-            result = response.json()
-            content = result.get("response", "")
-            
-            # Clean up response - sometimes there's extra text
-            content = content.strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.endswith("```"):
-                content = content[:-3]
-            content = content.strip()
-            
-            products = parse_qwen_response(content)
-            
-            if products:
-                print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
-            else:
-                print(f"[-] No products found in {os.path.basename(image_path)}")
-            
-            return products
-        else:
-            print(f"[!] Ollama API error ({response.status_code}): {response.text}")
-            return []
-            
-    except requests.exceptions.Timeout:
-        print(f"[!] Timeout processing {image_path}")
-        return []
-    except Exception as e:
-        print(f"[!] Error processing {image_path}: {e}")
-        return []
+        data = json.loads(content)
+        return data.get("promo_period", "") or ""
+    except json.JSONDecodeError:
+        return ""
 
 
 def process_promo_images(input_dir: str, output_file: str = "output/product_prices.json", debug_file: str = None):
@@ -205,15 +241,22 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
         print(f"[{i}/{len(image_files)}] Processing: {os.path.basename(image_path)}")
         
         products = extract_product_prices(image_path, debug_file=debug_file)
+        promo_date = extract_promo_date(image_path, debug_file=debug_file)
         
         # Store relative path as key
         rel_path = os.path.relpath(image_path, input_dir)
-        all_results[rel_path] = {
+        entry = {
             "products": products,
             "count": len(products)
         }
+        if promo_date:
+            entry["promo_period"] = promo_date
+        
+        all_results[rel_path] = entry
         
         # Show extracted products
+        if promo_date:
+            print(f"   Period: {promo_date}")
         for prod in products:
             brand = prod.get("brand", "")
             product = prod.get("product", "Unknown")
