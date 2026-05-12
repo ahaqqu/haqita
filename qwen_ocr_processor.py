@@ -29,22 +29,15 @@ Return ONLY a valid JSON array with this exact structure:
   ...
 ]
 
-Examples:
-  {"brand": "AICE", "product": "Sandwich Cookies Panda", "price": "39.900", "unit": "6 x 45 ml", "promo": "BUY 1 GET 1"}
-  {"brand": "KANZLER", "product": "Singles Sausage", "price": "9.000", "unit": "48 g - 55 g", "promo": "DAPAT 2 pcs"}
+Field rules:
+- brand: Separate brand from product name. Set to null if not clearly visible.
+- product: Product name without the brand.
+- price: The main product price only. Ignore regional pricing text like "harga pulau jawa", "medan", "makassar".
+- unit: Full quantity text. Examples: "6 x 45 ml", "48 g - 55 g", "200 g", "500 ml", "1 kg". Set to null if none.
+- promo: Promotional text near this product (e.g., "BUY 1 GET 1", "DAPAT 2 pcs"). Set to null if none.
 
-Rules:
-- Extract every visible product with its price
-- Separate brand into "brand" field and product name into "product" field
-- If brand is not clearly visible, set "brand" to null
-- For the "unit" field, capture the full quantity text exactly as shown:
-  Multi-item: "6 x 40 g", "3 pcs", "10s"
-  Range: "40 g - 50 g"
-  Single: "200 g", "500 ml", "1 kg"
-- If no unit text is visible, set "unit" to null
-- If there is promotional text associated with a product, include it in "promo" field
-- Only assign promo text to a product if it is visually close to that product in the image (same row, same column, or directly adjacent). Do not assign promos from other products.
-- Ignore regional price variations, area labels, or location-specific text like "harga pulau jawa", "medan", "makassar", "harga khusus", etc. Only extract the main product price.
+Other rules:
+- Extract every visible product. Do not skip any.
 - Do not include any text outside the JSON array
 - If no products found, return empty array []
 - Be precise — extract exactly what is shown in the image
