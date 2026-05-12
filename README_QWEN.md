@@ -1,6 +1,6 @@
-# Qwen2-VL OCR for Product Promo Extraction
+# Qwen2.5VL OCR for Product Promo Extraction
 
-This tool uses Qwen2-VL (via Ollama) to intelligently extract product names and prices from promo images, solving the text grouping issues found in traditional OCR like PaddleOCR.
+This tool uses Qwen2.5VL (via Ollama) to intelligently extract product names and prices from promo images, solving the text grouping issues found in traditional OCR like PaddleOCR.
 
 ## Prerequisites
 
@@ -36,7 +36,7 @@ This tool uses Qwen2-VL (via Ollama) to intelligently extract product names and 
 
 ## Configuration
 
-- **Model Selection**: Edit `qwen_ocr_processor.py` and change `MODEL_NAME = "qwen2-vl:2b"` to `qwen2-vl:7b` for better accuracy (requires ~6GB VRAM).
+- **Model Selection**: Edit `qwen_ocr_processor.py` and change `MODEL_NAME = "qwen2.5vl:2b"` to `qwen2.5vl:7b` for better accuracy (requires ~6GB VRAM).
 - **Input/Output Paths**: Modify `IMAGE_DIR` and `OUTPUT_FILE` in the Python script if needed.
 
 ## Requirements

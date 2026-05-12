@@ -1,6 +1,6 @@
 """
-Qwen2-VL OCR Processor for Product Promos
-Runs natively on Windows with Ollama + Qwen2-VL
+Qwen2.5VL OCR Processor for Product Promos
+Runs natively on Windows with Ollama + Qwen2.5VL
 Extracts product names and prices as structured pairs
 """
 
@@ -10,24 +10,28 @@ import base64
 from pathlib import Path
 from typing import List, Dict, Any
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Ollama API endpoint (default)
 OLLAMA_BASE_URL = "http://localhost:11434"
-MODEL_NAME = "qwen2.5vl:3b"  # Use "qwen2.5vl:7b" for better accuracy if VRAM allows, or "qwen3-vl" for latest
+MODEL_NAME = "qwen2.5vl-small:latest"  # Works reliably with GPU. For 7B: ollama pull qwen2.5vl:7b then change this
 
 # Prompt optimized for product promo extraction
 PROMPT = """
 Analyze this product promo image and extract all product-price pairs.
 Return ONLY a valid JSON array with this exact structure:
 [
-  {"product": "product name", "price": "price value", "unit": "unit if any"},
+  {"product": "product name", "price": "price value", "unit": "unit if any", "promo": "promo text if any"},
   ...
 ]
 
 Rules:
 - Extract every visible product with its price
-- If price has unit (e.g., "/kg", "/pcs"), include it in "unit" field
+- If price has unit (e.g., "kg", "pcs", "ml", "g"), include it in "unit" field
 - If no unit, set "unit" to null
+- If there is any promotional text associated with a product, include it in the "promo" field
 - Do not include any text outside the JSON array
 - If no products found, return empty array []
 - Be precise with product names and prices exactly as shown
@@ -50,21 +54,21 @@ def check_ollama_running() -> bool:
             if MODEL_NAME in model_names:
                 return True
             else:
-                print(f"⚠️  Model '{MODEL_NAME}' not found. Available models: {model_names}")
-                print(f"   Run: ollama pull {MODEL_NAME}")
+                print(f"[!] Model '{MODEL_NAME}' not found. Available models: {model_names}")
+                print(f"    Run: ollama pull {MODEL_NAME}")
                 return False
         return False
     except requests.exceptions.ConnectionError:
-        print("❌ Ollama is not running. Start it with: ollama serve")
+        print("[!] Ollama is not running. Start it with: ollama serve")
         return False
     except Exception as e:
-        print(f"❌ Error checking Ollama: {e}")
+        print(f"[!] Error checking Ollama: {e}")
         return False
 
 
 def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict[str, Any]]:
     """
-    Extract product-price pairs from an image using Qwen2-VL via Ollama
+    Extract product-price pairs from an image using Qwen2.5VL via Ollama
     
     Args:
         image_path: Path to the image file
@@ -74,7 +78,7 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         List of dictionaries with product, price, and unit
     """
     if not os.path.exists(image_path):
-        print(f"❌ Image not found: {image_path}")
+        print(f"[!] Image not found: {image_path}")
         return []
     
     # Encode image
@@ -86,14 +90,16 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         "prompt": PROMPT,
         "images": [base64_image],
         "stream": False,
-        "format": "json"  # Request JSON output
+        "options": {
+            "num_ctx": 8192
+        }
     }
     
     try:
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json=payload,
-            timeout=300  # 2 minutes timeout for large images
+            timeout=600  # 2 minutes timeout for large images
         )
         
         # Save debug info if requested
@@ -113,38 +119,31 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
             result = response.json()
             content = result.get("response", "")
             
-            # Parse JSON from response
-            try:
-                # Clean up response - sometimes there's extra text
-                content = content.strip()
-                if content.startswith("```json"):
-                    content = content[7:]
-                if content.endswith("```"):
-                    content = content[:-3]
-                content = content.strip()
-                
-                products = json.loads(content)
-                
-                if isinstance(products, list):
-                    print(f"✅ Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
-                    return products
-                else:
-                    print(f"⚠️  Unexpected response format for {image_path}")
-                    return []
-                    
-            except json.JSONDecodeError as e:
-                print(f"⚠️  Failed to parse JSON from {image_path}: {e}")
-                print(f"   Raw response: {content[:200]}...")
-                return []
+            # Clean up response - sometimes there's extra text
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
+            
+            products = parse_qwen_response(content)
+            
+            if products:
+                print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
+            else:
+                print(f"[-] No products found in {os.path.basename(image_path)}")
+            
+            return products
         else:
-            print(f"❌ Ollama API error ({response.status_code}): {response.text}")
+            print(f"[!] Ollama API error ({response.status_code}): {response.text}")
             return []
             
     except requests.exceptions.Timeout:
-        print(f"⏱️  Timeout processing {image_path}")
+        print(f"[!] Timeout processing {image_path}")
         return []
     except Exception as e:
-        print(f"❌ Error processing {image_path}: {e}")
+        print(f"[!] Error processing {image_path}: {e}")
         return []
 
 
@@ -159,7 +158,7 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
     """
     # Check if Ollama is running
     if not check_ollama_running():
-        print("\n💡 To fix:")
+        print("\nTo fix:")
         print("   1. Install Ollama: https://ollama.com/download")
         print(f"   2. Pull model: ollama pull {MODEL_NAME}")
         print("   3. Start Ollama: ollama serve")
@@ -179,10 +178,10 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
                 image_files.append(os.path.join(root, file))
     
     if not image_files:
-        print(f"❌ No images found in {input_dir}")
+        print(f"[!] No images found in {input_dir}")
         return
     
-    print(f"📸 Found {len(image_files)} image(s) to process\n")
+    print(f"[*] Found {len(image_files)} image(s) to process\n")
     
     # Process each image
     all_results = {}
@@ -204,7 +203,7 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
             price = prod.get("price", "N/A")
             unit = prod.get("unit", "")
             unit_str = f" {unit}" if unit else ""
-            print(f"   • {prod.get('product', 'Unknown')}: {price}{unit_str}")
+            print(f"   - {prod.get('product', 'Unknown')}: {price}{unit_str}")
         
         print()
     
@@ -212,12 +211,39 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False)
     
-    print(f"💾 Results saved to: {output_file}")
+    print(f"[*] Results saved to: {output_file}")
     
     # Summary
     total_products = sum(r["count"] for r in all_results.values())
-    print(f"\n📊 Summary: {total_products} products extracted from {len(image_files)} images")
+    print(f"\n[*] Summary: {total_products} products extracted from {len(image_files)} images")
 
+def parse_qwen_response(response_text: str) -> list:
+    """
+    Parses the model's JSON output into a list of product dicts.
+    The model returns a flat JSON array: [{product, price, unit, promo}, ...]
+    """
+    if not response_text or not response_text.strip():
+        return []
+
+    try:
+        data = json.loads(response_text)
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse model output as JSON: {e}")
+        logger.debug(f"Raw output: {response_text[:500]}")
+        return []
+
+    if isinstance(data, list):
+        return data
+
+    if isinstance(data, dict):
+        for key in ('products', 'items', 'results'):
+            if key in data and isinstance(data[key], list):
+                return data[key]
+        logger.error(f"No product list found in response. Keys: {list(data.keys())}")
+        return []
+
+    logger.error(f"Unexpected JSON type: {type(data).__name__}")
+    return []
 
 if __name__ == "__main__":
     # Default: process images from data/logs/images
@@ -225,7 +251,7 @@ if __name__ == "__main__":
     output_json = "output/product_prices.json"
     debug_log = "output/qwen_debug.log"  # Debug log file
     
-    print("🔍 Qwen2-VL Product Promo OCR")
+    print("Qwen2.5VL Product Promo OCR")
     print("=" * 50)
     print(f"Model: {MODEL_NAME}")
     print(f"Input: {input_directory}")

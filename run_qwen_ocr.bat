@@ -35,8 +35,8 @@ if errorlevel 1 (
     echo.
 )
 
-REM Run the Qwen2-VL processor
-echo Starting Qwen2-VL OCR processing...
+REM Run the Qwen2.5VL processor
+echo Starting Qwen2.5VL OCR processing...
 echo.
 python qwen_ocr_processor.py
 
