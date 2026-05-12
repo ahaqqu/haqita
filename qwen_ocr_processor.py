@@ -42,7 +42,9 @@ Rules:
   Range: "40 g - 50 g"
   Single: "200 g", "500 ml", "1 kg"
 - If no unit text is visible, set "unit" to null
-- If there is promotional text, include it in "promo" field
+- If there is promotional text associated with a product, include it in "promo" field
+- Only assign promo text to a product if it is visually close to that product in the image (same row, same column, or directly adjacent). Do not assign promos from other products.
+- Ignore regional price variations, area labels, or location-specific text like "harga pulau jawa", "medan", "makassar", "harga khusus", etc. Only extract the main product price.
 - Do not include any text outside the JSON array
 - If no products found, return empty array []
 - Be precise — extract exactly what is shown in the image
