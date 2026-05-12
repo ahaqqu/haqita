@@ -7,8 +7,10 @@ Extracts product names and prices as structured pairs
 import os
 import json
 import base64
+import io
 from pathlib import Path
 from typing import List, Dict, Any
+from PIL import Image
 import requests
 import logging
 
@@ -81,8 +83,17 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         print(f"[!] Image not found: {image_path}")
         return []
     
-    # Encode image
-    base64_image = encode_image_to_base64(image_path)
+    # Resize large images to fit within context window
+    # Qwen2.5VL uses 14x14 patches — at 672 max dim, ~2880 patches fit in 4096 ctx
+    img = Image.open(image_path)
+    max_dim = 672
+    if img.width > max_dim or img.height > max_dim:
+        img.thumbnail((max_dim, max_dim), Image.LANCZOS)
+        buffer = io.BytesIO()
+        img.save(buffer, format='JPEG', quality=90)
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    else:
+        base64_image = encode_image_to_base64(image_path)
     
     # Prepare request for Ollama
     payload = {
@@ -91,7 +102,7 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         "images": [base64_image],
         "stream": False,
         "options": {
-            "num_ctx": 8192
+            "num_ctx": 4096
         }
     }
     
@@ -99,7 +110,7 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json=payload,
-            timeout=600  # 2 minutes timeout for large images
+            timeout=180  # 3 minutes timeout for large images
         )
         
         # Save debug info if requested
