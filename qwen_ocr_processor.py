@@ -29,16 +29,23 @@ Return ONLY a valid JSON array with this exact structure:
   ...
 ]
 
+Examples:
+  {"brand": "AICE", "product": "Sandwich Cookies Panda", "price": "39.900", "unit": "6 x 45 ml", "promo": "BUY 1 GET 1"}
+  {"brand": "KANZLER", "product": "Singles Sausage", "price": "9.000", "unit": "48 g - 55 g", "promo": "DAPAT 2 pcs"}
+
 Rules:
 - Extract every visible product with its price
-- Separate the brand name into the "brand" field and product name into the "product" field (e.g., brand="AICE", product="Sandwich Cookies Panda")
+- Separate brand into "brand" field and product name into "product" field
 - If brand is not clearly visible, set "brand" to null
-- If price has unit (e.g., "kg", "pcs", "ml", "g"), include it in "unit" field
-- If no unit, set "unit" to null
-- If there is any promotional text associated with a product, include it in the "promo" field
+- For the "unit" field, capture the full quantity text exactly as shown:
+  Multi-item: "6 x 40 g", "3 pcs", "10s"
+  Range: "40 g - 50 g"
+  Single: "200 g", "500 ml", "1 kg"
+- If no unit text is visible, set "unit" to null
+- If there is promotional text, include it in "promo" field
 - Do not include any text outside the JSON array
 - If no products found, return empty array []
-- Be precise with product names, brands, and prices exactly as shown in the image
+- Be precise — extract exactly what is shown in the image
 """
 
 
