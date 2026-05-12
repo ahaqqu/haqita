@@ -25,18 +25,20 @@ PROMPT = """
 Analyze this product promo image and extract all product-price pairs.
 Return ONLY a valid JSON array with this exact structure:
 [
-  {"product": "product name", "price": "price value", "unit": "unit if any", "promo": "promo text if any"},
+  {"brand": "brand name", "product": "product name", "price": "price value", "unit": "unit if any", "promo": "promo text if any"},
   ...
 ]
 
 Rules:
 - Extract every visible product with its price
+- Separate the brand name into the "brand" field and product name into the "product" field (e.g., brand="AICE", product="Sandwich Cookies Panda")
+- If brand is not clearly visible, set "brand" to null
 - If price has unit (e.g., "kg", "pcs", "ml", "g"), include it in "unit" field
 - If no unit, set "unit" to null
 - If there is any promotional text associated with a product, include it in the "promo" field
 - Do not include any text outside the JSON array
 - If no products found, return empty array []
-- Be precise with product names and prices exactly as shown
+- Be precise with product names, brands, and prices exactly as shown in the image
 """
 
 
@@ -211,10 +213,13 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
         
         # Show extracted products
         for prod in products:
+            brand = prod.get("brand", "")
+            product = prod.get("product", "Unknown")
             price = prod.get("price", "N/A")
             unit = prod.get("unit", "")
             unit_str = f" {unit}" if unit else ""
-            print(f"   - {prod.get('product', 'Unknown')}: {price}{unit_str}")
+            brand_str = f"[{brand}] " if brand else ""
+            print(f"   - {brand_str}{product}: {price}{unit_str}")
         
         print()
     
