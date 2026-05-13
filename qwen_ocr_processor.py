@@ -21,8 +21,12 @@ OLLAMA_BASE_URL = "http://localhost:11434"
 QWN_MODEL = os.environ.get("QWN_MODEL", "3b")
 if QWN_MODEL == "7b":
     MODEL_NAME = "qwen2.5vl:7b"
+    MODEL_CTX = 4096
+    MAX_DIM = 672
 else:
-    MODEL_NAME = "qwen2.5vl:3b"  # 3.8B Q4_K_M, fits 8GB VRAM
+    MODEL_NAME = "qwen2.5vl:3b"
+    MODEL_CTX = 4096
+    MAX_DIM = 672
 
 # Prompt optimized for product promo extraction
 PROMPT_PRODUCTS = """
@@ -82,11 +86,10 @@ def resize_image_for_ollama(image_path: str) -> str:
     Qwen2.5VL requires image dimensions divisible by 14 (patch size).
     """
     img = Image.open(image_path)
-    max_dim = 672
     patch_size = 14
 
-    if img.width > max_dim or img.height > max_dim:
-        ratio = min(max_dim / img.width, max_dim / img.height)
+    if img.width > MAX_DIM or img.height > MAX_DIM:
+        ratio = min(MAX_DIM / img.width, MAX_DIM / img.height)
         w = int(img.width * ratio / patch_size) * patch_size
         h = int(img.height * ratio / patch_size) * patch_size
     else:
@@ -111,7 +114,7 @@ def call_ollama(prompt: str, base64_image: str, timeout: int = 300) -> str:
         "prompt": prompt,
         "images": [base64_image],
         "stream": False,
-        "options": {"num_ctx": 4096, "num_gpu": 99}
+        "options": {"num_ctx": MODEL_CTX}
     }
     response = requests.post(
         f"{OLLAMA_BASE_URL}/api/generate",
