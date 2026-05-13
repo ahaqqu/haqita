@@ -7,10 +7,8 @@ Extracts product names and prices as structured pairs
 import os
 import json
 import base64
-import io
 from pathlib import Path
 from typing import List, Dict, Any
-from PIL import Image
 import requests
 import logging
 
@@ -20,7 +18,6 @@ logger = logging.getLogger(__name__)
 OLLAMA_BASE_URL = "http://localhost:11434"
 MODEL_NAME = "qwen3-vl:2b"
 MODEL_CTX = 8192
-MAX_DIM = 672
 
 # Prompt optimized for product promo extraction
 PROMPT_PRODUCTS = """
@@ -75,32 +72,6 @@ def encode_image_to_base64(image_path: str) -> str:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-def resize_image_for_ollama(image_path: str) -> str:
-    """Load image, resize to fit model constraints, return base64 string.
-    Qwen2.5VL requires image dimensions divisible by 14 (patch size).
-    """
-    img = Image.open(image_path)
-    patch_size = 14
-
-    if img.width > MAX_DIM or img.height > MAX_DIM:
-        ratio = min(MAX_DIM / img.width, MAX_DIM / img.height)
-        w = int(img.width * ratio / patch_size) * patch_size
-        h = int(img.height * ratio / patch_size) * patch_size
-    else:
-        w = (img.width // patch_size) * patch_size
-        h = (img.height // patch_size) * patch_size
-
-    if w < patch_size: w = patch_size
-    if h < patch_size: h = patch_size
-
-    if (w, h) != (img.width, img.height):
-        img = img.resize((w, h), Image.LANCZOS)
-
-    buffer = io.BytesIO()
-    img.save(buffer, format='JPEG', quality=90)
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
-
-
 def call_ollama(prompt: str, base64_image: str, timeout: int = 300) -> str:
     """Send a prompt + image to Ollama and return the raw response text"""
     payload = {
@@ -153,7 +124,7 @@ def check_ollama_running() -> bool:
 
 def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict[str, Any]]:
     """
-    Extract product-price pairs from an image using Qwen2.5VL via Ollama
+    Extract product-price pairs from an image using Qwen3-VL via Ollama
     
     Args:
         image_path: Path to the image file
@@ -166,8 +137,7 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         print(f"[!] Image not found: {image_path}")
         return []
     
-    base64_image = resize_image_for_ollama(image_path)
-    content = call_ollama(PROMPT_PRODUCTS, base64_image)
+    base64_image = encode_image_to_base64(image_path)
     
     if debug_file:
         debug_info = {
@@ -185,11 +155,6 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
     products = parse_qwen_response(content)
     
     if products:
-        # Post-processing: "LOTTE MART" is the store name, not a product brand
-        for p in products:
-            brand = p.get("brand")
-            if brand and str(brand).upper() == "LOTTE MART":
-                p["brand"] = None
         print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
     else:
         print(f"[-] No products found in {os.path.basename(image_path)}")
@@ -202,7 +167,7 @@ def extract_promo_date(image_path: str, debug_file: str = None) -> str:
     if not os.path.exists(image_path):
         return ""
     
-    base64_image = resize_image_for_ollama(image_path)
+    base64_image = encode_image_to_base64(image_path)
     content = call_ollama(PROMPT_DATE, base64_image)
     
     if debug_file:
