@@ -19,7 +19,12 @@ logger = logging.getLogger(__name__)
 # Ollama API endpoint (default)
 OLLAMA_BASE_URL = "http://localhost:11434"
 QWN_MODEL = os.environ.get("QWN_MODEL", "3b")
-if QWN_MODEL == "7b":
+
+if QWN_MODEL == "qwen3":
+    MODEL_NAME = "qwen3-vl:2b"
+    MODEL_CTX = 8192     # 2B Q4_K_M is only 1.9GB — plenty of VRAM for higher ctx
+    MAX_DIM = 672
+elif QWN_MODEL == "7b":
     MODEL_NAME = "qwen2.5vl:7b"
     MODEL_CTX = 4096
     MAX_DIM = 672
@@ -193,7 +198,8 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
     if products:
         # Post-processing: "LOTTE MART" is the store name, not a product brand
         for p in products:
-            if p.get("brand", "").upper() == "LOTTE MART":
+            brand = p.get("brand")
+            if brand and str(brand).upper() == "LOTTE MART":
                 p["brand"] = None
         print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
     else:
