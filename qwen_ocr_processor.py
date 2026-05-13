@@ -7,6 +7,7 @@ Extracts product names and prices as structured pairs
 import os
 import json
 import base64
+import time
 from pathlib import Path
 from typing import List, Dict, Any
 import requests
@@ -74,6 +75,11 @@ def encode_image_to_base64(image_path: str) -> str:
 
 def call_ollama(prompt: str, base64_image: str, timeout: int = 300) -> str:
     """Send a prompt + image to Ollama and return the raw response text"""
+    is_cold = not hasattr(call_ollama, "_warmed") or not call_ollama._warmed
+    if is_cold:
+        print(f"   Loading model (first request may take a while)...")
+        call_ollama._warmed = True
+
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
@@ -138,6 +144,7 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
         return []
     
     base64_image = encode_image_to_base64(image_path)
+    content = call_ollama(PROMPT_PRODUCTS, base64_image)
     
     if debug_file:
         debug_info = {
@@ -228,10 +235,15 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     for i, image_path in enumerate(image_files, 1):
-        print(f"[{i}/{len(image_files)}] Processing: {os.path.basename(image_path)}")
+        name = os.path.basename(image_path)
+        print(f"[{i}/{len(image_files)}] {name}")
         
+        t0 = time.time()
+        print(f"   Extracting products...")
         products = extract_product_prices(image_path, debug_file=debug_file)
+        t1 = time.time()
         promo_date = extract_promo_date(image_path, debug_file=debug_file)
+        t2 = time.time()
         
         # Store relative path as key
         rel_path = os.path.relpath(image_path, input_dir)
@@ -255,6 +267,8 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
             unit_str = f" {unit}" if unit else ""
             brand_str = f"[{brand}] " if brand else ""
             print(f"   - {brand_str}{product}: {price}{unit_str}")
+        
+        print(f"   [{len(products)} products in {t1-t0:.0f}s + date in {t2-t1:.0f}s]")
         
         # Write incremental results after each image
         with open(output_file, "w", encoding="utf-8") as f:
