@@ -2,31 +2,10 @@
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo  Qwen2.5VL Product Promo OCR Processor
-echo  Runs on Windows with Ollama + Qwen2.5VL
+echo  Qwen3-VL Product Promo OCR Processor
+echo  Runs on Windows with Ollama + Qwen3-VL 2B
 echo ========================================
 echo.
-
-REM Load .env file
-if exist .env (
-    for /f "usebackq tokens=1* delims==" %%a in (.env) do (
-        if not "%%a"=="" (
-            set "%%a=%%b"
-        )
-    )
-)
-
-REM Default QWN_MODEL if not set
-if not defined QWN_MODEL set QWN_MODEL=3b
-echo Model: Qwen2.5VL %QWN_MODEL%
-echo.
-
-REM Map model name
-if "%QWN_MODEL%"=="7b" (
-    set OLLAMA_MODEL=qwen2.5vl:7b
-) else (
-    set OLLAMA_MODEL=qwen2.5vl:3b
-)
 
 REM Check if Python is available
 python --version >nul 2>&1
@@ -70,12 +49,11 @@ if errorlevel 1 (
 )
 
 REM Check if model exists
-python -c "import requests; r=requests.get('http://localhost:11434/api/tags'); models=[m['name'] for m in r.json().get('models',[])]; exit(0 if '%OLLAMA_MODEL%' in models else 1)" >nul 2>&1
+python -c "import requests; r=requests.get('http://localhost:11434/api/tags'); exit(0 if any('qwen3-vl:2b' in m['name'] for m in r.json().get('models',[])) else 1)" >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo Model '%OLLAMA_MODEL%' not found. Pulling it now...
-    echo This may take a while (several GB download).
-    ollama pull %OLLAMA_MODEL%
+    echo Model 'qwen3-vl:2b' not found. Pulling it now (1.9 GB)...
+    ollama pull qwen3-vl:2b
     if errorlevel 1 (
         echo ERROR: Failed to pull model. Check your internet connection.
         pause
@@ -84,11 +62,8 @@ if errorlevel 1 (
 )
 
 echo.
-echo Starting Qwen2.5VL OCR processing...
+echo Starting Qwen3-VL OCR processing...
 echo.
-
-REM Pass QWN_MODEL to Python and run
-set QWN_MODEL=%QWN_MODEL%
 python qwen_ocr_processor.py
 
 echo.

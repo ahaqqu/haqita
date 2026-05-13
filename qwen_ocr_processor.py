@@ -1,6 +1,6 @@
 """
-Qwen2.5VL OCR Processor for Product Promos
-Runs natively on Windows with Ollama + Qwen2.5VL
+Qwen3-VL OCR Processor for Product Promos
+Runs on Windows with Ollama + Qwen3-VL 2B
 Extracts product names and prices as structured pairs
 """
 
@@ -18,20 +18,9 @@ logger = logging.getLogger(__name__)
 
 # Ollama API endpoint (default)
 OLLAMA_BASE_URL = "http://localhost:11434"
-QWN_MODEL = os.environ.get("QWN_MODEL", "3b")
-
-if QWN_MODEL == "qwen3":
-    MODEL_NAME = "qwen3-vl:2b"
-    MODEL_CTX = 8192     # 2B Q4_K_M is only 1.9GB — plenty of VRAM for higher ctx
-    MAX_DIM = 672
-elif QWN_MODEL == "7b":
-    MODEL_NAME = "qwen2.5vl:7b"
-    MODEL_CTX = 4096
-    MAX_DIM = 672
-else:
-    MODEL_NAME = "qwen2.5vl:3b"
-    MODEL_CTX = 4096
-    MAX_DIM = 672
+MODEL_NAME = "qwen3-vl:2b"
+MODEL_CTX = 8192
+MAX_DIM = 672
 
 # Prompt optimized for product promo extraction
 PROMPT_PRODUCTS = """
