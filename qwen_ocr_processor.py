@@ -22,7 +22,13 @@ MODEL_NAME = "qwen2.5vl-small:latest"  # Works reliably with GPU. For 7B: ollama
 
 # Prompt optimized for product promo extraction
 PROMPT_PRODUCTS = """
-Analyze this product promo image and extract all product-price pairs.
+Analyze this product promo image. Each product card has this layout (top to bottom):
+1. Promo text (left side, if any)
+2. BRAND NAME in uppercase (if any, e.g., "AICE", "BANGO", "INDOMIE")
+3. Product name (multiple lines possible, but always below the brand)
+4. Promo text (left side, if any) + Unit/Price info
+5. Additional info like regional pricing (if any)
+
 Return ONLY a valid JSON array with this exact structure:
 [
   {"brand": "brand name", "product": "product name", "price": "price value", "unit": "unit if any", "promo": "promo text if any"},
@@ -30,14 +36,14 @@ Return ONLY a valid JSON array with this exact structure:
 ]
 
 Field rules:
-- brand: Separate brand from product name. Set to null if not clearly visible.
+- brand: The product BRAND — uppercase text directly above the product name. "LOTTE MART" is the store/supermarket name, NOT a brand. If the only uppercase text is "LOTTE MART", set brand to null.
 - product: Product name without the brand.
 - price: The main product price only. Ignore regional pricing text like "harga pulau jawa", "medan", "makassar".
 - unit: Full quantity text. Examples: "6 x 45 ml", "48 g - 55 g", "200 g", "500 ml", "1 kg". Set to null if none.
-- promo: Promotional text near this product (e.g., "BUY 1 GET 1", "DAPAT 2 pcs"). Set to null if none.
+- promo: Promotional text near this product (e.g., "BUY 1 GET 1", "DAPAT 2 pcs", "Max 1"). Set to null if none.
 
 Other rules:
-- Extract every visible product. Do not skip any.
+- Extract every visible product card. Do not skip any.
 - Do not include any text outside the JSON array
 - If no products found, return empty array []
 - Be precise — extract exactly what is shown in the image
@@ -178,6 +184,10 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
     products = parse_qwen_response(content)
     
     if products:
+        # Post-processing: "LOTTE MART" is the store name, not a product brand
+        for p in products:
+            if p.get("brand", "").upper() == "LOTTE MART":
+                p["brand"] = None
         print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
     else:
         print(f"[-] No products found in {os.path.basename(image_path)}")
