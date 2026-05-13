@@ -29,41 +29,42 @@ Analyze this product promo image. Each product card has this layout (top to bott
 4. Promo text (left side, if any) + Unit/Price info
 5. Additional info like regional pricing (if any)
 
-Return ONLY a valid JSON array with this exact structure:
+The brochure contains both Indonesian and English text. Extract text exactly as shown in either language.
+
+Return ONLY a valid JSON array. No explanations, no markdown, no extra text:
 [
-  {"brand": "brand name", "product": "product name", "price": "price value", "unit": "unit if any", "promo": "promo text if any"},
-  ...
+  {"brand": "AICE", "product": "Sandwich Cookies Panda", "price": "39.900", "unit": "6 x 45 ml", "promo": "BUY 1 GET 1"},
+  {"brand": null, "product": "Gula Pasir", "price": "53.000", "unit": "1 kg", "promo": null}
 ]
 
 Field rules:
-- brand: The product BRAND — uppercase text directly above the product name. "LOTTE MART" is the store/supermarket name, NOT a brand. If the only uppercase text is "LOTTE MART", set brand to null.
-- product: Product name without the brand.
-- price: The main product price only. Ignore regional pricing text like "harga pulau jawa", "medan", "makassar".
-- unit: Full quantity text. Examples: "6 x 45 ml", "48 g - 55 g", "200 g", "500 ml", "1 kg". Set to null if none.
-- promo: Promotional text near this product (e.g., "BUY 1 GET 1", "DAPAT 2 pcs", "Max 1"). Set to null if none.
+- brand: The product BRAND in uppercase above the product name. "LOTTE MART" is the store name, NOT a brand — set to null.
+- product: Product name only, without the brand.
+- price: The main price. Use the format shown (e.g., "39.900" or "39,900"). Ignore regional pricing text.
+- unit: Full quantity ("6 x 45 ml", "48 g - 55 g", "200 g", "500 ml", "1 kg"). Set to null if none.
+- promo: Promotional text near this product ("BUY 1 GET 1", "DAPAT 2 pcs", "Max 1"). Set to null if none.
 
 Other rules:
-- Extract every visible product card. Do not skip any.
+- Extract EVERY visible product. Look carefully — do not skip any.
 - Do not include any text outside the JSON array
-- If no products found, return empty array []
-- Be precise — extract exactly what is shown in the image
+- If no products found, return []
 """
 
 PROMPT_DATE = """
-Look at this product promo image and find the promo validity period or date range.
-Return ONLY a single JSON object:
+Look at this product promo image and find the promo validity period or date range (in Indonesian or English).
+Return ONLY a single JSON object — no extra text:
 {"promo_period": "the date range or validity period as shown"}
 
 Examples:
-- {"promo_period": "25 Maret - 1 April 2026"}
-- {"promo_period": "Berlaku 1-15 Mei 2026"}
-- {"promo_period": "Periode 1 s/d 30 Juni 2026"}
-- {"promo_period": "Valid until 15 May 2026"}
+{"promo_period": "7 - 20 Mei 2026"}
+{"promo_period": "Berlaku 1-15 Mei 2026"}
+{"promo_period": "Periode 1 s/d 30 Juni 2026"}
+{"promo_period": "Valid until 15 May 2026"}
 
 Rules:
 - Look for text like "periode", "berlaku", "valid", "promo", "s/d", "sampai", "sd.", date ranges, or expiry dates
+- Extract the text exactly as shown
 - If no promo period is found, return {"promo_period": null}
-- Return ONLY the JSON object, nothing else
 """
 
 
@@ -85,7 +86,9 @@ def call_ollama(prompt: str, base64_image: str, timeout: int = 300) -> str:
         "prompt": prompt,
         "images": [base64_image],
         "stream": False,
-        "options": {"num_ctx": MODEL_CTX}
+        "options": {
+            "num_ctx": MODEL_CTX
+        }
     }
     response = requests.post(
         f"{OLLAMA_BASE_URL}/api/generate",
@@ -131,42 +134,51 @@ def check_ollama_running() -> bool:
 def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict[str, Any]]:
     """
     Extract product-price pairs from an image using Qwen3-VL via Ollama
-    
-    Args:
-        image_path: Path to the image file
-        debug_file: Optional path to save debug info
-        
-    Returns:
-        List of dictionaries with product, price, and unit
     """
     if not os.path.exists(image_path):
         print(f"[!] Image not found: {image_path}")
         return []
     
     base64_image = encode_image_to_base64(image_path)
-    content = call_ollama(PROMPT_PRODUCTS, base64_image)
+    max_retries = 3
+    prompts = [
+        PROMPT_PRODUCTS,
+        PROMPT_PRODUCTS + "\nIMPORTANT: Your previous output was NOT a valid JSON array. Return ONLY a JSON array like [{...}, {...}]. No explanations, no markdown, no extra text.",
+        PROMPT_PRODUCTS + "\nCRITICAL: You MUST return ONLY a valid JSON array. Example: [{\"brand\": \"AICE\", \"product\": \"Sandwich Cookies Panda\", \"price\": \"39.900\"}]. Nothing else. No markdown. No additional text before or after."
+    ]
     
-    if debug_file:
-        debug_info = {
-            "image": image_path,
-            "prompt": PROMPT_PRODUCTS,
-            "response": content,
-            "timestamp": str(__import__('datetime').datetime.now())
-        }
-        with open(debug_file, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(debug_info, indent=2, ensure_ascii=False) + "\n\n")
+    for attempt in range(1, max_retries + 1):
+        idx = min(attempt - 1, len(prompts) - 1)
+        content = call_ollama(prompts[idx], base64_image)
+        
+        if debug_file:
+            debug_info = {
+                "image": image_path,
+                "attempt": attempt,
+                "prompt": prompts[idx],
+                "response": content,
+                "timestamp": str(__import__('datetime').datetime.now())
+            }
+            with open(debug_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(debug_info, indent=2, ensure_ascii=False) + "\n\n")
+        
+        if not content:
+            if attempt < max_retries:
+                print(f"   Retry {attempt}/{max_retries} (empty response)...")
+                continue
+            return []
+        
+        products = parse_qwen_response(content)
+        
+        if products:
+            print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
+            return products
+        
+        if attempt < max_retries:
+            print(f"   Retry {attempt}/{max_retries} (bad format)...")
     
-    if not content:
-        return []
-    
-    products = parse_qwen_response(content)
-    
-    if products:
-        print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
-    else:
-        print(f"[-] No products found in {os.path.basename(image_path)}")
-    
-    return products
+    print(f"[-] No products found in {os.path.basename(image_path)}")
+    return []
 
 
 def extract_promo_date(image_path: str, debug_file: str = None) -> str:
@@ -175,26 +187,46 @@ def extract_promo_date(image_path: str, debug_file: str = None) -> str:
         return ""
     
     base64_image = encode_image_to_base64(image_path)
-    content = call_ollama(PROMPT_DATE, base64_image)
+    max_retries = 3
+    prompts = [
+        PROMPT_DATE,
+        PROMPT_DATE + "\nIMPORTANT: Return ONLY a JSON object like {\"promo_period\": \"...\"}. No other text.",
+        PROMPT_DATE + "\nCRITICAL: ONLY a JSON object. No markdown. No extra words. Example: {\"promo_period\": \"7 - 20 Mei 2026\"}"
+    ]
     
-    if debug_file:
-        debug_info = {
-            "image": image_path,
-            "prompt": PROMPT_DATE,
-            "response": content,
-            "timestamp": str(__import__('datetime').datetime.now())
-        }
-        with open(debug_file, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(debug_info, indent=2, ensure_ascii=False) + "\n\n")
+    for attempt in range(1, max_retries + 1):
+        idx = min(attempt - 1, len(prompts) - 1)
+        content = call_ollama(prompts[idx], base64_image)
+        
+        if debug_file:
+            debug_info = {
+                "image": image_path,
+                "attempt": attempt,
+                "prompt": prompts[idx],
+                "response": content,
+                "timestamp": str(__import__('datetime').datetime.now())
+            }
+            with open(debug_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(debug_info, indent=2, ensure_ascii=False) + "\n\n")
+        
+        if not content:
+            if attempt < max_retries:
+                print(f"   Retry date {attempt}/{max_retries} (empty)...")
+                continue
+            return ""
+        
+        try:
+            data = json.loads(content)
+            period = data.get("promo_period", "") or ""
+            if period:
+                return period
+        except json.JSONDecodeError:
+            pass
+        
+        if attempt < max_retries:
+            print(f"   Retry date {attempt}/{max_retries} (bad format)...")
     
-    if not content:
-        return ""
-    
-    try:
-        data = json.loads(content)
-        return data.get("promo_period", "") or ""
-    except json.JSONDecodeError:
-        return ""
+    return ""
 
 
 def process_promo_images(input_dir: str, output_file: str = "output/product_prices.json", debug_file: str = None):
