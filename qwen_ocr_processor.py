@@ -242,10 +242,6 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
         print("   3. Start Ollama: ollama serve")
         return
     
-    # Create output directory
-    output_path = Path(output_file)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    
     # Find all images
     image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
     image_files = []
@@ -261,8 +257,10 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
     
     print(f"[*] Found {len(image_files)} image(s) to process\n")
     
-    # Process each image
+    # Process each image with incremental output
     all_results = {}
+    output_path = Path(output_file)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     
     for i, image_path in enumerate(image_files, 1):
         print(f"[{i}/{len(image_files)}] Processing: {os.path.basename(image_path)}")
@@ -293,11 +291,11 @@ def process_promo_images(input_dir: str, output_file: str = "output/product_pric
             brand_str = f"[{brand}] " if brand else ""
             print(f"   - {brand_str}{product}: {price}{unit_str}")
         
+        # Write incremental results after each image
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(all_results, f, indent=2, ensure_ascii=False)
+        
         print()
-    
-    # Save results
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(all_results, f, indent=2, ensure_ascii=False)
     
     print(f"[*] Results saved to: {output_file}")
     
@@ -334,12 +332,14 @@ def parse_qwen_response(response_text: str) -> list:
     return []
 
 if __name__ == "__main__":
-    # Default: process images from data/logs/images
-    input_directory = "data/logs/images"
-    output_json = "output/product_prices.json"
-    debug_log = "output/qwen_debug.log"  # Debug log file
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    print("Qwen2.5VL Product Promo OCR")
+    input_directory = "data/test/lotte"
+    output_json = f"output/product_prices_{timestamp}.json"
+    debug_log = f"output/qwen_debug_{timestamp}.log"
+    
+    print("Qwen3-VL Product Promo OCR")
     print("=" * 50)
     print(f"Model: {MODEL_NAME}")
     print(f"Input: {input_directory}")

@@ -1,6 +1,5 @@
-data/logs/
-data/products.csv
 .env
+.vscode/
 output
 __pycache__/
 *.pyc
