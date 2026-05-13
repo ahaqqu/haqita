@@ -18,7 +18,11 @@ logger = logging.getLogger(__name__)
 
 # Ollama API endpoint (default)
 OLLAMA_BASE_URL = "http://localhost:11434"
-MODEL_NAME = "qwen2.5vl-small:latest"  # Works reliably with GPU. For 7B: ollama pull qwen2.5vl:7b then change this
+QWN_MODEL = os.environ.get("QWN_MODEL", "3b")
+if QWN_MODEL == "7b":
+    MODEL_NAME = "qwen2.5vl:7b"
+else:
+    MODEL_NAME = "qwen2.5vl:3b"  # 3.8B Q4_K_M, fits 8GB VRAM
 
 # Prompt optimized for product promo extraction
 PROMPT_PRODUCTS = """
@@ -107,7 +111,7 @@ def call_ollama(prompt: str, base64_image: str, timeout: int = 300) -> str:
         "prompt": prompt,
         "images": [base64_image],
         "stream": False,
-        "options": {"num_ctx": 4096}
+        "options": {"num_ctx": 4096, "num_gpu": 99}
     }
     response = requests.post(
         f"{OLLAMA_BASE_URL}/api/generate",
