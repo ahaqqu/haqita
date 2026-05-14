@@ -35,13 +35,8 @@ def call_ollama_ocr(image_path: str, cfg: dict) -> list[dict]:
 
     payload = {
         "model": cfg['ocr']['model_ollama'],
-        "messages": [{
-            "role": "user",
-            "content": [
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}},
-                {"type": "text", "text": OCR_PROMPT}
-            ]
-        }],
+        "prompt": OCR_PROMPT,
+        "images": [img_b64],
         "stream": False,
         "options": {
             "temperature": cfg['ocr']['temperature'],
@@ -49,10 +44,10 @@ def call_ollama_ocr(image_path: str, cfg: dict) -> list[dict]:
             "seed": 42
         }
     }
-    resp = requests.post("http://localhost:11434/api/chat", json=payload,
+    resp = requests.post("http://localhost:11434/api/generate", json=payload,
                          timeout=cfg['ocr']['timeout_seconds'])
     resp.raise_for_status()
-    raw_text = resp.json()['message']['content']
+    raw_text = resp.json()['response']
     return _parse_ocr_json(raw_text)
 
 

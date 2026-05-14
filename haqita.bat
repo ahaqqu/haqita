@@ -13,7 +13,8 @@ echo  [2] Scrape Superindo promos
 echo  [3] Dry-run Lotte  (no OCR, just check for new images)
 echo  [4] Dry-run Superindo
 echo  [5] Run standalone OCR on images
-echo  [6] Exit
+echo  [6] Run integration tests  (requires Ollama)
+echo  [0] Exit
 echo.
 
 set /p choice="Your choice: "
@@ -23,7 +24,8 @@ if "%choice%"=="2" goto RUN_SUPERINDO
 if "%choice%"=="3" goto RUN_LOTTE_DRY
 if "%choice%"=="4" goto RUN_SUPERINDO_DRY
 if "%choice%"=="5" goto RUN_OCR
-if "%choice%"=="6" goto END
+if "%choice%"=="6" goto RUN_INTEGRATION
+if "%choice%"=="0" goto END
 
 echo Invalid choice. Press any key to try again...
 pause >nul
@@ -80,6 +82,20 @@ echo  Running OCR on Local Images
 echo ========================================
 echo.
 python scripts/qwen_ocr_processor.py
+echo.
+pause
+goto MENU
+
+:RUN_INTEGRATION
+cls
+echo ========================================
+echo  Integration Tests
+echo ========================================
+echo.
+echo  This will run OCR on a real brochure image
+echo  using Ollama. Ensure Ollama is running.
+echo.
+call "tests\integration\run_integration_tests.bat"
 echo.
 pause
 goto MENU
