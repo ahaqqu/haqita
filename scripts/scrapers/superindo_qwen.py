@@ -67,8 +67,8 @@ def fetch_html(url: str) -> str:
     return resp.text
 
 
-def parse_katalog_images(html: str) -> list[tuple[str, str]]:
-    """Parse Katalog Super Hemat page — swiper slides with region filter."""
+def parse_swiper_images(html: str, fancybox_filter: str) -> list[tuple[str, str]]:
+    """Parse swiper-slide fancybox images filtered by data-fancybox value."""
     soup = BeautifulSoup(html, "html.parser")
     urls = []
 
@@ -76,8 +76,8 @@ def parse_katalog_images(html: str) -> list[tuple[str, str]]:
         link = slide.select_one("a.fancybox")
         if not link:
             continue
-        region = link.get("data-fancybox", "")
-        if region != REGION_FILTER:
+        fbox = link.get("data-fancybox", "")
+        if fbox != fancybox_filter:
             continue
         href = link.get("href", "")
         if href:
@@ -93,41 +93,11 @@ def parse_katalog_images(html: str) -> list[tuple[str, str]]:
     return unique
 
 
-def parse_promo_koran_images(html: str) -> list[tuple[str, str]]:
-    """Parse Promo Koran page — single newspaper promo image."""
-    soup = BeautifulSoup(html, "html.parser")
-    urls = []
-
-    for img in soup.select("article img, .entry-content img, .post-content img, main img"):
-        src = img.get("src") or ""
-        if not src:
-            continue
-        src_lower = src.lower()
-        if not src_lower.endswith((".jpg", ".jpeg", ".png", ".webp")):
-            continue
-        if "logo" in src_lower or "icon" in src_lower or "banner" in src_lower:
-            continue
-        if src.startswith("//"):
-            src = "https:" + src
-        elif src.startswith("/"):
-            src = "https://www.superindo.co.id" + src
-        urls.append((src, src))
-
-    seen = set()
-    unique = []
-    for url, orig in urls:
-        if url not in seen:
-            seen.add(url)
-            unique.append((url, orig))
-
-    return unique
-
-
 def parse_page_images(html: str, url: str) -> list[tuple[str, str]]:
     """Route to the right parser based on URL path."""
     if "promo-koran" in url.lower():
-        return parse_promo_koran_images(html)
-    return parse_katalog_images(html)
+        return parse_swiper_images(html, "promo-koran")
+    return parse_swiper_images(html, REGION_FILTER)
 
 
 def download_image(url: str) -> bytes:
