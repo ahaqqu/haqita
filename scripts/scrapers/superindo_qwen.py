@@ -6,12 +6,13 @@ import os
 import sys
 import time
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 from PIL import Image
-from io import BytesIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.ocr.ocr_processor import extract_products, validate_product
@@ -24,7 +25,6 @@ STATE_DIR = Path("data/scrape")
 IMAGES_DIR = STATE_DIR / "superindo"
 STATE_FILE = STATE_DIR / "superindo_state.json"
 
-SUPERINDO_URL = "https://www.superindo.co.id/promosi/katalog-super-hemat/"
 REGION_FILTER = "jabodetabek-palembang"
 MIN_SIZE = 50 * 1024
 MIN_DIM = 300
@@ -67,7 +67,8 @@ def fetch_html(url: str) -> str:
     return resp.text
 
 
-def parse_promo_images(html: str) -> list[tuple[str, str]]:
+def parse_katalog_images(html: str) -> list[tuple[str, str]]:
+    """Parse Katalog Super Hemat page — swiper slides with region filter."""
     soup = BeautifulSoup(html, "html.parser")
     urls = []
 
@@ -92,7 +93,44 @@ def parse_promo_images(html: str) -> list[tuple[str, str]]:
     return unique
 
 
-def download_image(url: str, test_mode: bool = False) -> bytes:
+def parse_promo_koran_images(html: str) -> list[tuple[str, str]]:
+    """Parse Promo Koran page — single newspaper promo image."""
+    soup = BeautifulSoup(html, "html.parser")
+    urls = []
+
+    for img in soup.select("article img, .entry-content img, .post-content img, main img"):
+        src = img.get("src") or ""
+        if not src:
+            continue
+        src_lower = src.lower()
+        if not src_lower.endswith((".jpg", ".jpeg", ".png", ".webp")):
+            continue
+        if "logo" in src_lower or "icon" in src_lower or "banner" in src_lower:
+            continue
+        if src.startswith("//"):
+            src = "https:" + src
+        elif src.startswith("/"):
+            src = "https://www.superindo.co.id" + src
+        urls.append((src, src))
+
+    seen = set()
+    unique = []
+    for url, orig in urls:
+        if url not in seen:
+            seen.add(url)
+            unique.append((url, orig))
+
+    return unique
+
+
+def parse_page_images(html: str, url: str) -> list[tuple[str, str]]:
+    """Route to the right parser based on URL path."""
+    if "promo-koran" in url.lower():
+        return parse_promo_koran_images(html)
+    return parse_katalog_images(html)
+
+
+def download_image(url: str) -> bytes:
     logger.info(f"   Downloading: {url}")
     resp = requests.get(url, headers=HEADERS, timeout=120)
     resp.raise_for_status()
@@ -100,7 +138,6 @@ def download_image(url: str, test_mode: bool = False) -> bytes:
 
 
 def filename_from_url(url: str, md5_prefix: str = "") -> str:
-    from urllib.parse import urlparse
     parsed = urlparse(url)
     name = os.path.basename(parsed.path)
     if not name or "." not in name:
@@ -114,11 +151,14 @@ def filename_from_url(url: str, md5_prefix: str = "") -> str:
 def main():
     parser = argparse.ArgumentParser(description="Superindo Promo Scraper + Qwen3-VL OCR")
     parser.add_argument("--dry-run", action="store_true", help="Check for new images without OCR")
-    parser.add_argument("--url", default=SUPERINDO_URL, help="Superindo promo page URL")
+    parser.add_argument("--url", help="Single URL override (for testing a specific page)")
     args = parser.parse_args()
 
     ensure_dirs()
     state = load_state()
+    cfg = _load_config()
+
+    urls = [args.url] if args.url else cfg["scrapers"]["superindo"]["urls"]
 
     print("=" * 60)
     print("  Superindo Promo Scraper")
@@ -127,21 +167,35 @@ def main():
     print("=" * 60)
     print()
 
-    html = fetch_html(args.url)
+    all_image_refs = []
+    for url in urls:
+        print(f"[*] Processing: {url}")
+        html = fetch_html(url)
+        refs = parse_page_images(html, url)
+        label = "katalog" if "promo-koran" not in url.lower() else "koran"
+        print(f"    Found {len(refs)} image(s) from {label} page\n")
+        all_image_refs.extend(refs)
 
-    image_refs = parse_promo_images(html)
-    print(f"[*] Found {len(image_refs)} promo image(s) for region '{REGION_FILTER}'\n")
-
-    if not image_refs:
+    if not all_image_refs:
         print("[!] No promo images found. Exiting.")
         return
+
+    seen = set()
+    deduped = []
+    for url, orig in all_image_refs:
+        if url not in seen:
+            seen.add(url)
+            deduped.append((url, orig))
+
+    if len(deduped) < len(all_image_refs):
+        print(f"[*] Deduplicated: {len(all_image_refs)} → {len(deduped)} unique images\n")
 
     known_hashes = {entry["md5"] for entry in state.get("processed", [])}
     seen_this_run = set()
     new_images = []
     existing_images = []
 
-    for url, orig_ref in image_refs:
+    for url, orig_ref in deduped:
         try:
             data = download_image(url)
             h = md5_hash(data)
@@ -205,7 +259,6 @@ def main():
     output_file = Path("output") / f"superindo_promos_{timestamp}.json"
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
-    cfg = _load_config()
     ocr_results = []
 
     for idx, img in enumerate(new_images, 1):
@@ -285,7 +338,7 @@ def _load_config() -> dict:
 def _build_output(ocr_results: list, skipped_count: int, current: int, total: int, status: str = "in_progress") -> dict:
     return {
         "scrape_date": datetime.now().isoformat(),
-        "source": SUPERINDO_URL,
+        "source": "superindo.co.id",
         "mode": "live",
         "new_images": ocr_results,
         "total_new": len(ocr_results),

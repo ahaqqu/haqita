@@ -5,7 +5,9 @@ scrapers:
     request_delay_seconds: 2
 
   superindo:
-    url: https://www.superindo.co.id/promosi/katalog-super-hemat/
+    urls:
+      - https://www.superindo.co.id/promosi/katalog-super-hemat/
+      - https://www.superindo.co.id/promosi/promo-koran/
     region_filter: jabodetabek-palembang
     min_image_size_kb: 50
     request_delay_seconds: 2
