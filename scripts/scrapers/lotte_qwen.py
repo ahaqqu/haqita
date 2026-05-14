@@ -31,8 +31,8 @@ STATE_FILE = STATE_DIR / "lotte_state.json"
 LOTTE_URL = "https://www.lottemart.co.id/all-promo-mart"
 
 # --- Test mode paths ---
-TEST_HTML = Path("data/examples/lotte/All Promo Mart.html")
-TEST_HTML_FILES = Path("data/examples/lotte/All Promo Mart_files")
+TEST_HTML = Path("data/test/lotte/html-scape/All Promo Mart.html")
+TEST_HTML_FILES = Path("data/test/lotte/html-scape/All Promo Mart_files")
 
 # --- Headers ---
 HEADERS = {

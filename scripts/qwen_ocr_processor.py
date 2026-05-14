@@ -390,7 +390,7 @@ if __name__ == "__main__":
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    input_directory = "data/test/lotte"
+    input_directory = "data/test/lotte/image-brochure"
     output_json = f"output/product_prices_{timestamp}.json"
     debug_log = f"output/qwen_debug_{timestamp}.log"
     
