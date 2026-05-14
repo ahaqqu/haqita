@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haqita — Grocery Price Comparison</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f7fa;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --muted: #6c757d;
+  --border: #dee2e6;
+  --accent: #0057A8;
+  --danger: #E8211D;
+  --success: #28a745;
+  --warning: #ffc107;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.logo { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; color: var(--accent); }
+.logo span { color: var(--danger); }
+.subtitle { font-size: 0.8rem; color: var(--muted); }
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.15s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-sort { font-size: 0.8rem; padding: 4px 10px; }
+select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--card);
+}
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+.card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.card-stores { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.store-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #fff;
+  text-transform: uppercase;
+}
+.store-lotte { background: #0057A8; }
+.store-superindo { background: #E8211D; }
+.badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.badge-warning { background: #fff3cd; color: #856404; }
+.card-name { font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
+.card-unit { font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; }
+.card-prices { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.price-row { display: flex; align-items: center; gap: 6px; }
+.price-value { font-size: 1.2rem; font-weight: 700; }
+.price-value.dimmed { color: var(--muted); font-weight: 400; text-decoration: line-through; font-size: 0.95rem; }
+.price-store { font-size: 0.75rem; color: var(--muted); }
+.promo-tag {
+  font-size: 0.7rem;
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.savings-text { color: var(--success); font-weight: 600; }
+.expiry { color: var(--muted); }
+.single-card .card-name { font-size: 0.95rem; }
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--muted);
+}
+.empty-state h3 { font-size: 1.1rem; margin-bottom: 8px; }
+.footer {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.footer-review {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fff3cd;
+  border-radius: 8px;
+  color: #856404;
+  cursor: pointer;
+}
+.detail-panel {
+  display: none;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.detail-panel.open { display: block; }
+.detail-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; margin-bottom: 12px; }
+.detail-table th, .detail-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.detail-table th { font-weight: 600; color: var(--muted); }
+canvas { width: 100%; height: 120px; margin-top: 8px; border-radius: 8px; background: #fafafa; }
+.confidence-badge { font-size: 0.7rem; }
+@media (max-width: 480px) {
+  body { padding: 10px; }
+  .card { padding: 12px; }
+  .price-value { font-size: 1rem; }
+  .controls { gap: 4px; }
+  .btn { font-size: 0.8rem; padding: 4px 10px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Haqi<span>ta</span></div>
+    <div class="subtitle" id="dataDate">Memuat data...</div>
+  </div>
+</header>
+
+<div class="controls" id="controls">
+  <button class="btn active" data-filter="all">Semua</button>
+  <button class="btn" data-filter="Lotte">Lotte</button>
+  <button class="btn" data-filter="Superindo">Superindo</button>
+  <select id="sortSelect">
+    <option value="name">Nama</option>
+    <option value="cheapest">Termurah</option>
+    <option value="savings">Hemat</option>
+    <option value="expiry">Berakhir</option>
+  </select>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div id="productList"></div>
+
+<div class="footer" id="footer"></div>
+
+<script>
+const MONTHS_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const STORE_COLORS = { Lotte: '#0057A8', Superindo: '#E8211D' };
+
+function formatIDR(n) {
+  return 'Rp ' + Number(n).toLocaleString('id-ID');
+}
+
+function formatDateID(isoDate) {
+  if (!isoDate) return '';
+  const [y, m, d] = isoDate.split('-');
+  return `${parseInt(d)} ${MONTHS_ID[parseInt(m) - 1]} ${y}`;
+}
+
+function escaped(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+let consolidated = null;
+let history = null;
+
+async function loadData() {
+  try {
+    const resp = await fetch('output/consolidated_latest.json');
+    consolidated = await resp.json();
+  } catch (e) {
+    document.getElementById('productList').innerHTML = '<div class="empty-state"><h3>Belum ada data</h3><p>Jalankan scraper terlebih dahulu untuk melihat promo.</p></div>';
+    return;
+  }
+  try {
+    const resp = await fetch('output/price_history.json');
+    history = await resp.json();
+  } catch (e) {
+    history = { snapshots: [] };
+  }
+  render();
+}
+
+let currentFilter = 'all';
+let currentSort = 'name';
+
+function render() {
+  if (!consolidated) return;
+
+  const genDate = consolidated.generated_at ? formatDateID(consolidated.generated_at.slice(0, 10)) : '';
+  document.getElementById('dataDate').textContent = genDate ? `Data per: ${genDate}` : '';
+
+  const stats = consolidated.stats || {};
+  document.getElementById('statsBar').innerHTML = `
+    <span>Lotte: ${stats.total_products_lotte || 0}</span>
+    <span>Superindo: ${stats.total_products_superindo || 0}</span>
+    <span>Cocok: ${stats.matched_across_stores || 0}</span>
+  `;
+
+  let items = [];
+
+  for (const p of (consolidated.products || [])) {
+    items.push({ type: 'matched', data: p });
+  }
+  for (const s of (consolidated.singles || [])) {
+    items.push({ type: 'single', data: s });
+  }
+
+  if (currentFilter !== 'all') {
+    items = items.filter(item => {
+      if (item.type === 'matched') {
+        return item.data.stores?.some(s => s.store === currentFilter);
+      }
+      return item.data.store === currentFilter;
+    });
+  }
+
+  items.sort((a, b) => {
+    const da = a.data, db = b.data;
+    switch (currentSort) {
+      case 'cheapest':
+        return (da.price_min ?? da.effective_unit_price ?? 0) - (db.price_min ?? db.effective_unit_price ?? 0);
+      case 'savings':
+        return (db.savings_pct ?? 0) - (da.savings_pct ?? 0);
+      case 'expiry':
+        const va = da.valid_until || '9999-99-99';
+        const vb = db.valid_until || '9999-99-99';
+        return va.localeCompare(vb);
+      default:
+        return da.name?.localeCompare(db.name || '') || 0;
+    }
+  });
+
+  const container = document.getElementById('productList');
+  container.innerHTML = '';
+
+  if (items.length === 0) {
+    container.innerHTML = '<div class="empty-state"><h3>Tidak ada produk</h3><p>Tidak ada produk untuk filter ini.</p></div>';
+    return;
+  }
+
+  for (const item of items) {
+    if (item.type === 'matched') {
+      container.appendChild(buildMatchedCard(item.data));
+    } else {
+      container.appendChild(buildSingleCard(item.data));
+    }
+  }
+}
+
+function buildMatchedCard(product) {
+  const cheapestEntry = product.stores?.find(s => s.store === product.cheapest_store);
+  const otherEntry = product.stores?.find(s => s.store !== product.cheapest_store);
+
+  const savingsText = product.price_gap > 0
+    ? `Hemat ${formatIDR(product.price_gap)} (${product.savings_pct}%) di ${product.cheapest_store}`
+    : 'Harga sama';
+
+  const lowConfidenceBadge = product.match_confidence < 0.80
+    ? `<span class="badge badge-warning">⚠ Perkiraan (${(product.match_confidence * 100).toFixed(0)}%)</span>`
+    : '';
+
+  const card = document.createElement('div');
+  card.className = 'card card-matched';
+  card.dataset.key = product.key || '';
+
+  card.innerHTML = `
+    <div class="card-stores">
+      ${(product.stores || []).map(s => `<span class="store-badge store-${s.store.toLowerCase()}">${s.store}</span>`).join('')}
+      ${lowConfidenceBadge}
+    </div>
+    <div class="card-name">${escaped(product.name)}</div>
+    <div class="card-unit">${escaped(product.unit || '')}</div>
+    <div class="card-prices">
+      <div class="price-row price-cheapest">
+        <span class="price-value">${formatIDR(cheapestEntry?.effective_unit_price || 0)}</span>
+        <span class="price-store">${cheapestEntry?.store || ''}</span>
+        ${cheapestEntry?.promo ? `<span class="promo-tag">${escaped(cheapestEntry.promo)}</span>` : ''}
+      </div>
+      ${otherEntry ? `
+      <div class="price-row">
+        <span class="price-value dimmed">${formatIDR(otherEntry.effective_unit_price)}</span>
+        <span class="price-store dimmed">${otherEntry.store}</span>
+      </div>` : ''}
+    </div>
+    <div class="card-footer">
+      <span class="savings-text">${savingsText}</span>
+      ${product.valid_until ? `<span class="expiry">s/d ${formatDateID(product.valid_until)}</span>` : ''}
+    </div>
+    <div class="detail-panel" id="detail-${escaped(product.key)}">
+      <table class="detail-table">
+        <tr><th>Toko</th><th>Harga</th><th>Per Unit</th><th>Promo</th><th>Berlaku</th></tr>
+        ${(product.stores || []).map(s => `
+          <tr>
+            <td><span class="store-badge store-${s.store.toLowerCase()}">${s.store}</span></td>
+            <td>${formatIDR(s.price)}</td>
+            <td>${formatIDR(s.effective_unit_price)}</td>
+            <td>${s.promo ? escaped(s.promo) : '-'}</td>
+            <td>${s.valid_until ? formatDateID(s.valid_until) : '-'}</td>
+          </tr>
+        `).join('')}
+      </table>
+      <canvas id="chart-${escaped(product.key)}" width="600" height="120"></canvas>
+      ${product.match_confidence < 0.80 ? `<div class="confidence-badge">Kepercayaan: ${(product.match_confidence * 100).toFixed(0)}% (${product.match_method})</div>` : ''}
+    </div>
+  `;
+
+  card.addEventListener('click', (e) => {
+    const panel = card.querySelector('.detail-panel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+      const canvas = panel.querySelector('canvas');
+      if (canvas && history) drawPriceChart(canvas, product.key, product.stores, history);
+    }
+  });
+
+  return card;
+}
+
+function buildSingleCard(product) {
+  const card = document.createElement('div');
+  card.className = 'card single-card';
+
+  card.innerHTML = `
+    <div class="card-stores">
+      <span class="store-badge store-${product.store.toLowerCase()}">${product.store}</span>
+      <span class="badge badge-warning">Hanya di ${product.store}</span>
+    </div>
+    <div class="card-name">${escaped(product.name)}</div>
+    <div class="card-unit">${escaped(product.unit || '')}</div>
+    <div class="card-prices">
+      <div class="price-row">
+        <span class="price-value">${formatIDR(product.effective_unit_price || product.price)}</span>
+        ${product.promo ? `<span class="promo-tag">${escaped(product.promo)}</span>` : ''}
+      </div>
+    </div>
+    <div class="card-footer">
+      ${product.valid_until ? `<span class="expiry">s/d ${formatDateID(product.valid_until)}</span>` : ''}
+    </div>
+  `;
+
+  return card;
+}
+
+function drawPriceChart(canvas, productKey, stores, historyData) {
+  const snapshots = (historyData.snapshots || []).filter(s => s.product_key === productKey);
+  if (snapshots.length < 2) {
+    canvas.style.display = 'none';
+    return;
+  }
+  canvas.style.display = 'block';
+
+  const storeData = {};
+  for (const snap of snapshots) {
+    if (!storeData[snap.store]) storeData[snap.store] = [];
+    storeData[snap.store].push({ date: snap.date, price: snap.effective_unit_price });
+  }
+  for (const s in storeData) storeData[s].sort((a, b) => a.date.localeCompare(b.date));
+
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const PAD = 30;
+
+  const allPrices = Object.values(storeData).flat().map(p => p.price);
+  const minP = Math.min(...allPrices) * 0.9;
+  const maxP = Math.max(...allPrices) * 1.1;
+  const allDates = [...new Set(Object.values(storeData).flat().map(p => p.date))].sort();
+
+  if (allDates.length < 2) { canvas.style.display = 'none'; return; }
+
+  const xScale = d => PAD + (allDates.indexOf(d) / (allDates.length - 1)) * (W - 2 * PAD);
+  const yScale = p => H - PAD - ((p - minP) / (maxP - minP)) * (H - 2 * PAD);
+
+  ctx.clearRect(0, 0, W, H);
+  for (const [store, points] of Object.entries(storeData)) {
+    if (points.length < 2) continue;
+    ctx.strokeStyle = STORE_COLORS[store] || '#888';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    points.forEach((pt, i) => {
+      const x = xScale(pt.date), y = yScale(pt.price);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    for (const pt of points) {
+      const x = xScale(pt.date), y = yScale(pt.price);
+      ctx.fillStyle = STORE_COLORS[store] || '#888';
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+document.getElementById('sortSelect').addEventListener('change', (e) => {
+  currentSort = e.target.value;
+  render();
+});
+
+document.getElementById('controls').addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn');
+  if (!btn || !btn.dataset.filter) return;
+  document.querySelectorAll('.btn[data-filter]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.filter;
+  render();
+});
+
+loadData();
+</script>
+</body>
+</html>
