@@ -21,33 +21,33 @@ MODEL_NAME = "qwen3-vl:2b"
 MODEL_CTX = 8192
 
 # Prompt optimized for product promo extraction
-PROMPT_PRODUCTS = """
-Analyze this product promo image. Each product card has this layout (top to bottom):
-1. Promo text (left side, if any)
-2. BRAND NAME in uppercase (if any, e.g., "AICE", "BANGO", "INDOMIE")
-3. Product name (multiple lines possible, but always below the brand)
-4. Promo text (left side, if any) + Unit/Price info
-5. Additional info like regional pricing (if any)
+PROMPT_PRODUCTS_FIRST = """
+Look at this promo brochure image. Describe every product you see.
+For each product, tell me:
+- The BRAND name (uppercase text, if visible)
+- The product name
+- The price
+- The quantity or unit (e.g., "200 g", "6 x 45 ml", "1 kg")
+- Any promo text (e.g., "BUY 1 GET 1", "DAPAT 2 pcs")
 
-The brochure contains both Indonesian and English text. Extract text exactly as shown in either language.
+The brochure uses both Indonesian and English. Extract text exactly as shown.
+List them one by one — do not skip any product.
+"""
 
-Return ONLY a valid JSON array. No explanations, no markdown, no extra text:
+PROMPT_PRODUCTS_SECOND = """
+Now convert the products you described into a valid JSON array with this exact format.
+No explanations, no extra text, ONLY the JSON array:
 [
   {"brand": "AICE", "product": "Sandwich Cookies Panda", "price": "39.900", "unit": "6 x 45 ml", "promo": "BUY 1 GET 1"},
   {"brand": null, "product": "Gula Pasir", "price": "53.000", "unit": "1 kg", "promo": null}
 ]
 
-Field rules:
-- brand: The product BRAND in uppercase above the product name. "LOTTE MART" is the store name, NOT a brand — set to null.
-- product: Product name only, without the brand.
-- price: The main price. Use the format shown (e.g., "39.900" or "39,900"). Ignore regional pricing text.
-- unit: Full quantity ("6 x 45 ml", "48 g - 55 g", "200 g", "500 ml", "1 kg"). Set to null if none.
-- promo: Promotional text near this product ("BUY 1 GET 1", "DAPAT 2 pcs", "Max 1"). Set to null if none.
-
-Other rules:
-- Extract EVERY visible product. Look carefully — do not skip any.
-- Do not include any text outside the JSON array
-- If no products found, return []
+Rules:
+- brand: The product brand (uppercase). If only "LOTTE MART" is visible, set to null.
+- product: Product name only.
+- price: Just the number. Ignore "Rp", "Harga", regional pricing.
+- unit: Full quantity. Set to null if none.
+- promo: Promo text. Set to null if none.
 """
 
 PROMPT_DATE = """
@@ -100,7 +100,39 @@ def call_ollama(prompt: str, base64_image: str, timeout: int = 300) -> str:
         return ""
 
     content = response.json().get("response", "")
-    # Strip markdown code fences if present
+    content = content.strip()
+    if content.startswith("```json"):
+        content = content[7:]
+    if content.endswith("```"):
+        content = content[:-3]
+    return content.strip()
+
+
+def call_ollama_chat(prompt: str, base64_image: str, prev_output: str, correction: str = "", timeout: int = 300) -> str:
+    """Send prompt + image + previous output as context via /api/chat"""
+    messages = [
+        {"role": "user", "content": prompt, "images": [base64_image]},
+        {"role": "assistant", "content": prev_output}
+    ]
+    if correction:
+        messages.append({"role": "user", "content": correction})
+    
+    payload = {
+        "model": MODEL_NAME,
+        "messages": messages,
+        "stream": False,
+        "options": {"num_ctx": MODEL_CTX}
+    }
+    response = requests.post(
+        f"{OLLAMA_BASE_URL}/api/chat",
+        json=payload,
+        timeout=timeout
+    )
+    if response.status_code != 200:
+        print(f"[!] Ollama API error ({response.status_code}): {response.text[:200]}")
+        return ""
+
+    content = response.json().get("message", {}).get("content", "")
     content = content.strip()
     if content.startswith("```json"):
         content = content[7:]
@@ -132,30 +164,36 @@ def check_ollama_running() -> bool:
 
 
 def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict[str, Any]]:
-    """
-    Extract product-price pairs from an image using Qwen3-VL via Ollama
-    """
     if not os.path.exists(image_path):
         print(f"[!] Image not found: {image_path}")
         return []
     
     base64_image = encode_image_to_base64(image_path)
     max_retries = 3
-    prompts = [
-        PROMPT_PRODUCTS,
-        PROMPT_PRODUCTS + "\nIMPORTANT: Your previous output was NOT a valid JSON array. Return ONLY a JSON array like [{...}, {...}]. No explanations, no markdown, no extra text.",
-        PROMPT_PRODUCTS + "\nCRITICAL: You MUST return ONLY a valid JSON array. Example: [{\"brand\": \"AICE\", \"product\": \"Sandwich Cookies Panda\", \"price\": \"39.900\"}]. Nothing else. No markdown. No additional text before or after."
-    ]
+    prev_output = ""
     
     for attempt in range(1, max_retries + 1):
-        idx = min(attempt - 1, len(prompts) - 1)
-        content = call_ollama(prompts[idx], base64_image)
+        if attempt == 1:
+            desc = call_ollama(PROMPT_PRODUCTS_FIRST, base64_image)
+            if not desc:
+                if attempt < max_retries:
+                    print(f"   Retry {attempt}/{max_retries} (empty description)...")
+                    continue
+                return []
+            content = call_ollama_chat(PROMPT_PRODUCTS_SECOND, base64_image, desc, "")
+        else:
+            # Retry with chat context showing previous bad output
+            correction = (
+                "That was not valid. Return ONLY a JSON array: "
+                '[{"brand": "AICE", "product": "Sandwich Cookies Panda", "price": "39.900", "unit": "6 x 45 ml", "promo": "BUY 1 GET 1"}] '
+                "No other text."
+            )
+            content = call_ollama_chat(PROMPT_PRODUCTS_FIRST, base64_image, prev_output, correction)
         
         if debug_file:
             debug_info = {
                 "image": image_path,
                 "attempt": attempt,
-                "prompt": prompts[idx],
                 "response": content,
                 "timestamp": str(__import__('datetime').datetime.now())
             }
@@ -174,6 +212,8 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
             print(f"[OK] Extracted {len(products)} product(s) from {os.path.basename(image_path)}")
             return products
         
+        prev_output = content[:500]
+        
         if attempt < max_retries:
             print(f"   Retry {attempt}/{max_retries} (bad format)...")
     
@@ -182,27 +222,29 @@ def extract_product_prices(image_path: str, debug_file: str = None) -> List[Dict
 
 
 def extract_promo_date(image_path: str, debug_file: str = None) -> str:
-    """Extract promo validity period/date range from an image"""
     if not os.path.exists(image_path):
         return ""
     
     base64_image = encode_image_to_base64(image_path)
     max_retries = 3
-    prompts = [
-        PROMPT_DATE,
-        PROMPT_DATE + "\nIMPORTANT: Return ONLY a JSON object like {\"promo_period\": \"...\"}. No other text.",
-        PROMPT_DATE + "\nCRITICAL: ONLY a JSON object. No markdown. No extra words. Example: {\"promo_period\": \"7 - 20 Mei 2026\"}"
-    ]
+    prev_output = ""
+    correction = ""
     
     for attempt in range(1, max_retries + 1):
-        idx = min(attempt - 1, len(prompts) - 1)
-        content = call_ollama(prompts[idx], base64_image)
+        if attempt == 1:
+            content = call_ollama(PROMPT_DATE, base64_image)
+        else:
+            correction = "That was not a valid JSON object. Return ONLY {\"promo_period\": \"...\"} with no other text."
+            content = call_ollama_chat(PROMPT_DATE, base64_image, prev_output, correction)
         
         if debug_file:
+            used_prompt = PROMPT_DATE
+            if attempt > 1:
+                used_prompt = f"{PROMPT_DATE}\n[Previous bad output]: {prev_output[:200]}\n[Correction]: {correction}"
             debug_info = {
                 "image": image_path,
                 "attempt": attempt,
-                "prompt": prompts[idx],
+                "prompt": used_prompt,
                 "response": content,
                 "timestamp": str(__import__('datetime').datetime.now())
             }
@@ -222,6 +264,8 @@ def extract_promo_date(image_path: str, debug_file: str = None) -> str:
                 return period
         except json.JSONDecodeError:
             pass
+        
+        prev_output = content[:500]
         
         if attempt < max_retries:
             print(f"   Retry date {attempt}/{max_retries} (bad format)...")
