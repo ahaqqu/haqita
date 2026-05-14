@@ -40,7 +40,7 @@ echo ========================================
 echo  Superindo OCR Integration Test
 echo ========================================
 echo.
-python "%SCRIPT_DIR%test_ocr_image.py" --output "%PROJECT_DIR%\output\integration_test_superindo.json"
+python "%SCRIPT_DIR%test_superindo_ocr.py" --output "%PROJECT_DIR%\output\integration_test_superindo.json"
 set EXIT_CODE=!ERRORLEVEL!
 goto SHOW_RESULT
 
@@ -74,7 +74,7 @@ if not exist "%img_path%" (
 set /p store="Store name for output file [lotte/superindo]: "
 if "!store!"=="" set store=custom
 echo.
-python "%SCRIPT_DIR%test_ocr_image.py" --image "%img_path%" --output "%PROJECT_DIR%\output\integration_test_!store!.json"
+python "%SCRIPT_DIR%test_superindo_ocr.py" --image "%img_path%" --output "%PROJECT_DIR%\output\integration_test_!store!.json"
 set EXIT_CODE=!ERRORLEVEL!
 goto SHOW_RESULT
 
@@ -88,7 +88,7 @@ set ALL_PASSED=1
 
 echo --- Test 1: Superindo OCR ---
 echo.
-python "%SCRIPT_DIR%test_ocr_image.py" --output "%PROJECT_DIR%\output\integration_test_superindo.json"
+python "%SCRIPT_DIR%test_superindo_ocr.py" --output "%PROJECT_DIR%\output\integration_test_superindo.json"
 if !ERRORLEVEL! neq 0 set ALL_PASSED=0
 echo.
 echo ----------------------------------------
