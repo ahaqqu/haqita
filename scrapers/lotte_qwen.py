@@ -318,9 +318,6 @@ def main():
         state["last_run"] = datetime.now().isoformat()
         save_state(state)
 
-        # Update state with this processed image
-        state["processed"].append(result)
-
     # Update final status (already saved incrementally)
     output_file.write_text(
         json.dumps({
