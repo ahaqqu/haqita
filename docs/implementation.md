@@ -6,6 +6,12 @@ Scrape promo brochures from Lotte Mart and Superindo, extract product data using
 normalize product names across stores, consolidate into a unified dataset, and display price
 comparisons in a dynamic HTML page — with historical price tracking for trend analysis.
 
+**Critical Design Principles:**
+1. **Fail gracefully**: Partial results are better than no results
+2. **Validate everything**: Never trust OCR output without validation
+3. **Monitor continuously**: Detect failures before users do
+4. **Test comprehensively**: Cover edge cases, not just happy paths
+
 ```
                     ┌──────────────┐
                     │  Lotte Mart  │
@@ -74,7 +80,8 @@ output/
 ├── superindo_promos_20260514_081500.json    # Superindo OCR — per run, never overwritten
 ├── consolidated_20260514_082000.json        # Merged data — per run, never overwritten
 ├── consolidated_latest.json                 # Symlink/copy of latest (for HTML fetch)
-└── price_history.json                       # Accumulated over time (appended each run)
+├── price_history.json                       # Accumulated over time (appended each run)
+└── price_history.json.backup                # Auto-backup before each write (critical!)
 ```
 
 ### price_history.json format
@@ -94,7 +101,240 @@ output/
         {"date": "2026-05-14", "store": "Superindo", "price": 3400, "promo": null}
       ]
     }
+  ],
+  "metadata": {
+    "last_updated": "2026-05-14T08:20:00",
+    "total_runs": 52,
+    "schema_version": "1.0"
+  }
+}
+```
+
+### ⚠️ Critical: Data Retention Policy
+
+**Problem:** `price_history.json` will grow unbounded (~100 KB/run × 52 runs/year = 5 MB/year per product).
+
+**Solution:** Implement tiered retention:
+- Keep **daily snapshots** for last 90 days
+- After 90 days, keep only **weekly aggregates** (avg price per week)
+- After 1 year, keep only **monthly aggregates**
+
+**Implementation:** Add `aggregate_history.py` script to run monthly, compressing old data.
+
+---
+
+## Data Validation Layer (CRITICAL)
+
+**Problem:** OCR output is unreliable. Without validation, garbage data pollutes `price_history.json` permanently.
+
+### Validation Rules
+
+All OCR output MUST pass these checks before being saved:
+
+| Check | Rule | Action on Failure |
+|-------|------|-------------------|
+| **Schema validation** | All required fields present (name, price, unit) | Reject product, log warning |
+| **Price sanity** | Price must be 100 ≤ price ≤ 1,000,000 IDR | Reject product, flag for review |
+| **Name validity** | Product name ≥ 3 characters, not all caps | Reject product |
+| **Unit consistency** | Unit must match known patterns (g, ml, kg, L, pcs) | Normalize or reject |
+| **Duplicate detection** | Same (name, brand, unit, price) within same store | Deduplicate, keep first |
+| **Confidence scoring** | Flag products with low OCR confidence (<0.7) | Mark for manual review |
+
+### Pydantic Schema Definition
+
+Create `schemas/product.py`:
+
+```python
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List
+from datetime import datetime
+
+class ProductSnapshot(BaseModel):
+    date: str
+    store: str
+    price: int
+    promo: Optional[str]
+    period: Optional[str]
+    
+    @validator('price')
+    def price_must_be_reasonable(cls, v):
+        if not (100 <= v <= 1_000_000):
+            raise ValueError(f'Price {v} outside reasonable range')
+        return v
+    
+    @validator('store')
+    def store_must_be_known(cls, v):
+        allowed = {'Lotte', 'Superindo'}
+        if v not in allowed:
+            raise ValueError(f'Unknown store: {v}')
+        return v
+
+class OCRProduct(BaseModel):
+    name: str = Field(..., min_length=3)
+    brand: Optional[str]
+    unit: Optional[str]
+    price: int
+    promo: Optional[str]
+    period: Optional[str]
+    image_source: str
+    ocr_confidence: float = Field(ge=0.0, le=1.0)
+    
+    @validator('name')
+    def name_not_all_caps(cls, v):
+        if v.isupper() and len(v) > 5:
+            raise ValueError('Product name appears to be all caps')
+        return v
+    
+    @validator('ocr_confidence')
+    def flag_low_confidence(cls, v):
+        if v < 0.7:
+            # Don't reject, but flag for review
+            pass
+        return v
+
+class ConsolidatedProduct(BaseModel):
+    key: str
+    name: str
+    brand: Optional[str]
+    unit: Optional[str]
+    stores: List[ProductSnapshot]
+    price_min: int
+    price_max: int
+    cheapest_store: str
+    price_gap: int
+```
+
+### Validation Flow
+
+```
+OCR Output → Schema Validation → Price Sanity Check → Deduplication → Confidence Scoring → Save
+                  ↓                      ↓                    ↓                  ↓
+              Reject if             Reject if          Remove dups         Flag if <0.7
+              invalid               unreasonable                          for review
+```
+
+### Manual Review Queue
+
+Products flagged for review are saved to `output/review_queue.json`:
+
+```json
+{
+  "flagged_products": [
+    {
+      "product": {...},
+      "reason": "low_ocr_confidence",
+      "confidence": 0.45,
+      "timestamp": "2026-05-14T08:20:00"
+    }
   ]
+}
+```
+
+---
+
+## Error Handling & Recovery Strategy (CRITICAL)
+
+**Problem:** The plan assumes OCR always succeeds and websites are always available.
+
+### Retry Logic with Exponential Backoff
+
+```python
+import time
+from functools import wraps
+
+def retry_with_backoff(max_retries=5, base_delay=1.0, max_delay=60.0):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = base_delay
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (RequestException, TimeoutError) as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    wait_time = min(delay * (2 ** attempt), max_delay)
+                    logger.warning(f'Retry {attempt+1}/{max_retries} after {wait_time}s: {e}')
+                    time.sleep(wait_time)
+            return None
+        return wrapper
+    return decorator
+```
+
+**Applied to:**
+- Image downloads (network timeouts)
+- Ollama API calls (service downtime)
+- Website scraping (rate limiting)
+
+### Circuit Breaker Pattern for Ollama
+
+```python
+class CircuitBreaker:
+    def __init__(self, failure_threshold=5, recovery_timeout=300):
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = 'CLOSED'  # CLOSED, OPEN, HALF_OPEN
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+    
+    def call(self, func, *args, **kwargs):
+        if self.state == 'OPEN':
+            if time.time() - self.last_failure_time > self.recovery_timeout:
+                self.state = 'HALF_OPEN'
+            else:
+                raise CircuitBreakerOpenError('Ollama service unavailable')
+        
+        try:
+            result = func(*args, **kwargs)
+            if self.state == 'HALF_OPEN':
+                self.state = 'CLOSED'
+                self.failure_count = 0
+            return result
+        except Exception as e:
+            self.failure_count += 1
+            self.last_failure_time = time.time()
+            if self.failure_count >= self.failure_threshold:
+                self.state = 'OPEN'
+            raise
+```
+
+### Graceful Degradation
+
+| Failure Scenario | Degradation Strategy |
+|-----------------|---------------------|
+| Ollama completely down | Skip AI matching, use only rule-based normalization |
+| One store scraper fails | Continue with other store, show partial results |
+| OCR returns empty array | Log error, continue with other images, alert user |
+| `price_history.json` corrupted | Restore from `.backup`, log incident |
+| Network timeout mid-batch | Save partial state, resume from checkpoint |
+
+### Health Check Endpoint
+
+Create `scripts/health_check.py`:
+
+```bash
+# Run before starting pipeline
+python scripts/health_check.py
+```
+
+Checks:
+- [ ] Ollama service responding (`ollama list`)
+- [ ] Required models installed (`qwen3-vl:2b`, `qwen3:4b`)
+- [ ] Write permissions to `output/` directory
+- [ ] Disk space available (>1 GB free)
+- [ ] Internet connectivity (can reach lottemart.co.id, superindo.co.id)
+
+Output:
+```json
+{
+  "status": "healthy|degraded|unhealthy",
+  "checks": {
+    "ollama": {"status": "pass|fail", "latency_ms": 245},
+    "models": {"status": "pass|fail", "missing": []},
+    "disk": {"status": "pass|fail", "free_gb": 15.3},
+    "network": {"status": "pass|fail"}
+  },
+  "timestamp": "2026-05-14T08:00:00"
 }
 ```
 
@@ -163,15 +403,28 @@ The `data-fancybox` attribute value indicates the region. We filter for `jabodet
 
 **Testing:**
 
-| Test | Method |
-|---|---|
-| HTML parsing | Save a local copy of the Superindo page, run BeautifulSoup parsing in isolation |
-| Image download | Run scraper in dry-run mode (`--dry-run`) to verify URLs are extracted correctly |
-| OCR on a single image | Manually download one catalog image and run `extract_product_prices()` on it |
-| Full run | `python scripts/scrapers/superindo_qwen.py` with `LOTTE_TEST_MODE=false` |
-| Duplicate detection | Run twice — second run should skip all images (MD5 match) |
+| Test | Method | Edge Cases Covered |
+|---|---|---|
+| HTML parsing | Save a local copy of the Superindo page, run BeautifulSoup parsing in isolation | Malformed HTML, missing elements, changed structure |
+| Image download | Run scraper in dry-run mode (`--dry-run`) to verify URLs are extracted correctly | Broken URLs, 404 errors, redirects |
+| OCR on a single image | Manually download one catalog image and run `extract_product_prices()` on it | Blank images, ad-only images, corrupted files |
+| Full run | `python scripts/scrapers/superindo_qwen.py` with `LOTTE_TEST_MODE=false` | End-to-end validation |
+| Duplicate detection | Run twice — second run should skip all images (MD5 match) | Same image, different URL; rotated images |
+| **OCR failure handling** | Mock Ollama to return empty/error responses | Verify graceful degradation |
+| **Network timeout** | Use `toxiproxy` to simulate network delays | Verify retry logic works |
+| **Validation layer** | Feed malformed OCR output | Verify rejection and logging |
 
 **Dry-run support:** Same as Lotte scraper — `--dry-run` flag fetches and reports new images without OCR.
+
+**Test Fixtures Required:**
+```
+test_data/
+├── superindo/
+│   ├── sample_html/           # Saved HTML snapshots
+│   ├── sample_images/         # 10 diverse promo images
+│   ├── edge_cases/            # Blank, ads-only, corrupted
+│   └── golden_outputs/        # Expected OCR results for regression
+```
 
 ---
 
@@ -181,20 +434,25 @@ The `data-fancybox` attribute value indicates the region. We filter for `jabodet
 
 **Files to create:**
 - `scripts/consolidate.py`
+- `schemas/product.py` (Pydantic validation schemas)
 
 **Steps:**
 
 ```
-1. Load latest lotte_promos_*.json
-2. Load latest superindo_promos_*.json
-3. Load existing price_history.json (create if not exists)
-4. Apply rule-based normalization to all product names
-5. Group products by (normalized_name, brand)
-6. For unmatched products: AI fuzzy matching via qwen3:4b
-7. Build consolidated product list
-8. Update price_history.json with today's snapshots
-9. Write consolidated_YYYYMMDD_HHMMSS.json
-10. Copy to consolidated_latest.json
+1. Run health check (fail fast if critical services unavailable)
+2. Load latest lotte_promos_*.json
+3. Load latest superindo_promos_*.json
+4. Load existing price_history.json (create if not exists)
+5. BACKUP price_history.json → price_history.json.backup
+6. Validate all OCR outputs against Pydantic schemas
+7. Apply rule-based normalization to all product names
+8. Group products by (normalized_name, brand, unit_hash)
+9. For unmatched products: AI fuzzy matching via qwen3:4b
+10. Build consolidated product list
+11. Update price_history.json with today's snapshots
+12. Write consolidated_YYYYMMDD_HHMMSS.json
+13. Copy to consolidated_latest.json
+14. Log metrics for monitoring
 ```
 
 **Rule-based normalization (deterministic, catches ~80%):**
@@ -205,14 +463,69 @@ The `data-fancybox` attribute value indicates the region. We filter for `jabodet
 3. Strip brand prefix from product name if brand field exists
 4. Lowercase and strip whitespace
 5. Remove punctuation differences (/, -, .)
+6. Normalize unit representations: "gram" → "g", "mililiter" → "ml"
+7. Create unit_hash for size comparison (e.g., "85g" → hash(85, "g"))
 ```
 
 Example matching:
 ```
-Lotte: "Indomie Goreng Ayam Geprek 85 g"  → normalized: "indomie goreng ayam geprek"
-Superindo: "Indomie Goreng Ayam Geprek"    → normalized: "indomie goreng ayam geprek"
+Lotte: "Indomie Goreng Ayam Geprek 85 g"  → normalized: "indomie goreng ayam geprek", unit_hash: hash(85, "g")
+Superindo: "Indomie Goreng Ayam Geprek"    → normalized: "indomie goreng ayam geprek", unit_hash: hash(85, "g")
 Result: MATCH ✓
+
+Lotte: "Indomie Goreng 85g"                → unit_hash: hash(85, "g")
+Superindo: "Indomie Goreng 80g"            → unit_hash: hash(80, "g")
+Result: NO MATCH (different sizes) ✗
 ```
+
+**⚠️ Critical: Product Matching Algorithm Improvements**
+
+The simple rule-based + AI approach has fundamental flaws. Implement this hybrid approach:
+
+```
+Step 1: Exact match on (normalized_name + brand + unit_hash)
+        ↓ (no match)
+Step 2: Fuzzy match on name only IF units are equivalent
+        - Use Levenshtein distance or ratio (>0.85 = match)
+        - Handle multi-pack conversions: "6 x 45 ml" = "270 ml"
+        ↓ (ambiguous, similarity 0.6-0.85)
+Step 3: AI verification via qwen3:4b
+        - Batch send ambiguous pairs only
+        - Cache AI decisions for future runs
+        ↓ (AI uncertain or "maybe")
+Step 4: Flag for manual review in review_queue.json
+```
+
+**Unit Equivalence Logic:**
+```python
+def normalize_unit_to_ml(unit_str):
+    """Convert all volume units to ml for comparison"""
+    mappings = {
+        'l': 1000, 'liter': 1000, 'liters': 1000,
+        'ml': 1, 'milliliter': 1, 'milliliters': 1,
+        'cl': 10, 'centiliter': 10
+    }
+    # Parse "6 x 45 ml" → 270 ml
+    # Parse "1.5 L" → 1500 ml
+    ...
+
+def normalize_unit_to_g(unit_str):
+    """Convert all weight units to g for comparison"""
+    mappings = {
+        'kg': 1000, 'kilogram': 1000, 'kilograms': 1000,
+        'g': 1, 'gram': 1, 'grams': 1,
+        'mg': 0.001
+    }
+    ...
+```
+
+**Handling Promotional Bundles:**
+```
+"DAPAT 5 pcs" at price 15000 → unit_price = 15000 / 5 = 3000 per pcs
+"Beli 2 Gratis 1" at price 6000 → unit_price = 6000 / 3 = 2000 per item
+```
+
+Store both `total_price` and `unit_price` in the schema for accurate comparisons.
 
 **AI fuzzy matching (catches remaining ~20%):**
 
@@ -222,12 +535,34 @@ For products that didn't find an exact match after rule-based normalization, bat
 Prompt:
 You are matching grocery products across stores.
 Do these two product names refer to the same item? Answer yes or no only.
+Consider:
+- Same brand and similar name = likely match
+- Different sizes (85g vs 80g) = NOT a match
+- Multi-pack vs single unit = NOT a match unless unit prices match
 
-Product A (Store: Lotte): "ILGUSTO Bratwurst Original 360 g"
-Product B (Store: Superindo): "Bratwurst Sosis 360g"
+Product A (Store: Lotte): "ILGUSTO Bratwurst Original 360 g" - Rp 45000
+Product B (Store: Superindo): "Bratwurst Sosis 360g" - Rp 48000
 ```
 
 **Model:** `ollama pull qwen3:4b` (~2.5 GB Q4_K_M) — text-only model, runs on CPU, ~2-5s per batch of 50 pairs.
+
+**⚠️ Critical: AI Response Validation**
+
+The AI might return unexpected responses. Implement robust parsing:
+
+```python
+def parse_ai_response(response_text):
+    response = response_text.strip().lower()
+    
+    if response in ['yes', 'ya', 'y', 'match', 'sama']:
+        return True
+    elif response in ['no', 'tidak', 'n', 'nomatch', 'beda']:
+        return False
+    else:
+        # AI returned something unexpected like "maybe", "not sure"
+        logger.warning(f'Unexpected AI response: {response}')
+        return None  # Flag for manual review
+```
 
 **Consolidated output format:**
 
@@ -246,16 +581,21 @@ Product B (Store: Superindo): "Bratwurst Sosis 360g"
       "name": "Indomie Goreng Ayam Geprek",
       "brand": "Indomie",
       "unit": "85 g",
+      "unit_price": 3100,
       "stores": [
         {
           "store": "Lotte",
           "price": 3100,
+          "total_price": 15500,
+          "bundle_size": 5,
           "promo": "DAPAT 5 pcs",
           "period": "7 - 20 Mei 2026"
         },
         {
           "store": "Superindo",
           "price": 3500,
+          "total_price": 3500,
+          "bundle_size": 1,
           "promo": null,
           "period": "12 - 25 Mei 2026"
         }
@@ -271,20 +611,46 @@ Product B (Store: Superindo): "Bratwurst Sosis 360g"
     "matched_across_stores": 12,
     "lotte_only": 20,
     "superindo_only": 13,
-    "ai_matches": 3
+    "ai_matches": 3,
+    "validation_rejected": 2,
+    "flagged_for_review": 1
+  },
+  "metadata": {
+    "schema_version": "1.0",
+    "validation_passed": true
   }
 }
 ```
 
 **Testing:**
 
-| Test | Method |
-|---|---|
-| Rule-based normalization | Create a test file with known product name pairs, verify matching |
-| AI normalization | Run consolidate with 3-5 intentionally different product names, verify model correctly matches/mismatches |
-| No-overwrite | Run consolidate twice — verify new timestamped file each time |
-| Price history append | Run consolidate twice — verify price_history.json has 2 entries per product |
-| Latest copy | Verify consolidated_latest.json is overwritten (not appended) |
+| Test | Method | Edge Cases Covered |
+|---|---|---|
+| Rule-based normalization | Create a test file with 50+ known product name pairs | Punctuation, case, spacing variations |
+| Unit equivalence | Test "6 x 45 ml" vs "270 ml", "1.5 L" vs "1500 ml" | Multi-pack conversions |
+| Bundle pricing | Test "DAPAT 5 pcs" price calculations | Division, rounding |
+| AI normalization | Run consolidate with 10 intentionally different product names | Verify correct match/mismatch |
+| **Empty input** | Run with one store having zero products | No division by zero, graceful handling |
+| **Corrupted history** | Corrupt price_history.json before run | Verify backup restore works |
+| **AI returns garbage** | Mock AI to return "maybe", "idk", random text | Verify parsing handles edge cases |
+| No-overwrite | Run consolidate twice — verify new timestamped file each time | File naming uniqueness |
+| Price history append | Run consolidate twice — verify price_history.json has 2 entries per product | Correct appending |
+| Latest copy | Verify consolidated_latest.json is overwritten (not appended) | Atomic write |
+| **Chaos test** | Kill Ollama mid-run | Verify partial state saved, can resume |
+
+**Test Fixtures Required:**
+```
+test_data/
+├── consolidate/
+│   ├── sample_lotte_promos.json
+│   ├── sample_superindo_promos.json
+│   ├── edge_cases/
+│   │   ├── empty_store.json
+│   │   ├── malformed_prices.json
+│   │   └── duplicate_products.json
+│   └── golden_outputs/
+│       └── expected_consolidated.json
+```
 
 ---
 
@@ -341,14 +707,16 @@ User opens index.html in browser
 
 **Testing:**
 
-| Test | Method |
-|---|---|
-| JSON fetch | Open index.html in browser, verify products load |
-| Empty state | Remove all JSON files, verify page shows "No data" gracefully |
-| Error state | Corrupt JSON, verify error message shown |
-| Trend chart | After 2 consolidate runs, verify chart appears with 2 data points per store |
-| Mobile | Open on phone / resize browser, verify responsive layout |
-| Cross-browser | Test in Chrome + Firefox + Edge |
+| Test | Method | Edge Cases Covered |
+|---|---|---|
+| JSON fetch | Open index.html in browser, verify products load | Network latency, large JSON files |
+| Empty state | Remove all JSON files, verify page shows "No data" gracefully | Zero products, missing files |
+| Error state | Corrupt JSON, verify error message shown | Malformed JSON, encoding errors |
+| Trend chart | After 2 consolidate runs, verify chart appears with 2 data points per store | Single data point, missing dates |
+| Mobile | Open on phone / resize browser, verify responsive layout | Small screens, touch interactions |
+| Cross-browser | Test in Chrome + Firefox + Edge | Browser-specific CSS/JS issues |
+| **Performance** | Load 500+ products, measure render time | Large datasets, slow devices |
+| **Accessibility** | Run Lighthouse audit | Screen reader compatibility, keyboard nav |
 
 ---
 
@@ -385,10 +753,171 @@ What would you like to do?
 ```
 
 **Full pipeline (option 7) runs sequentially:**
-1. Lotte scraper (with OCR)
-2. Superindo scraper (with OCR)
-3. Consolidation + normalization
-4. Report summary: "X products, Y matched across stores"
+1. Health check (fail fast if critical issues)
+2. Lotte scraper (with OCR, retry logic)
+3. Superindo scraper (with OCR, retry logic)
+4. Consolidation + normalization (with validation)
+5. Report summary: "X products, Y matched across stores, Z flagged for review"
+6. Log metrics to `output/metrics_YYYYMMDD.json`
+
+---
+
+## Monitoring & Alerting (CRITICAL)
+
+**Problem:** No way to detect when scraper stops working silently.
+
+### Metrics to Track
+
+Log these metrics every run to `output/metrics_YYYYMMDD.json`:
+
+```json
+{
+  "timestamp": "2026-05-14T08:20:00",
+  "run_id": "20260514_082000",
+  "stores": {
+    "lotte": {
+      "images_found": 6,
+      "images_downloaded": 6,
+      "ocr_success": 5,
+      "ocr_failed": 1,
+      "products_extracted": 42,
+      "validation_rejected": 2,
+      "processing_time_seconds": 145
+    },
+    "superindo": {
+      "images_found": 8,
+      "images_downloaded": 7,
+      "ocr_success": 7,
+      "ocr_failed": 0,
+      "products_extracted": 56,
+      "validation_rejected": 1,
+      "processing_time_seconds": 198
+    }
+  },
+  "consolidation": {
+    "total_products": 78,
+    "matched_across_stores": 23,
+    "ai_matches": 5,
+    "flagged_for_review": 3,
+    "processing_time_seconds": 45
+  },
+  "health": {
+    "ollama_latency_ms": 2450,
+    "network_errors": 0,
+    "retry_attempts": 2
+  }
+}
+```
+
+### Alert Thresholds
+
+| Metric | Warning Threshold | Critical Threshold | Action |
+|--------|------------------|-------------------|--------|
+| OCR failure rate | >10% | >30% | Check Ollama service, image quality |
+| Validation rejection rate | >5% | >20% | Review OCR model, update validation rules |
+| Products extracted | <10 | 0 | Website structure may have changed |
+| AI match rate | <5% | 0% | AI model may be broken |
+| Processing time | >10 min | >30 min | Performance degradation |
+| Flagged for review | >10 | >50 | Manual review backlog growing |
+
+### Dashboard Requirements
+
+Create a simple status page at `status.html`:
+
+- Last successful run timestamp
+- Products count trend (last 10 runs)
+- OCR success rate chart
+- Store availability indicators
+- Alert banner if any threshold exceeded
+
+### Notification Strategy
+
+For now, log alerts to console and file. Future enhancement:
+- Email notification on critical failures
+- Slack/Telegram webhook integration
+- SMS alert for prolonged outages
+
+---
+
+## Security Considerations
+
+| Risk | Mitigation |
+|------|------------|
+| SSRF vulnerability (scraping arbitrary URLs) | Validate URLs against allowlist (only lottemart.co.id, superindo.co.id) |
+| Path traversal (filenames from URLs) | Sanitize filenames: remove non-alphanumeric characters, use MD5 prefix |
+| Rate limiting / IP blocks | Respectful scraping: 1-2 second delays between requests, rotate user-agents |
+| API key exposure (future paid services) | Use environment variables, never commit secrets to git |
+| Data integrity | Backup before writes, validate all inputs, checksum verification |
+
+---
+
+## Configuration Management
+
+**Problem:** Hardcoded values scattered across scripts.
+
+**Solution:** Create `config.yaml`:
+
+```yaml
+scrapers:
+  lotte:
+    url: https://www.lottemart.co.id/all-promo-mart
+    min_image_size_kb: 50
+    request_delay_seconds: 2
+    
+  superindo:
+    url: https://www.superindo.co.id/promosi/katalog-super-hemat/
+    region_filter: "jabodetabek-palembang"
+    min_image_size_kb: 50
+    request_delay_seconds: 2
+
+ocr:
+  model: qwen3-vl:2b
+  timeout_seconds: 300
+  max_retries: 5
+  base_retry_delay_seconds: 1.0
+  
+consolidation:
+  ai_model: qwen3:4b
+  fuzzy_match_threshold: 0.85
+  ai_verification_min_similarity: 0.6
+  
+validation:
+  min_price: 100
+  max_price: 1000000
+  min_product_name_length: 3
+  ocr_confidence_threshold: 0.7
+  
+monitoring:
+  metrics_enabled: true
+  alert_on_failure: true
+  retention_days: 90
+```
+
+Load configuration in all scripts:
+```python
+import yaml
+
+def load_config():
+    with open('config.yaml', 'r') as f:
+        return yaml.safe_load(f)
+
+config = load_config()
+```
+
+---
+
+## Risk Assessment Summary
+
+| Risk | Likelihood | Impact | Mitigation Status |
+|------|-----------|--------|-------------------|
+| Website structure changes | High | High | ✅ Version control parsers, alert on parsing failures |
+| OCR quality degradation | Medium | High | ✅ Golden file regression tests, confidence scoring |
+| AI matching errors | Medium | Medium | ✅ Hybrid approach, manual review queue |
+| price_history.json corruption | Low | High | ✅ Auto-backup, schema validation |
+| Ollama service downtime | Medium | Medium | ✅ Retry logic, circuit breaker, graceful degradation |
+| Rate limiting/blocks | Low | Medium | ✅ Respectful scraping, configurable delays |
+| Data growth unbounded | Medium | Low | ✅ Tiered retention policy documented |
+| Silent failures | Medium | High | ✅ Metrics logging, alert thresholds defined |
 
 ---
 
@@ -397,9 +926,10 @@ What would you like to do?
 | Phase | Deliverables | Effort |
 |---|---|---|
 | 1 — Superindo scraper | `superindo_qwen.py` | ~300 lines, reuses existing OCR infra |
-| 2 — Consolidation | `consolidate.py`, pull `qwen3:4b` | ~400 lines |
-| 3 — HTML + trends | `index.html` | ~300 lines (JS + CSS + HTML) |
-| 4 — Integration | Update `haqita.bat`, add docs | ~50 lines |
+| 2 — Consolidation | `consolidate.py`, `schemas/product.py` | ~500 lines (includes validation, error handling) |
+| 3 — HTML + trends | `index.html`, `status.html` | ~400 lines (JS + CSS + HTML) |
+| 4 — Integration | Update `haqita.bat`, add docs, `config.yaml` | ~100 lines |
+| **New: Infrastructure** | `schemas/`, `test_data/`, monitoring | ~200 lines |
 
 **Models required:**
 - `qwen3-vl:2b` (already have) — for OCR on images
@@ -407,4 +937,13 @@ What would you like to do?
 
 **Storage growth:**
 - Each scrape run: ~6 images × ~1 MB = ~6 MB per store per run
-- price_history.json: ~100 KB per run (grows linearly over time)
+- price_history.json: ~100 KB per run (with tiered retention after 90 days)
+- metrics files: ~5 KB per run (auto-cleanup after 90 days)
+
+**Critical Success Factors:**
+1. ✅ Data validation layer prevents garbage data pollution
+2. ✅ Error handling ensures graceful degradation
+3. ✅ Comprehensive testing covers edge cases
+4. ✅ Monitoring detects failures before users do
+5. ✅ Configuration management enables easy tuning
+6. ✅ Security best practices protect against common vulnerabilities
