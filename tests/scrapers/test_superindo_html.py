@@ -1,10 +1,10 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.scrapers.superindo_qwen import parse_page_images
 
-FIXTURES_DIR = Path(__file__).resolve().parent.parent / "data" / "test" / "superindo" / "html-scape"
+FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "test" / "superindo" / "html-scape"
 
 
 def _load_fixture(name: str) -> str:

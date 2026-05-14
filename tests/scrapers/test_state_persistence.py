@@ -3,7 +3,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 # Mock the paths before importing the scraper
 import scripts.scrapers.superindo_qwen as scraper

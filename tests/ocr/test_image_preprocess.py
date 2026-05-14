@@ -2,7 +2,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.ocr.image_preprocess import preprocess_for_ocr, split_image_halves
 
 MOCK_CFG = {
