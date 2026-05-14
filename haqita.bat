@@ -2,63 +2,87 @@
 title Haqita - Grocery Price Tool
 setlocal enabledelayedexpansion
 
-:LOTTE_MENU
+:MENU
 cls
 echo ========================================
 echo        Haqita - Grocery Price Tool
 echo ========================================
 echo.
-echo  What would you like to do?
-echo.
-echo  [1] Run Lotte Promo Scraper
-echo  [2] Run Qwen3-VL OCR on local images
-echo  [3] Dry-run scraper (see new promos without OCR)
-echo  [4] Exit
+echo  [1] Scrape Lotte Mart promos
+echo  [2] Scrape Superindo promos
+echo  [3] Dry-run Lotte  (no OCR, just check for new images)
+echo  [4] Dry-run Superindo
+echo  [5] Run standalone OCR on images
+echo  [6] Exit
 echo.
 
-set /p choice="Enter your choice (1-4): "
+set /p choice="Your choice: "
 
-if "%choice%"=="1" goto RUN_SCRAPE
-if "%choice%"=="2" goto RUN_OCR
-if "%choice%"=="3" goto RUN_DRY
-if "%choice%"=="4" goto END
+if "%choice%"=="1" goto RUN_LOTTE
+if "%choice%"=="2" goto RUN_SUPERINDO
+if "%choice%"=="3" goto RUN_LOTTE_DRY
+if "%choice%"=="4" goto RUN_SUPERINDO_DRY
+if "%choice%"=="5" goto RUN_OCR
+if "%choice%"=="6" goto END
 
 echo Invalid choice. Press any key to try again...
 pause >nul
-goto LOTTE_MENU
+goto MENU
 
-:RUN_SCRAPE
+:RUN_LOTTE
 cls
 echo ========================================
-echo  Running Lotte Promo Scraper + OCR
+echo  Scraping Lotte Mart Promos
 echo ========================================
 echo.
-call "scripts\run_lotte_scraper.bat"
+python scripts/scrapers/lotte_qwen.py
 echo.
 pause
-goto LOTTE_MENU
+goto MENU
 
-:RUN_DRY
+:RUN_SUPERINDO
 cls
 echo ========================================
-echo  Running Lotte Promo Scraper (DRY-RUN)
+echo  Scraping Superindo Promos
 echo ========================================
 echo.
-call "scripts\run_lotte_scraper.bat" --dry-run
+python scripts/scrapers/superindo_qwen.py
 echo.
 pause
-goto LOTTE_MENU
+goto MENU
+
+:RUN_LOTTE_DRY
+cls
+echo ========================================
+echo  Dry-run Lotte Mart (no OCR)
+echo ========================================
+echo.
+python scripts/scrapers/lotte_qwen.py --dry-run
+echo.
+pause
+goto MENU
+
+:RUN_SUPERINDO_DRY
+cls
+echo ========================================
+echo  Dry-run Superindo (no OCR)
+echo ========================================
+echo.
+python scripts/scrapers/superindo_qwen.py --dry-run
+echo.
+pause
+goto MENU
 
 :RUN_OCR
 cls
 echo ========================================
-echo  Running Qwen3-VL OCR
+echo  Running OCR on Local Images
 echo ========================================
 echo.
-call "scripts\run_qwen_ocr.bat"
+python scripts/qwen_ocr_processor.py
 echo.
 pause
-goto LOTTE_MENU
+goto MENU
 
 :END
 cls
