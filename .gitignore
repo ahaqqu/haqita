@@ -1,3 +1,10 @@
-(docs/implementation.md is just a markdown documentation file - no build artifacts, dependencies, or temp files in the changes)
-
-(empty - no output)
+.env
+.vscode/
+output
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
