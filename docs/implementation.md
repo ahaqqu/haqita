@@ -340,6 +340,22 @@ Output:
 
 ---
 
+## Summary: Plan vs. Assessment
+
+| Current Plan | Assessment Recommendation | Action |
+|---|---|---|
+| Rigid canonical key (`name--brand--unit`) | Multi-key blocking with OCR tolerance | ✅ Updated to `generate_blocking_keys()` |
+| Brute-force O(n²) cosine similarity | FAISS ANN indexing | ✅ Added `ProductMatcher` class |
+| Pairwise matching only | Transitive closure via match graph | ✅ Added `MatchGraph` + NetworkX |
+| Simple threshold-based decisions | Fellegi-Sunter probabilistic linkage | ⏳ Future enhancement after v1 |
+| Passive review queue | Active learning prioritization | ⏳ Future enhancement after v1 |
+| Manual unit parsing | `UnitParser` with OCR tolerance | ✅ Added `UnitParser` class |
+| `all-MiniLM-L6-v2` embeddings | `paraphrase-multilingual-MiniLM-L12-v2` | ✅ Adopted in v1 spec |
+
+**Items deferred to v2:** Probabilistic record linkage and active learning for review queue. These require labeled training data that we don't have yet — they'll become valuable after 4-6 weeks of operation when sufficient ambiguous cases have accumulated.
+
+---
+
 ## Implementation Phases
 
 ### Phase 1 — Superindo Scraper
@@ -678,37 +694,149 @@ Scrape → Extract Products → Generate Canonical Keys → Store in Catalog
                             Low confidence? → Flag for review, don't merge
 ```
 
-### Step 1: Automatic Canonical Key Generation
+### Step 1: Robust Canonical Key Generation with Multi-Key Blocking
 
-Every product gets a **canonical key** generated from its attributes:
+Instead of a single rigid key, generate **multiple blocking keys** per product to catch OCR noise and variations:
 
 ```python
-def generate_canonical_key(name, brand, unit):
+def generate_blocking_keys(name, brand, unit):
     """
-    Generate a stable, unique key for a product.
-    Example: "indomie-goreng-ayam-geprek--indomie--85g"
+    Generate multiple blocking keys to catch OCR variations.
+    A product matches if it shares ANY blocking key with another product.
     """
-    # Normalize name: lowercase, remove punctuation, collapse spaces
-    normalized_name = re.sub(r'[^a-z0-9\s]', '', name.lower())
-    normalized_name = re.sub(r'\s+', '-', normalized_name.strip())
+    keys = set()
     
-    # Normalize brand
-    normalized_brand = brand.lower().replace(' ', '-') if brand else 'unknown'
+    # Normalize base name: strip units, special chars, lowercase
+    base = re.sub(r'\b\d+[\sx]*\d*\s*(g|gram|kg|ml|l|liter|pcs|pack)\b', '', name.lower())
+    base = re.sub(r'[^a-z0-9\s]', '', base)
+    base = re.sub(r'\s+', ' ', base).strip()
     
-    # Normalize unit (keep as-is for now, will improve later)
-    normalized_unit = unit.lower().replace(' ', '') if unit else 'unknown'
+    brand_norm = brand.lower().replace(' ', '') if brand else 'unknown'
     
-    return f"{normalized_name}--{normalized_brand}--{normalized_unit}"
+    # Key 1: Name + Brand (ignores unit entirely — catches unit OCR errors)
+    keys.add(f"{base}::{brand_norm}")
+    
+    # Key 2: Name only (for private label / no-brand items)
+    keys.add(f"{base}::nobrand")
+    
+    # Key 3: Name + normalized size bucket (if unit is parseable)
+    unit_grams = normalize_unit_to_grams(unit)
+    if unit_grams:
+        size_bucket = round(unit_grams / 10) * 10  # 85g → 80g bucket, 93g → 90g bucket
+        keys.add(f"{base}::{brand_norm}::{size_bucket}g")
+    
+    return keys
 ```
 
-**Example outputs:**
-| Raw Product | Canonical Key |
-|-------------|---------------|
-| Indomie Goreng Ayam Geprek 85g (Indomie) | `indomie-goreng-ayam-geprek--indomie--85g` |
-| ILGUSTO Bratwurst Original 360g | `ilgusto-bratwurst-original--ilgusto--360g` |
-| Coca-Cola 1.5L | `coca-cola--coca-cola--1.5l` |
+**Why this works:** A product with OCR unit "85g" and another with "8Sg" (OCRed as S instead of 5) will still share the name+brand blocking key, so they enter the same comparison pool.
 
-### Step 2: Catalog Storage Structure
+### Step 2: FAISS-Based ANN Matching (Scalable)
+
+Replace brute-force O(n²) cosine similarity with Approximate Nearest Neighbors:
+
+```python
+import faiss
+import numpy as np
+
+class ProductMatcher:
+    def __init__(self, embedding_dim=384):
+        self.index = faiss.IndexFlatIP(embedding_dim)
+        self.catalog_keys = []
+    
+    def add_catalog_batch(self, products, embeddings):
+        faiss.normalize_L2(embeddings)
+        self.index.add(embeddings)
+        self.catalog_keys.extend([p['key'] for p in products])
+    
+    def search(self, query_emb, k=5, threshold=0.75):
+        query_norm = query_emb.reshape(1, -1)
+        faiss.normalize_L2(query_norm)
+        scores, indices = self.index.search(query_norm, k)
+        
+        matches = []
+        for score, idx in zip(scores[0], indices[0]):
+            if score >= threshold:
+                matches.append((self.catalog_keys[int(idx)], float(score)))
+        return matches
+```
+
+Benefits: sub-millisecond lookups even with 10K+ entries, incremental updates.
+
+### Step 3: Transitive Closure via Match Graph
+
+Single pairwise comparisons miss relationships. Use a graph to propagate matches:
+
+```python
+import networkx as nx
+
+class MatchGraph:
+    def __init__(self):
+        self.graph = nx.Graph()
+    
+    def add_match(self, product_a, product_b, match_type, confidence):
+        self.graph.add_edge(
+            product_a['key'], product_b['key'],
+            type=match_type, confidence=confidence
+        )
+    
+    def get_clusters(self):
+        """Return groups of products that are the same item."""
+        return list(nx.connected_components(self.graph))
+```
+
+**Why this matters:** If Lotte A matches Superindo B (AI score 0.81), and Superindo B matches a future Alfamart C (embedding score 0.88), the graph ensures A, B, C all resolve to the same canonical product — even if A↔C direct similarity is only 0.65.
+
+### Step 4: Embedding Model Selection
+
+| Model | Size | Indonesian Support | Recommendation |
+|-------|------|--------------------|----------------|
+| `paraphrase-multilingual-MiniLM-L12-v2` | 420 MB | Good (12 languages) | **Default** |
+| `intfloat/multilingual-e5-small` | 118 MB | Good | Lighter alternative |
+| Fine-tuned sentence-transformer | ~80 MB | Best (domain-tuned) | Long-term goal |
+
+**For v1:** Use `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` via Python package (not Ollama). It produces 384-dim embeddings in ~5ms per product on CPU.
+
+### Step 5: Unit Parser with OCR Error Tolerance
+
+```python
+class UnitParser:
+    PATTERNS = [
+        (r'(\d+(?:[.,]\d+)?)\s*(?:x|X|×)\s*(\d+(?:[.,]\d+)?)\s*(g|kg|ml|l)', 'multipack'),
+        (r'(\d+(?:[.,]\d+)?)\s*(kg|kilogram)', 'weight'),
+        (r'(\d+(?:[.,]\d+)?)\s*(g|gram)', 'weight'),
+        (r'(\d+(?:[.,]\d+)?)\s*(l|liter)', 'volume'),
+        (r'(\d+(?:[.,]\d+)?)\s*(ml)', 'volume'),
+        (r'(\d+)\s*(pcs|pack|sachet)', 'count'),
+    ]
+    
+    @classmethod
+    def parse(cls, text):
+        """Return (normalized_value, unit_type, display_string) or None."""
+        if not text:
+            return None
+        text = text.lower().replace(',', '.')
+        for pattern, utype in cls.PATTERNS:
+            m = re.search(pattern, text)
+            if m:
+                if utype == 'multipack':
+                    total = float(m.group(1)) * float(m.group(2))
+                    return (total, 'weight', f"{int(total)}g")
+                return (float(m.group(1)), utype, m.group(0))
+        return None
+    
+    @classmethod
+    def compatible(cls, u1, u2):
+        """Check if two units refer to same size (with 15% tolerance for OCR)."""
+        p1, p2 = cls.parse(u1), cls.parse(u2)
+        if not p1 or not p2:
+            return u1.strip().lower() == u2.strip().lower()
+        if p1[1] != p2[1]:
+            return False
+        ratio = max(p1[0], p2[0]) / max(min(p1[0], p2[0]), 0.01)
+        return ratio <= 1.15
+```
+
+### Step 6: Catalog Storage Structure
 
 Create `output/product_catalog.json`:
 
