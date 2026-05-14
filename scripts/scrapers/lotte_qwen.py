@@ -1,8 +1,3 @@
-"""
-Lotte Promo Scraper + Qwen3-VL OCR
-Fetches promo images from Lotte Mart website, detects new promos via MD5 hash,
-and runs Qwen3-VL OCR on new images only.
-"""
 import argparse
 import hashlib
 import json
@@ -18,23 +13,15 @@ from bs4 import BeautifulSoup
 from PIL import Image
 from io import BytesIO
 
-# Add project root to path for qwen_ocr_processor import
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from qwen_ocr_processor import extract_product_prices, extract_promo_date
 
-# --- Paths ---
 STATE_DIR = Path("data/scape")
 IMAGES_DIR = STATE_DIR / "lotte"
 STATE_FILE = STATE_DIR / "lotte_state.json"
 
-# --- URLs ---
 LOTTE_URL = "https://www.lottemart.co.id/all-promo-mart"
 
-# --- Test mode paths ---
-TEST_HTML = Path("data/test/lotte/html-scape/All Promo Mart.html")
-TEST_HTML_FILES = Path("data/test/lotte/html-scape/All Promo Mart_files")
-
-# --- Headers ---
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -47,7 +34,6 @@ HEADERS = {
     "Upgrade-Insecure-Requests": "1",
 }
 
-# --- Proxy ---
 PROXY_CONFIG = {}
 if os.getenv("HTTP_PROXY"):
     PROXY_CONFIG["http"] = os.getenv("HTTP_PROXY")
@@ -74,14 +60,7 @@ def save_state(state: dict):
     STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def fetch_html(test_mode: bool) -> str:
-    if test_mode:
-        if not TEST_HTML.exists():
-            print(f"[!] Test HTML not found: {TEST_HTML}")
-            sys.exit(1)
-        print("[*] Test mode: loading local HTML")
-        return TEST_HTML.read_text(encoding="utf-8")
-
+def fetch_html() -> str:
     print(f"[*] Fetching {LOTTE_URL} ...")
     resp = requests.get(LOTTE_URL, headers=HEADERS, proxies=PROXY_CONFIG, timeout=60)
     resp.raise_for_status()
@@ -89,7 +68,7 @@ def fetch_html(test_mode: bool) -> str:
     return resp.text
 
 
-def parse_promo_images(html: str, test_mode: bool) -> list:
+def parse_promo_images(html: str) -> list:
     soup = BeautifulSoup(html, "html.parser")
     urls = []
     keywords = {"promo", "flyer", "catalog", "katalog", "ht"}
@@ -102,23 +81,16 @@ def parse_promo_images(html: str, test_mode: bool) -> list:
 
         src_lower = src.lower()
 
-        # Skip GIF animations
         if any(src_lower.endswith(ext) for ext in exclude_ext):
             continue
 
-        if test_mode:
-            if src.startswith("./All Promo Mart_files/"):
-                url = TEST_HTML_FILES / src.split("/")[-1]
-                urls.append((str(url), src))
-        else:
-            if any(k in src_lower for k in keywords):
-                if src.startswith("//"):
-                    src = "https:" + src
-                elif src.startswith("/"):
-                    src = "https://www.lottemart.co.id" + src
-                urls.append((src, src))
+        if any(k in src_lower for k in keywords):
+            if src.startswith("//"):
+                src = "https:" + src
+            elif src.startswith("/"):
+                src = "https://www.lottemart.co.id" + src
+            urls.append((src, src))
 
-    # Deduplicate by URL string
     seen = set()
     unique = []
     for url, orig in urls:
@@ -129,11 +101,7 @@ def parse_promo_images(html: str, test_mode: bool) -> list:
     return unique
 
 
-def download_image(url: str, test_mode: bool) -> bytes:
-    if test_mode:
-        path = Path(url)
-        return path.read_bytes()
-
+def download_image(url: str) -> bytes:
     print(f"   Downloading: {url}")
     resp = requests.get(url, headers=HEADERS, proxies=PROXY_CONFIG, timeout=120)
     resp.raise_for_status()
@@ -144,10 +112,7 @@ def filename_from_url(url: str, md5_prefix: str = "") -> str:
     parsed = urlparse(url)
     name = os.path.basename(parsed.path)
     if not name or "." not in name:
-        name = os.path.basename(url)  # fallback for test mode file paths
-    if not name or "." not in name:
         name = f"promo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-    # Prefix with first 8 chars of MD5 to avoid name collisions across runs
     if md5_prefix:
         stem, ext = os.path.splitext(name)
         name = f"{stem}_{md5_prefix[:8]}{ext}"
@@ -159,49 +124,41 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Fetch and report new images without OCR")
     args = parser.parse_args()
 
-    test_mode = os.getenv("LOTTE_TEST_MODE", "false").lower() == "true"
-
     ensure_dirs()
     state = load_state()
 
     print("=" * 60)
     print("  Lotte Promo Scraper")
-    print(f"  Mode: {'TEST (local HTML)' if test_mode else 'LIVE'}")
     if args.dry_run:
         print("  Dry-run: YES (no OCR)")
     print("=" * 60)
     print()
 
-    # 1. Fetch HTML
-    html = fetch_html(test_mode)
+    html = fetch_html()
 
-    # 2. Parse promo image URLs
-    image_refs = parse_promo_images(html, test_mode)
+    image_refs = parse_promo_images(html)
     print(f"[*] Found {len(image_refs)} promo image(s) in HTML\n")
 
     if not image_refs:
         print("[!] No promo images found. Exiting.")
         return
 
-    # 3. Download + hash + compare + filter by size/dimensions
     known_hashes = {entry["md5"] for entry in state.get("processed", [])}
     seen_this_run = set()
     new_images = []
     existing_images = []
     MIN_SIZE = 50 * 1024
-    MIN_DIM = 300  # minimum width or height in pixels (logos/icons are tiny)
+    MIN_DIM = 300
 
     for url, orig_ref in image_refs:
         try:
-            data = download_image(url, test_mode)
+            data = download_image(url)
             h = md5_hash(data)
 
-            # Skip tiny files (logos, icons, GIF animations)
             if len(data) < MIN_SIZE:
                 print(f"   [SKIP] {os.path.basename(urlparse(orig_ref).path)} — too small ({len(data)} bytes)")
                 continue
 
-            # Skip small-dimension images (logos, icons, thumbnails)
             try:
                 pil_img = Image.open(BytesIO(data))
                 iw, ih = pil_img.size
@@ -209,15 +166,13 @@ def main():
                     print(f"   [SKIP] {os.path.basename(urlparse(orig_ref).path)} — too small ({iw}x{ih})")
                     continue
             except Exception:
-                pass  # if we can't read the image, proceed anyway
+                pass
 
-            # Skip duplicates within this same batch (same MD5)
             if h in seen_this_run:
                 print(f"   [SKIP] {os.path.basename(urlparse(orig_ref).path)} — duplicate content (same MD5)")
                 continue
             seen_this_run.add(h)
 
-            # Save to disk with unique filename (hash-prefixed)
             fname = filename_from_url(orig_ref, h)
             dest = IMAGES_DIR / fname
             if not dest.exists():
@@ -255,7 +210,6 @@ def main():
         print("[*] No new images to OCR. Exiting.")
         return
 
-    # 4. Run OCR on new images (with incremental saving)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = Path("output") / f"lotte_promos_{timestamp}.json"
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -287,7 +241,6 @@ def main():
         ocr_results.append(result)
         print(f"   -> {len(products)} products in {t1-t0:.0f}s")
 
-        # Show extracted items
         if promo_date:
             print(f"   Period: {promo_date}")
         for p in products:
@@ -299,11 +252,9 @@ def main():
             tag = f"[{brand}] " if brand else ""
             print(f"   - {tag}{product}: {price}{unit_str}")
 
-        # Incrementally save after each image
         partial_output = {
             "scrape_date": datetime.now().isoformat(),
-            "source": TEST_HTML if test_mode else LOTTE_URL,
-            "mode": "test" if test_mode else "live",
+            "source": LOTTE_URL,
             "new_images": ocr_results,
             "total_new": len(ocr_results),
             "total_skipped": len(existing_images),
@@ -313,17 +264,14 @@ def main():
             json.dumps(partial_output, indent=2, ensure_ascii=False), encoding="utf-8"
         )
 
-        # Update and save state after each image
         state["processed"].append(result)
         state["last_run"] = datetime.now().isoformat()
         save_state(state)
 
-    # Update final status (already saved incrementally)
     output_file.write_text(
         json.dumps({
             "scrape_date": datetime.now().isoformat(),
-            "source": TEST_HTML if test_mode else LOTTE_URL,
-            "mode": "test" if test_mode else "live",
+            "source": LOTTE_URL,
             "new_images": ocr_results,
             "total_new": len(ocr_results),
             "total_skipped": len(existing_images),
