@@ -2,8 +2,8 @@
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo  Qwen3-VL Product Promo OCR Processor
-echo  Runs on Windows with Ollama + Qwen3-VL 2B
+echo  Ollama Product Promo OCR Processor
+echo  Runs on Windows with Ollama + Qwen3-VL
 echo ========================================
 echo.
 
@@ -50,7 +50,7 @@ if errorlevel 1 (
 echo.
 echo Starting OCR...
 echo.
-python "%~dp0qwen_ocr_processor.py"
+python "%~dp0ollama_ocr_processor.py"
 
 echo.
 pause

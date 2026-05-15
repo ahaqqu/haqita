@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo  Lotte Promo Scraper + Qwen3-VL OCR
+echo  Lotte Promo Scraper + OCR
 echo ========================================
 echo.
 
@@ -52,7 +52,7 @@ if defined DRY_RUN (
     echo Running full scrape
 )
 echo.
-python "%~dp0scrapers\lotte_qwen.py" %DRY_RUN%
+python "%~dp0scrapers\lotte.py" %DRY_RUN%
 
 echo.
 pause

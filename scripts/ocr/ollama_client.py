@@ -1,13 +1,16 @@
 import base64
+import os
 
 import requests
 
 from .prompts import get_prompt
 from .ocr_processor import _parse_ocr_json
 
+# Ollama base URL — use env var for Docker (host.docker.internal:11434)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
 
 def call_ollama_ocr(image_path: str, cfg: dict) -> list[dict]:
-    provider = cfg['ocr']['provider']
     ollama_cfg = cfg['ocr'].get('ollama', {})
     store = cfg.get('store', 'superindo')
     prompt = get_prompt('ollama', store)
@@ -26,7 +29,7 @@ def call_ollama_ocr(image_path: str, cfg: dict) -> list[dict]:
             "seed": 42
         }
     }
-    resp = requests.post("http://localhost:11434/api/generate", json=payload,
+    resp = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload,
                          timeout=ollama_cfg.get('timeout_seconds', 300))
     resp.raise_for_status()
     raw_text = resp.json()['response']

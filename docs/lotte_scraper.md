@@ -1,6 +1,6 @@
 # Lotte Promo Scraper
 
-Fetches promo flyers from Lotte Mart website, detects new promos via content hashing, and extracts product data using Qwen3-VL OCR.
+Fetches promo flyers from Lotte Mart website, detects new promos via content hashing, and extracts product data using OCR.
 
 ## How It Works
 
@@ -11,7 +11,7 @@ Fetches promo flyers from Lotte Mart website, detects new promos via content has
 4. Filter         → Skip logos/icons (size < 50KB, dimensions < 300px)
 5. Deduplicate    → MD5 hash comparison against state history
 6. Skip old       → Already-processed hashes skipped
-7. OCR new        → Qwen3-VL extracts products + promo period
+7. OCR new        → OCR extracts products + promo period
 8. Save results   → output/lotte_promos_YYYYMMDD_HHMMSS.json
 9. Update state   → data/scrape/lotte_state.json
 ```
@@ -36,8 +36,8 @@ scripts\run_lotte_scraper.bat
 
 ### Direct Python
 ```cmd
-python scripts/scrapers/lotte_qwen.py --dry-run
-python scripts/scrapers/lotte_qwen.py
+python scripts/scrapers/lotte.py --dry-run
+python scripts/scrapers/lotte.py
 ```
 
 ## New Promo Detection
@@ -96,7 +96,7 @@ Saved incrementally after each image — a crash on image 4 preserves images 1-3
 
 | Path | Purpose |
 |---|---|
-| `scripts/scrapers/lotte_qwen.py` | Scraper script |
+| `scripts/scrapers/lotte.py` | Scraper script |
 | `scripts/run_lotte_scraper.bat` | Batch launcher |
 | `data/scrape/lotte/` | Downloaded promo images |
 | `data/scrape/lotte_state.json` | Processed image tracking |
@@ -116,7 +116,7 @@ Uses `data/test/lotte/html-scape/All Promo Mart.html` and assets from its `All P
 
 - Python 3.8+
 - `requests`, `beautifulsoup4`, `Pillow`
-- Ollama with `qwen3-vl:2b` (auto-pulled by batch file)
+- Ollama with `qwen3-vl:7b` (configurable in config.yaml)
 - Internet connection for live scraping
 
 ## Configuration

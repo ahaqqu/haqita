@@ -4,20 +4,22 @@ Items to address after Phase 2 is complete.
 
 ## Phase 1 Refactoring
 
-### [ ] `lotte_qwen.py` uses old `qwen_ocr_processor.py`
-- **Location**: `scripts/scrapers/lotte_qwen.py:17`
-- **Issue**: Imports from legacy `qwen_ocr_processor.py` (root-level) instead of the newer `scripts/ocr/` module used by `superindo_qwen.py`.
-- **Impact**: Duplicated OCR logic, inconsistent product schema (uses `product` key vs `name` key), harder to maintain.
-- **Fix**: Refactor to use `scripts/ocr/ocr_processor.py` + `validate_product()` like Superindo scraper does.
+### [x] Scrapers share duplicated code (state, download, etc.)
+- **Status**: DONE — Extracted `scripts/scrapers/base_scraper.py` with `BaseScraper` class.
+- Both `lotte.py` and `superindo.py` now inherit from `BaseScraper`.
+- Shared code: `md5_hash`, `load_state`, `save_state`, `filename_from_url`, `download_image`, `fetch_html`, `download_and_classify`, `run_ocr_loop`.
+
+### [ ] `lotte.py` uses old `ollama_ocr_processor.py`
+- **Status**: PARTIAL — Refactored to use `BaseScraper`, but still imports from legacy `ollama_ocr_processor.py` instead of `scripts/ocr/` module.
+- **Impact**: Duplicated OCR logic, inconsistent product schema.
+- **Fix**: Switch to `scripts/ocr/ocr_processor.py` + `validate_product()` like Superindo scraper does.
 
 ### [ ] Lotte scraper output schema differs from Superindo
-- **Lotte output**: `{scrape_date, source, new_images: [{filename, md5, products: [{brand, product, price, unit, promo}], product_count, promo_period}]}`
-- **Superindo output**: `{scrape_date, source, mode, new_images: [{filename, md5, products: [{name, brand, unit, price, promo, period, image_source, ...}], rejected, product_count}]}`
-- **Impact**: `consolidate.py` must handle both schemas. Better to unify.
-- **Fix**: Standardize both scrapers to output the same schema (see `docs/implementation-phase2.md` §4.1).
+- **Status**: DONE — `_normalize_lotte_products()` in `lotte.py` converts raw OCR output to standard schema.
+- **Remaining**: Full refactor to use `scripts/ocr/` module (see item above).
 
-### [ ] `data/scape` typo already fixed
-- **Status**: DONE — Fixed in `lotte_qwen.py`, `docs/implementation.md`, `docs/lotte_scraper.md`.
+### [x] `data/scape` typo
+- **Status**: DONE — Fixed in `lotte.py`, `docs/implementation.md`, `docs/lotte_scraper.md`.
 
 ## Future Improvements
 

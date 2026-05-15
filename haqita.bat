@@ -35,7 +35,7 @@ echo ========================================
 echo  Scraping Lotte Mart Promos
 echo ========================================
 echo.
-python scripts/scrapers/lotte_qwen.py
+python scripts/scrapers/lotte.py
 echo.
 pause
 goto MENU
@@ -46,7 +46,7 @@ echo ========================================
 echo  Scraping Superindo Promos
 echo ========================================
 echo.
-python scripts/scrapers/superindo_qwen.py
+python scripts/scrapers/superindo.py
 echo.
 pause
 goto MENU
@@ -57,7 +57,7 @@ echo ========================================
 echo  Dry-run Lotte Mart (no OCR)
 echo ========================================
 echo.
-python scripts/scrapers/lotte_qwen.py --dry-run
+python scripts/scrapers/lotte.py --dry-run
 echo.
 pause
 goto MENU
@@ -68,7 +68,7 @@ echo ========================================
 echo  Dry-run Superindo (no OCR)
 echo ========================================
 echo.
-python scripts/scrapers/superindo_qwen.py --dry-run
+python scripts/scrapers/superindo.py --dry-run
 echo.
 pause
 goto MENU

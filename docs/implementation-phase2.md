@@ -104,8 +104,9 @@ haqita/
 │
 ├── scripts/
 │   ├── scrapers/
-│   │   ├── lotte_qwen.py               # Lotte Mart scraper (existing)
-│   │   └── superindo_qwen.py           # Superindo scraper (existing)
+│   │   ├── base_scraper.py               # Shared scraper infrastructure (BaseScraper class)
+│   │   ├── lotte.py                      # Lotte Mart scraper (store-specific)
+│   │   └── superindo.py                  # Superindo scraper (store-specific)
 │   ├── consolidate.py                  # NEW — Merge + match + output JSON
 │   ├── run_consolidate.bat             # NEW — Windows launcher for consolidation
 │   ├── ocr/

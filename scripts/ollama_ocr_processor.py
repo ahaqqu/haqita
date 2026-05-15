@@ -1,8 +1,8 @@
 # TODO check used? if not, remove
 
 """
-Qwen3-VL OCR Processor for Product Promos
-Runs on Windows with Ollama + Qwen3-VL 2B
+Ollama OCR Processor for Product Promos
+Runs on Windows with Ollama (model configurable)
 Extracts product names and prices as structured pairs
 """
 
@@ -394,9 +394,9 @@ if __name__ == "__main__":
     
     input_directory = "data/test/lotte/image-brochure"
     output_json = f"output/product_prices_{timestamp}.json"
-    debug_log = f"output/qwen_debug_{timestamp}.log"
+    debug_log = f"output/ollama_debug_{timestamp}.log"
     
-    print("Qwen3-VL Product Promo OCR")
+    print("Ollama Product Promo OCR")
     print("=" * 50)
     print(f"Model: {MODEL_NAME}")
     print(f"Input: {input_directory}")

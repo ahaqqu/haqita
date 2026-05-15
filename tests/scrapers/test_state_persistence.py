@@ -5,8 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-# Mock the paths before importing the scraper
-import scripts.scrapers.superindo_qwen as scraper
+# Use base_scraper for shared utilities
+from scripts.scrapers.base_scraper import load_state, save_state, md5_hash
 
 
 class TestStatePersistence:
@@ -14,16 +14,13 @@ class TestStatePersistence:
         state_dir = tmp_path / "scrape"
         state_file = state_dir / "superindo_state.json"
         assert not state_file.exists()
-        # Test the load_state directly with a temp state file path
-        scraper.STATE_FILE = state_file
-        state = scraper.load_state()
+        state = load_state(state_file)
         assert state == {"last_run": None, "processed": []}
 
     def test_save_and_reload_state(self, tmp_path):
         state_dir = tmp_path / "scrape"
         state_dir.mkdir(parents=True, exist_ok=True)
         state_file = state_dir / "superindo_state.json"
-        scraper.STATE_FILE = state_file
 
         state = {
             "last_run": "2026-05-14T12:00:00",
@@ -31,10 +28,10 @@ class TestStatePersistence:
                 {"filename": "img1.jpg", "md5": "abc123", "image_url": "https://example.com/1.jpg"}
             ]
         }
-        scraper.save_state(state)
+        save_state(state, state_file)
         assert state_file.exists()
 
-        loaded = scraper.load_state()
+        loaded = load_state(state_file)
         assert loaded["last_run"] == "2026-05-14T12:00:00"
         assert len(loaded["processed"]) == 1
         assert loaded["processed"][0]["md5"] == "abc123"
@@ -44,12 +41,10 @@ class TestStatePersistence:
         state_dir.mkdir(parents=True, exist_ok=True)
         state_file = state_dir / "superindo_state.json"
         state_file.write_text("not valid json", encoding="utf-8")
-        scraper.STATE_FILE = state_file
 
         # Should raise JSON decode error
-        import json
         try:
-            scraper.load_state()
+            load_state(state_file)
             assert False, "Should have raised"
         except json.JSONDecodeError:
             pass
@@ -65,8 +60,8 @@ class TestDuplicateDetection:
         data1 = b"hello world"
         data2 = b"hello world"
         data3 = b"different content"
-        assert scraper.md5_hash(data1) == scraper.md5_hash(data2)
-        assert scraper.md5_hash(data1) != scraper.md5_hash(data3)
+        assert md5_hash(data1) == md5_hash(data2)
+        assert md5_hash(data1) != md5_hash(data3)
 
     def test_duplicate_in_same_batch_filtered(self):
         """Simulate the dedup logic within a single run."""
@@ -78,7 +73,7 @@ class TestDuplicateDetection:
             ("https://example.com/b.jpg", "b.jpg"),
         ]
         for url, fname in urls:
-            h = scraper.md5_hash(url.encode())
+            h = md5_hash(url.encode())
             if h in seen_this_run:
                 continue
             seen_this_run.add(h)
