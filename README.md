@@ -29,7 +29,6 @@ haqita/
 ├── Dockerfile                        ← Docker image for consolidation pipeline
 ├── docker-compose.yml                ← Docker service definition
 ├── scripts/
-│   ├── ollama_ocr_processor.py       ← Legacy Ollama OCR engine (used by lotte.py)
 │   ├── scrapers/
 │   │   ├── base_scraper.py           ← Shared scraper infrastructure
 │   │   ├── lotte.py                  ← Lotte Mart scraper (store-specific)

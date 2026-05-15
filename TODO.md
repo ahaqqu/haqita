@@ -9,14 +9,15 @@ Items to address after Phase 2 is complete.
 - Both `lotte.py` and `superindo.py` now inherit from `BaseScraper`.
 - Shared code: `md5_hash`, `load_state`, `save_state`, `filename_from_url`, `download_image`, `fetch_html`, `download_and_classify`, `run_ocr_loop`.
 
-### [ ] `lotte.py` uses old `ollama_ocr_processor.py`
-- **Status**: PARTIAL — Refactored to use `BaseScraper`, but still imports from legacy `ollama_ocr_processor.py` instead of `scripts/ocr/` module.
-- **Impact**: Duplicated OCR logic, inconsistent product schema.
-- **Fix**: Switch to `scripts/ocr/ocr_processor.py` + `validate_product()` like Superindo scraper does.
+### [x] `lotte.py` uses old `ollama_ocr_processor.py`
+- **Status**: DONE — Now uses `scripts/ocr/ollama_client.py` with proven two-step OCR strategy.
+- Legacy `ollama_ocr_processor.py` removed.
 
-### [ ] Lotte scraper output schema differs from Superindo
-- **Status**: DONE — `_normalize_lotte_products()` in `lotte.py` converts raw OCR output to standard schema.
-- **Remaining**: Full refactor to use `scripts/ocr/` module (see item above).
+### [x] Lotte scraper output schema differs from Superindo
+- **Status**: DONE — Both scrapers now produce the same standard product schema:
+  - `lotte.py`: `_normalize_lotte_products()` adds missing fields
+  - `superindo.py`: `validate_product()` adds missing fields
+  - Final output: `{"name", "brand", "unit", "price", "promo", "period", "image_source", "ocr_raw_price", "ocr_confidence"}`
 
 ### [x] `data/scape` typo
 - **Status**: DONE — Fixed in `lotte.py`, `docs/implementation.md`, `docs/lotte_scraper.md`.

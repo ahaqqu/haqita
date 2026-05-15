@@ -7,7 +7,6 @@ content hashing, and extracts product data using OCR.
 
 import argparse
 import os
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +17,7 @@ from bs4 import BeautifulSoup
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.scrapers.base_scraper import BaseScraper, DEFAULT_HEADERS, fetch_html
 from scripts.ocr.image_preprocess import preprocess_for_ocr
-from scripts.ollama_ocr_processor import extract_product_prices, extract_promo_date
+from scripts.ocr.ollama_client import call_ollama_ocr, extract_promo_date
 
 # --- Store-specific configuration ---
 STORE_NAME = "Lotte"
@@ -33,49 +32,31 @@ HEADERS = {
 }
 
 
-def _clean_price(raw) -> int | None:
-    """Parse Indonesian price string to integer. '39.900' → 39900."""
-    if raw is None:
-        return None
-    s = re.sub(r'[Rr][Pp]\.?\s*', '', str(raw)).strip()
-    s = re.sub(r'(\d)\.(\d{3})(?!\d)', r'\1\2', s)
-    s = s.replace(',', '').replace(' ', '').replace('.', '')
-    try:
-        val = int(float(s))
-        return val if 100 <= val <= 1_000_000 else None
-    except (ValueError, TypeError):
-        return None
-
-
 def _normalize_lotte_products(
     raw_products: list[dict], image_source: str, promo_date: str | None
 ) -> list[dict]:
     """
-    Convert Lotte's raw OCR output to the standard product schema.
+    Add missing fields to OCR output to match the standard product schema.
 
-    Raw Lotte format (from ollama_ocr_processor.py):
-        {"brand": "...", "product": "...", "price": "39.900", "unit": "...", "promo": "..."}
-
-    Standard schema:
-        {"name": "...", "brand": "...", "unit": "...", "price": 39900,
-         "promo": "...", "period": "...", "image_source": "...",
-         "ocr_raw_price": "39.900", "ocr_confidence": 1.0}
+    New client already returns: name (str), brand (str|None), unit (str|None),
+    price (int), promo (str|None). We add: period, image_source, ocr_raw_price,
+    ocr_confidence.
     """
     normalized = []
     for raw in raw_products:
-        price = _clean_price(raw.get("price"))
+        price = raw.get("price")
         if price is None:
-            continue  # Skip products with unparseable prices
+            continue
 
         normalized.append({
-            "name": str(raw.get("product", "")).strip(),
+            "name": str(raw.get("name", "")).strip(),
             "brand": str(raw["brand"]).strip() if raw.get("brand") else None,
             "unit": str(raw["unit"]).strip() if raw.get("unit") else None,
-            "price": price,
+            "price": int(price),
             "promo": str(raw["promo"]).strip() if raw.get("promo") else None,
             "period": promo_date or None,
             "image_source": image_source,
-            "ocr_raw_price": str(raw.get("price", "")),
+            "ocr_raw_price": str(price),
             "ocr_confidence": 1.0,
         })
     return normalized
@@ -131,8 +112,8 @@ class LotteScraper(BaseScraper):
     def run_ocr(self, image_path: Path, entry: dict) -> tuple[list[dict], list[dict]]:
         """Run OCR on a Lotte brochure image with preprocessing."""
         processed_path = preprocess_for_ocr(str(image_path), self.cfg)
-        products_raw = extract_product_prices(str(processed_path))
-        promo_date = extract_promo_date(str(processed_path))
+        products_raw = call_ollama_ocr(str(processed_path), self.cfg)
+        promo_date = extract_promo_date(str(processed_path), self.cfg)
         products = _normalize_lotte_products(
             products_raw, entry["filename"], promo_date
         )
