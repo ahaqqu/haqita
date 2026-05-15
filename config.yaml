@@ -21,6 +21,7 @@ ocr:
     timeout_seconds: 300
     max_retries: 2
     temperature: 0
+    preprocess: true                    # Upscale + enhance before OCR (Ollama only)
     image_min_width_px: 1400
     image_contrast_enhance: 1.4
     image_sharpness_enhance: 1.2

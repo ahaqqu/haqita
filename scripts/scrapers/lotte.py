@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.scrapers.base_scraper import BaseScraper, DEFAULT_HEADERS, fetch_html
+from scripts.ocr.image_preprocess import preprocess_for_ocr
 from scripts.ollama_ocr_processor import extract_product_prices, extract_promo_date
 
 # --- Store-specific configuration ---
@@ -88,6 +89,10 @@ class LotteScraper(BaseScraper):
     state_file = STATE_FILE
     headers = HEADERS
 
+    def __init__(self, cfg: dict = None):
+        super().__init__()
+        self.cfg = cfg or {"ocr": {"provider": "ollama", "ollama": {"preprocess": True}}}
+
     def collect_image_refs(self) -> list[tuple[str, str]]:
         """Fetch Lotte HTML and extract promo image URLs by keyword matching."""
         html = fetch_html(LOTTE_URL, self.headers, self.proxies)
@@ -124,13 +129,17 @@ class LotteScraper(BaseScraper):
         return unique
 
     def run_ocr(self, image_path: Path, entry: dict) -> tuple[list[dict], list[dict]]:
-        """Run Qwen3-VL OCR on a Lotte brochure image."""
-        products_raw = extract_product_prices(str(image_path))
-        promo_date = extract_promo_date(str(image_path))
+        """Run OCR on a Lotte brochure image with preprocessing."""
+        processed_path = preprocess_for_ocr(str(image_path), self.cfg)
+        products_raw = extract_product_prices(str(processed_path))
+        promo_date = extract_promo_date(str(processed_path))
         products = _normalize_lotte_products(
             products_raw, entry["filename"], promo_date
         )
-        return products, []  # Lotte legacy OCR doesn't produce rejected list
+        # Clean up processed temp file if different from original
+        if processed_path != str(image_path):
+            Path(processed_path).unlink(missing_ok=True)
+        return products, []
 
     def build_output(self, ocr_results: list, skipped_count: int, status: str) -> dict:
         """Build Lotte-specific output dict."""
@@ -144,12 +153,30 @@ class LotteScraper(BaseScraper):
         }
 
 
+def _load_config() -> dict:
+    """Load config.yaml with .env overrides."""
+    import yaml
+    from dotenv import load_dotenv
+    load_dotenv()
+    cfg_path = Path(__file__).resolve().parent.parent.parent / 'config.yaml'
+    with open(cfg_path) as f:
+        cfg = yaml.safe_load(f)
+    env_provider = os.getenv('OCR_PROVIDER')
+    if env_provider:
+        cfg['ocr']['provider'] = env_provider
+    env_key = os.getenv('GEMINI_API_KEY')
+    if env_key:
+        cfg['ocr']['gemini']['api_key'] = env_key
+    return cfg
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Lotte Promo Scraper + Qwen3-VL OCR")
+    parser = argparse.ArgumentParser(description="Lotte Promo Scraper + OCR")
     parser.add_argument("--dry-run", action="store_true", help="Fetch and report new images without OCR")
     args = parser.parse_args()
 
-    scraper = LotteScraper()
+    cfg = _load_config()
+    scraper = LotteScraper(cfg)
     scraper.ensure_dirs()
     state = scraper.load_state()
 
