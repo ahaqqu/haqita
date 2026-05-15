@@ -2,6 +2,7 @@
 Shared integration test utilities for OCR testing.
 
 Both Lotte and Superindo integration tests use this module.
+Assert files are read from: data/test/<store>/ocr-result/<provider>/<image>.json
 """
 
 import json
@@ -14,6 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.ocr.ocr_processor import extract_products, validate_product
 from scripts.ocr.image_preprocess import preprocess_for_ocr
 from tests.integration.compare_results import load_asserts, compare_results
+
+# Base test data directory
+TEST_DATA_DIR = Path("data/test")
 
 # Output directory for integration test results
 OUTPUT_DIR = Path("work/tests")
@@ -67,7 +71,6 @@ def check_provider(cfg: dict) -> bool:
 def run_ocr_on_image(
     img_path: Path,
     cfg: dict,
-    asserts_dir: Path,
     output_dir: Path,
 ) -> tuple[int, str]:
     """
@@ -147,8 +150,8 @@ def run_ocr_on_image(
         json.dumps(actual_result, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
-    # Compare against assert if available
-    expected = load_asserts(asserts_dir, provider, store, img_path.stem)
+    # Compare against assert if available (from data/test/<store>/ocr-result/<provider>/)
+    expected = load_asserts(TEST_DATA_DIR, provider, store, img_path.stem)
     if expected:
         print()
         print("[*] Comparing against expected result...")
@@ -170,7 +173,6 @@ def run_ocr_on_image(
 def run_store_tests(
     store: str,
     image_dir: Path,
-    asserts_dir: Path,
     output_dir: Path = OUTPUT_DIR,
     images: list[Path] = None,
 ) -> int:
@@ -214,7 +216,7 @@ def run_store_tests(
             continue
 
         print("-" * 40)
-        code, result = run_ocr_on_image(img_path, cfg, asserts_dir, output_dir)
+        code, result = run_ocr_on_image(img_path, cfg, output_dir)
         if code != 0:
             all_exit = code
         print()
