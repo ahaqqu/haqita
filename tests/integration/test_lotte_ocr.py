@@ -7,9 +7,11 @@ Usage:
     python tests/integration/test_lotte_ocr.py [--image path/to/image.jpg]
 
 Exit codes:
-    0 - products extracted
+    0 - products extracted, matches assert
     1 - infrastructure error (Ollama/Gemini not available)
     2 - OCR ran but no products extracted
+    3 - preprocessing error
+    4 - products extracted but differ from assert
 """
 
 import argparse
@@ -22,9 +24,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.ocr.ocr_processor import extract_products, validate_product
 from scripts.ocr.image_preprocess import preprocess_for_ocr
+from tests.integration.compare_results import load_asserts, compare_results
 
 IMAGE_DIR = Path(__file__).resolve().parent.parent.parent / "data/test/lotte/image-brochure"
 ALL_IMAGES = sorted(str(p) for p in IMAGE_DIR.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png"})
+ASSERTS_DIR = Path(__file__).resolve().parent / "asserts"
 
 
 def load_config() -> dict:
@@ -130,16 +134,34 @@ def run_on_image(img_path: Path, cfg: dict, output_path: Path | None) -> tuple[i
         result = "FAIL"
         exit_code = 2
 
+    # Build actual result dict
+    actual_result = {
+        "image": img_path.name, "provider": provider,
+        "ocr_time_s": round(ocr_time, 1),
+        "products_count": len(validated), "rejected_count": len(rejected),
+        "products": validated, "rejected": rejected,
+    }
+
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
-            json.dumps({
-                "image": img_path.name, "provider": provider,
-                "ocr_time_s": round(ocr_time, 1),
-                "products_count": len(validated), "rejected_count": len(rejected),
-                "products": validated, "rejected": rejected,
-            }, indent=2, ensure_ascii=False), encoding="utf-8"
+            json.dumps(actual_result, indent=2, ensure_ascii=False), encoding="utf-8"
         )
+
+    # Compare against assert if available
+    expected = load_asserts(ASSERTS_DIR, "lotte", img_path.stem)
+    if expected:
+        print()
+        print("[*] Comparing against expected result...")
+        diffs = compare_results(actual_result, expected)
+        if diffs:
+            print(f"  [!!] {len(diffs)} difference(s) found:")
+            for d in diffs:
+                print(d)
+            result = "DIFF"
+            exit_code = 4
+        else:
+            print("  [OK] Output matches expected result.")
 
     Path(processed).unlink(missing_ok=True)
     print(f"\n  Result: {result}")
