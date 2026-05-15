@@ -7,9 +7,12 @@ import json
 from pathlib import Path
 
 
-def load_asserts(asserts_dir: Path, store: str, image_stem: str) -> dict | None:
-    """Load expected output from asserts directory."""
-    assert_file = asserts_dir / f"integration_test_{store}_{image_stem}.json"
+def load_asserts(asserts_dir: Path, provider: str, store: str, image_stem: str) -> dict | None:
+    """
+    Load expected output from asserts directory.
+    Structure: asserts/<provider>/<store>/<image_stem>.json
+    """
+    assert_file = asserts_dir / provider / store / f"{image_stem}.json"
     if not assert_file.exists():
         return None
     return json.loads(assert_file.read_text(encoding="utf-8"))
@@ -22,7 +25,6 @@ def compare_products(actual: list[dict], expected: list[dict]) -> list[str]:
     if len(actual) != len(expected):
         diffs.append(f"  Product count: actual={len(actual)}, expected={len(expected)}")
 
-    # Compare by index (order matters for OCR consistency)
     for i in range(max(len(actual), len(expected))):
         a = actual[i] if i < len(actual) else None
         e = expected[i] if i < len(expected) else None
@@ -34,7 +36,6 @@ def compare_products(actual: list[dict], expected: list[dict]) -> list[str]:
             diffs.append(f"  Product [{i}]: EXTRA (actual: {a.get('name', '?')})")
             continue
 
-        # Compare key fields
         for field in ("name", "brand", "unit", "price", "promo", "period"):
             av = a.get(field)
             ev = e.get(field)
@@ -76,20 +77,16 @@ def compare_results(actual: dict, expected: dict) -> list[str]:
     """
     diffs = []
 
-    # Product count
     if actual.get("products_count") != expected.get("products_count"):
         diffs.append(f"  Products count: actual={actual.get('products_count')}, expected={expected.get('products_count')}")
 
-    # Rejected count
     if actual.get("rejected_count") != expected.get("rejected_count"):
         diffs.append(f"  Rejected count: actual={actual.get('rejected_count')}, expected={expected.get('rejected_count')}")
 
-    # Products
     actual_products = actual.get("products", [])
     expected_products = expected.get("products", [])
     diffs.extend(compare_products(actual_products, expected_products))
 
-    # Rejected
     actual_rejected = actual.get("rejected", [])
     expected_rejected = expected.get("rejected", [])
     diffs.extend(compare_rejected(actual_rejected, expected_rejected))
