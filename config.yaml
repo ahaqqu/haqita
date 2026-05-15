@@ -13,15 +13,22 @@ scrapers:
     request_delay_seconds: 2
 
 ocr:
-  provider: ollama
-  model_ollama: qwen3-vl:7b
-  model_gemini: gemini-2.0-flash
-  timeout_seconds: 120
-  max_retries: 2
-  temperature: 0
-  image_min_width_px: 1400
-  image_contrast_enhance: 1.4
-  image_sharpness_enhance: 1.2
+  provider: gemini
+
+  ollama:
+    model: qwen3-vl:7b
+    num_ctx: 8192
+    timeout_seconds: 300
+    max_retries: 2
+    temperature: 0
+    image_min_width_px: 1400
+    image_contrast_enhance: 1.4
+    image_sharpness_enhance: 1.2
+
+  gemini:
+    model: gemini-2.0-flash
+    timeout_seconds: 60
+    max_retries: 2
 
 consolidation:
   token_jaccard_min: 0.30

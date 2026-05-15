@@ -6,16 +6,19 @@ WORK_DIR = Path("work")
 
 
 def preprocess_for_ocr(img_path: str, cfg: dict) -> str:
+    provider = cfg['ocr']['provider']
+
     img = Image.open(img_path).convert('RGB')
 
-    min_w = cfg['ocr']['image_min_width_px']
-    if img.width < min_w:
-        scale = min_w / img.width
-        new_size = (int(img.width * scale), int(img.height * scale))
-        img = img.resize(new_size, Image.LANCZOS)
-
-    img = ImageEnhance.Contrast(img).enhance(cfg['ocr']['image_contrast_enhance'])
-    img = ImageEnhance.Sharpness(img).enhance(cfg['ocr']['image_sharpness_enhance'])
+    if provider == 'ollama':
+        ollama_cfg = cfg['ocr'].get('ollama', {})
+        min_w = ollama_cfg.get('image_min_width_px', 1400)
+        if img.width < min_w:
+            scale = min_w / img.width
+            new_size = (int(img.width * scale), int(img.height * scale))
+            img = img.resize(new_size, Image.LANCZOS)
+        img = ImageEnhance.Contrast(img).enhance(ollama_cfg.get('image_contrast_enhance', 1.4))
+        img = ImageEnhance.Sharpness(img).enhance(ollama_cfg.get('image_sharpness_enhance', 1.2))
 
     stem = Path(img_path).stem
     out_path = WORK_DIR / f"{stem}_proc.jpg"

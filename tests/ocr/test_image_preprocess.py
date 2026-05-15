@@ -7,9 +7,12 @@ from scripts.ocr.image_preprocess import preprocess_for_ocr, split_image_halves
 
 MOCK_CFG = {
     "ocr": {
-        "image_min_width_px": 1400,
-        "image_contrast_enhance": 1.0,
-        "image_sharpness_enhance": 1.0,
+        "provider": "ollama",
+        "ollama": {
+            "image_min_width_px": 1400,
+            "image_contrast_enhance": 1.0,
+            "image_sharpness_enhance": 1.0,
+        }
     }
 }
 
