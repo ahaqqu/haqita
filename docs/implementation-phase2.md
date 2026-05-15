@@ -1001,7 +1001,7 @@ OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 ### Test data
 
-Use `data/test/lotte/ocr-result/integration_test_lotte_ht1.json`, `data/test/lotte/ocr-result/integration_test_lotte_ht5.json`, and `data/test/superindo/ocr-result//integration_test_superindo.json` as input for integration tests.
+Use `data/test/lotte/ocr-result/gemini/ht1.json`, `data/test/lotte/ocr-result/gemini/ht5.json`, and `data/test/superindo/ocr-result/gemini/sample_katalog_1.json` as input for integration tests.
 
 ### Running tests
 
