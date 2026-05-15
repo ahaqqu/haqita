@@ -1,86 +1,26 @@
-import base64
 import json
 import logging
-import os
 import re
-
-import requests
 
 logger = logging.getLogger(__name__)
 
-OCR_PROMPT = """Extract all product promotions from this Indonesian supermarket brochure image.
-
-Return ONLY a valid JSON array. No explanation. No markdown code fences. Start with [ and end with ].
-
-Each item must follow this exact structure:
-{
-  "name": "full product name as shown",
-  "brand": "brand name if visible, else null",
-  "unit": "size as shown (e.g. '85 g', '1.5 L', '6 x 45 ml'), else null",
-  "price": <integer in IDR, numbers only, no dots or Rp symbol>,
-  "promo": "promo text if any (e.g. 'DAPAT 5 pcs', 'Beli 2 Gratis 1'), else null",
-  "period": "validity dates if shown (e.g. '7 - 20 Mei 2026'), else null"
-}
-
-Rules:
-- price MUST be an integer (3500 not "Rp 3.500"). Indonesian thousands separator is '.' — ignore it.
-- If you are not confident about a price, omit that product entirely.
-- Extract EVERY product visible, including small-text items.
-- Ignore store logos, decorative banners, and page numbers."""
-
-
-def call_ollama_ocr(image_path: str, cfg: dict) -> list[dict]:
-    with open(image_path, 'rb') as f:
-        img_b64 = base64.b64encode(f.read()).decode()
-
-    payload = {
-        "model": cfg['ocr']['model_ollama'],
-        "prompt": OCR_PROMPT,
-        "images": [img_b64],
-        "stream": False,
-        "options": {
-            "temperature": cfg['ocr']['temperature'],
-            "num_ctx": 8192,
-            "seed": 42
-        }
-    }
-    resp = requests.post("http://localhost:11434/api/generate", json=payload,
-                         timeout=cfg['ocr']['timeout_seconds'])
-    resp.raise_for_status()
-    raw_text = resp.json()['response']
-    return _parse_ocr_json(raw_text)
-
-
-def call_gemini_ocr(image_path: str, cfg: dict) -> list[dict]:
-    import google.generativeai as genai
-
-    api_key = cfg['ocr'].get('gemini_api_key') or os.getenv('GEMINI_API_KEY')
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY not set in .env")
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(cfg['ocr']['model_gemini'])
-
-    with open(image_path, 'rb') as f:
-        img_bytes = f.read()
-
-    response = model.generate_content([
-        {"mime_type": "image/jpeg", "data": img_bytes},
-        OCR_PROMPT
-    ])
-    return _parse_ocr_json(response.text)
-
 
 def extract_products(image_path: str, cfg: dict) -> list[dict]:
-    provider = cfg['ocr'].get('provider', 'ollama')
+    provider = cfg['ocr']['provider']
+    retries = cfg['ocr'].get(provider, {}).get('max_retries', 2)
 
-    for attempt in range(cfg['ocr']['max_retries']):
+    if provider == 'gemini':
+        from .gemini_client import call_gemini_ocr
+        fn = call_gemini_ocr
+    else:
+        from .ollama_client import call_ollama_ocr
+        fn = call_ollama_ocr
+
+    for attempt in range(retries):
         try:
-            if provider == 'gemini':
-                return call_gemini_ocr(image_path, cfg)
-            else:
-                return call_ollama_ocr(image_path, cfg)
+            return fn(image_path, cfg)
         except (json.JSONDecodeError, ValueError) as e:
-            if attempt == cfg['ocr']['max_retries'] - 1:
+            if attempt == retries - 1:
                 raise
     return []
 
