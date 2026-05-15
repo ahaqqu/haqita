@@ -1,3 +1,5 @@
+# TODO check used? if not, remove
+
 import requests, sys
 try:
     r = requests.get('http://localhost:11434/api/tags', timeout=10)

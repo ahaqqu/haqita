@@ -1,3 +1,5 @@
+TODO removed because obsolete
+
 # Implementation Plan — Multi-Store Promo Scraper & Price Comparison
 
 ## Overview

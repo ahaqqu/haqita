@@ -1,0 +1,65 @@
+{
+  "image": "ht5.jpeg",
+  "provider": "gemini",
+  "ocr_time_s": 43.5,
+  "products_count": 5,
+  "rejected_count": 0,
+  "products": [
+    {
+      "name": "Alpukat Mentega",
+      "brand": null,
+      "unit": "100 g",
+      "price": 4490,
+      "promo": null,
+      "period": "7 - 20 Mei 2026",
+      "image_source": "ht5.jpeg",
+      "ocr_raw_price": "4490",
+      "ocr_confidence": 1.0
+    },
+    {
+      "name": "Daging Semur / Rendang / Rawon Reguler",
+      "brand": null,
+      "unit": "100 g",
+      "price": 17990,
+      "promo": null,
+      "period": "7 - 20 Mei 2026",
+      "image_source": "ht5.jpeg",
+      "ocr_raw_price": "17990",
+      "ocr_confidence": 1.0
+    },
+    {
+      "name": "Boneless Dada / Paha Tanpa Kulit",
+      "brand": null,
+      "unit": "100 g",
+      "price": 8550,
+      "promo": "Satu Harga",
+      "period": "7 - 20 Mei 2026",
+      "image_source": "ht5.jpeg",
+      "ocr_raw_price": "8550",
+      "ocr_confidence": 1.0
+    },
+    {
+      "name": "Mini Creamy Nanban / Wafu / Yuzu / Sakura Sal With Chicken & Dressing/ Caesar / Japanese With Chicken & Dressing Sweet Onion / Baby Cos With Cleslaw & Chicken",
+      "brand": "HIGHLAND",
+      "unit": "100 g / 120 g",
+      "price": 27900,
+      "promo": "BUY 1 GET 1",
+      "period": "7 - 20 Mei 2026",
+      "image_source": "ht5.jpeg",
+      "ocr_raw_price": "27900",
+      "ocr_confidence": 1.0
+    },
+    {
+      "name": "Cumi Ring Frozen",
+      "brand": "Z Seafood",
+      "unit": "500 g",
+      "price": 89900,
+      "promo": "BUY 1 GET 1",
+      "period": "7 - 20 Mei 2026",
+      "image_source": "ht5.jpeg",
+      "ocr_raw_price": "89900",
+      "ocr_confidence": 1.0
+    }
+  ],
+  "rejected": []
+}

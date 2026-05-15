@@ -1,3 +1,5 @@
+# TODO check used? if not, remove
+
 """
 Qwen3-VL OCR Processor for Product Promos
 Runs on Windows with Ollama + Qwen3-VL 2B
