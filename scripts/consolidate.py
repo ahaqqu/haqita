@@ -220,8 +220,11 @@ def append_to_price_history(history: dict, products: list[dict], today: str) -> 
 # Main consolidation flow
 # ---------------------------------------------------------------------------
 
-def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, output_dir: Path, database_dir: Path) -> None:
+def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, output_dir: Path, database_dir: Path, dry_run: bool = False) -> None:
     t_start = time.time()
+
+    if dry_run:
+        print("[*] Dry-run mode: database will not be updated\n")
 
     # 1. Discover input files
     lotte_file = discover_latest(lotte_dir, 'lotte') if lotte_dir else None
@@ -460,89 +463,96 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
     atomic_write_json(consolidated, str(latest_path))
 
     # 8. Update product catalog
-    database_dir.mkdir(parents=True, exist_ok=True)
-    catalog_path = database_dir / 'product_catalog.json'
-    catalog_data = {}
-    if catalog_path.exists():
-        with open(catalog_path, encoding='utf-8') as f:
-            catalog_data = json.load(f).get('catalog', {})
+    if not dry_run:
+        database_dir.mkdir(parents=True, exist_ok=True)
+        catalog_path = database_dir / 'product_catalog.json'
+        catalog_data = {}
+        if catalog_path.exists():
+            with open(catalog_path, encoding='utf-8') as f:
+                catalog_data = json.load(f).get('catalog', {})
 
-    all_products_for_catalog = []
-    for p in consolidated_products:
-        all_products_for_catalog.append({
-            'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
-            'unit': p.get('unit'), 'unit_type': p.get('unit_type'),
-            'unit_value_g': p.get('unit_value_g'), 'store': 'both',
-        })
-    for p in singles:
-        all_products_for_catalog.append({
-            'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
-            'unit': p.get('unit'), 'unit_type': p.get('unit_type'),
-            'unit_value_g': p.get('unit_value_g'), 'store': p['store'],
-        })
+        all_products_for_catalog = []
+        for p in consolidated_products:
+            all_products_for_catalog.append({
+                'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
+                'unit': p.get('unit'), 'unit_type': p.get('unit_type'),
+                'unit_value_g': p.get('unit_value_g'), 'store': 'both',
+            })
+        for p in singles:
+            all_products_for_catalog.append({
+                'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
+                'unit': p.get('unit'), 'unit_type': p.get('unit_type'),
+                'unit_value_g': p.get('unit_value_g'), 'store': p['store'],
+            })
 
-    catalog = update_catalog(catalog_data, all_products_for_catalog, today)
-    catalog_output = {
-        'catalog': catalog,
-        'metadata': {
-            'total_entries': len(catalog),
-            'last_updated': datetime.now().isoformat(),
-            'schema_version': '1.1',
-        },
-    }
-    print(f"[*] Updating product_catalog.json: {len(catalog)} entries")
-    atomic_write_json(catalog_output, str(catalog_path))
+        catalog = update_catalog(catalog_data, all_products_for_catalog, today)
+        catalog_output = {
+            'catalog': catalog,
+            'metadata': {
+                'total_entries': len(catalog),
+                'last_updated': datetime.now().isoformat(),
+                'schema_version': '1.1',
+            },
+        }
+        print(f"[*] Updating product_catalog.json: {len(catalog)} entries")
+        atomic_write_json(catalog_output, str(catalog_path))
 
-    # 9. Append to price history
-    history_path = database_dir / 'price_history.json'
-    backup_path = database_dir / 'price_history.json.backup'
+        # 9. Append to price history
+        history_path = database_dir / 'price_history.json'
+        backup_path = database_dir / 'price_history.json.backup'
 
-    if history_path.exists():
-        shutil.copy2(str(history_path), str(backup_path))
+        if history_path.exists():
+            shutil.copy2(str(history_path), str(backup_path))
 
-    history = load_price_history(history_path)
-    history_snapshots = []
-    for p in consolidated_products:
-        for s in p['stores']:
+        history = load_price_history(history_path)
+        history_snapshots = []
+        for p in consolidated_products:
+            for s in p['stores']:
+                history_snapshots.append({
+                    'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
+                    'unit': p.get('unit'), 'store': s['store'],
+                    'price': s['price'], 'effective_unit_price': s['effective_unit_price'],
+                    'promo': s.get('promo'),
+                })
+        for p in singles:
             history_snapshots.append({
                 'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
-                'unit': p.get('unit'), 'store': s['store'],
-                'price': s['price'], 'effective_unit_price': s['effective_unit_price'],
-                'promo': s.get('promo'),
+                'unit': p.get('unit'), 'store': p['store'],
+                'price': p['price'], 'effective_unit_price': p.get('effective_unit_price', p['price']),
+                'promo': p.get('promo'),
             })
-    for p in singles:
-        history_snapshots.append({
-            'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
-            'unit': p.get('unit'), 'store': p['store'],
-            'price': p['price'], 'effective_unit_price': p.get('effective_unit_price', p['price']),
-            'promo': p.get('promo'),
-        })
 
-    history = append_to_price_history(history, history_snapshots, today)
-    print(f"[*] Appending to price_history.json: {len(history_snapshots)} snapshots")
-    atomic_write_json(history, str(history_path))
+        history = append_to_price_history(history, history_snapshots, today)
+        print(f"[*] Appending to price_history.json: {len(history_snapshots)} snapshots")
+        atomic_write_json(history, str(history_path))
 
-    # 10. Review queue
-    review_path = database_dir / 'review_queue.json'
-    review_data = []
-    if review_path.exists():
-        with open(review_path, encoding='utf-8') as f:
-            review_data = json.load(f)
-    if isinstance(review_data, dict):
-        review_data = review_data.get('items', [])
+        # 10. Review queue
+        review_path = database_dir / 'review_queue.json'
+        review_data = []
+        if review_path.exists():
+            with open(review_path, encoding='utf-8') as f:
+                review_data = json.load(f)
+        if isinstance(review_data, dict):
+            review_data = review_data.get('items', [])
 
-    max_review = cfg.get('monitoring', {}).get('review_queue_max', 100)
-    for item in review_items:
-        review_data.append({
-            'detected_at': datetime.now().isoformat(),
-            'reason': item.get('reason', 'unknown'),
-            'product_a': item.get('product_a', {}),
-            'product_b': item.get('product_b', {}),
-        })
-    review_data = review_data[-max_review:]
+        max_review = cfg.get('monitoring', {}).get('review_queue_max', 100)
+        for item in review_items:
+            review_data.append({
+                'detected_at': datetime.now().isoformat(),
+                'reason': item.get('reason', 'unknown'),
+                'product_a': item.get('product_a', {}),
+                'product_b': item.get('product_b', {}),
+            })
+        review_data = review_data[-max_review:]
 
-    print(f"[*] Review queue: {len(review_data)} items")
-    atomic_write_json({'items': review_data}, str(review_path))
+        print(f"[*] Review queue: {len(review_data)} items")
+        atomic_write_json({'items': review_data}, str(review_path))
+    else:
+        # Dry-run: write consolidated output to output/consolidation/ only
+        dry_path = output_dir / f'dry_run_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+        print(f"[*] Writing dry_run output to {dry_path.name}")
+        atomic_write_json(consolidated, str(dry_path))
+        print("[*] Database not updated (dry-run)")
 
     # 11. Print summary
     elapsed = time.time() - t_start
@@ -570,6 +580,7 @@ def main():
     parser.add_argument('--lotte-dir', type=str, help='Explicit Lotte input directory')
     parser.add_argument('--superindo-dir', type=str, help='Explicit Superindo input directory')
     parser.add_argument('--output-dir', type=str, default='output/consolidation', help='Consolidation output directory')
+    parser.add_argument('--dry-run', action='store_true', help='Output to console, no database update')
     parser.add_argument('--no-docker', action='store_true', help='Run natively')
     args = parser.parse_args()
 
@@ -584,7 +595,7 @@ def main():
         lotte_dir = Path(args.lotte_dir) if args.lotte_dir else Path('output/ocr')
         superindo_dir = Path(args.superindo_dir) if args.superindo_dir else Path('output/ocr')
 
-    consolidate(cfg, lotte_dir, superindo_dir, output_dir, database_dir)
+    consolidate(cfg, lotte_dir, superindo_dir, output_dir, database_dir, args.dry_run)
 
 
 if __name__ == '__main__':

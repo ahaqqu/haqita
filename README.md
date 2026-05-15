@@ -4,13 +4,15 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
 
 ## Pipeline
 
+Each stage runs independently. If something fails, rerun from that stage onward.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                        Haqita — Price Comparison                        │
 └─────────────────────────────────────────────────────────────────────────┘
 
   ┌─────────────┐     ┌──────────────┐     ┌──────────────────┐
-  │  Step 1     │     │  Step 2      │     │  Step 3          │
+  │  Stage 1    │     │  Stage 2     │     │  Stage 3         │
   │  Scrape     │────▶│  OCR         │────▶│  Consolidation   │
   └─────────────┘     └──────────────┘     └──────────────────┘
         │                     │                       │
@@ -27,8 +29,13 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
                                                   └─ review_queue.json
                                                 (maintained, do not delete)
 
+  Dry-run behavior:
+    Stage 1 dry-run  → report new images without downloading
+    Stage 2 dry-run  → print products without saving JSON
+    Stage 3 dry-run  → write to output/consolidation/dry_run_*.json, skip database
+
   ┌─────────────────────────────────────────────────────────────────────┐
-  │  Matching Pipeline (inside Step 3)                                  │
+  │  Matching Pipeline (inside Stage 3)                                 │
   │                                                                     │
   │  lotte_products ──┐                                                 │
   │                   ├──▶ Gate 0: Unit Type ──▶ Gate 1: Brand          │
@@ -44,13 +51,13 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
   └─────────────────────────────────────────────────────────────────────┘
 
   ┌─────────────────────────────────────────────────────────────────────┐
-  │  Output (Phase 3)                                                   │
+  │  Future (Phase 3)                                                   │
   │                                                                     │
   │  consolidated_latest.json ──────▶ index.html (browser display)      │
   └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 1: Scrape
+### Stage 1: Scrape
 
 Downloads current promo brochure images from supermarket websites.
 
@@ -59,9 +66,9 @@ Downloads current promo brochure images from supermarket websites.
 | **Input** | Superindo / Lotte Mart website URLs (from `config.yaml`) |
 | **Output** | Brochure images in `output/scrape/<store>/` (JPG/PNG) |
 | **State** | `output/scrape/<store>/state.json` — tracks already-seen images to avoid re-downloading |
-| **Run** | `haqita.bat` → Option 1 (Lotte) or 2 (Superindo), or dry-run Option 3/4 |
+| **Dry-run** | Reports new images without downloading |
 
-### Step 2: OCR
+### Stage 2: OCR
 
 Extracts product data from brochure images using Gemini or Ollama vision models.
 
@@ -70,7 +77,7 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
 | **Input** | Brochure images in `output/scrape/<store>/` |
 | **Output** | `output/ocr/<store>_promos_YYYYMMDD_HHMMSS.json` |
 | **Schema** | See below |
-| **Run** | Automatically triggered after scrape, or via integration tests (Option 5) |
+| **Dry-run** | Prints extracted products without saving JSON |
 
 **OCR output schema:**
 ```json
@@ -104,7 +111,7 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
 }
 ```
 
-### Step 3: Consolidation
+### Stage 3: Consolidation
 
 Merges OCR results from both stores, matches same products across stores, computes unit prices and savings.
 
@@ -116,7 +123,7 @@ Merges OCR results from both stores, matches same products across stores, comput
 | **Database** | `database/price_history.json` — accumulated price snapshots across runs |
 | | `database/product_catalog.json` — auto-built product registry |
 | | `database/review_queue.json` — low-confidence matches for inspection |
-| **Run** | `haqita.bat` → Option 6 (Docker), or `scripts\run_consolidate.bat` |
+| **Dry-run** | Writes to `output/consolidation/dry_run_*.json`, skips database update |
 
 **Consolidated output schema:**
 ```json
@@ -162,18 +169,24 @@ Merges OCR results from both stores, matches same products across stores, comput
 haqita.bat
 ```
 
-Launches an interactive menu with options to run scrapers, consolidation, or tests.
+Launches an interactive menu organized by stages. Each stage can be run independently — if something fails, you can rerun from that stage onward.
 
-## Tools
+## Menu
 
-| Tool | What it does | Docs | Run via menu |
-|---|---|---|---|
-| **Lotte Scraper** | Fetches promo flyers from Lotte Mart | [`docs/lotte_scraper.md`](docs/lotte_scraper.md) | Option 1 |
-| **Superindo Scraper** | Fetches promo flyers from Superindo | — | Option 2 |
-| **Dry-run** | Reports new promos without running OCR | [`docs/lotte_scraper.md`](docs/lotte_scraper.md) | Option 3/4 |
-| **Integration Tests** | Runs OCR on real brochure images | — | Option 5 |
-| **Consolidate** | Merges & matches across stores | [`docs/implementation-phase2.md`](docs/implementation-phase2.md) | Option 6 |
-| **Matching Tests** | Unit tests for matching pipeline | — | Option 7 |
+| Key | Action | Description |
+|---|---|---|
+| **1** | Full pipeline | Scrape → OCR → Consolidate (end-to-end) |
+| **2** | Stage 1: Scrape | Download brochure images (Lotte, Superindo, All, or dry-run) |
+| **3** | Stage 2: OCR | Extract products from scraped images (all, specific, or dry-run) |
+| **4** | Stage 3: Consolidation | Match products across stores (run or dry-run) |
+| **5** | Tests | Integration tests or matching pipeline tests |
+
+Each stage has a **dry-run** mode:
+- **Scrape dry-run**: Reports new images without downloading
+- **OCR dry-run**: Prints extracted products without saving JSON
+- **Consolidation dry-run**: Runs full pipeline but outputs to `output/consolidation/dry_run_*.json` instead of updating `database/`
+
+The **full pipeline** option ([1]) chains all 3 stages automatically with no dry-run — it scrapes, OCRs, and consolidates to the database in one go.
 
 ## Project Structure
 
