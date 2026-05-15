@@ -23,8 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.ocr.ocr_processor import extract_products, validate_product
 from scripts.ocr.image_preprocess import preprocess_for_ocr
 
-DEFAULT_IMAGE = str(Path(__file__).resolve().parent.parent.parent /
-                    "data/test/lotte/image-brochure/ht1.jpeg")
+IMAGE_DIR = Path(__file__).resolve().parent.parent.parent / "data/test/lotte/image-brochure"
+ALL_IMAGES = sorted(str(p) for p in IMAGE_DIR.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png"})
 
 
 def load_config() -> dict:
@@ -70,32 +70,13 @@ def check_provider(cfg: dict) -> bool:
     return False
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Integration test: OCR on a Lotte brochure image")
-    parser.add_argument("--image", default=DEFAULT_IMAGE, help="Path to brochure image")
-    parser.add_argument("--output", default="work/integration_test_lotte.json", help="Save results to JSON")
-    args = parser.parse_args()
-
-    img_path = Path(args.image)
-    if not img_path.exists():
-        print(f"[!!] Image not found: {img_path}")
-        sys.exit(1)
-
-    cfg = load_config()
+def run_on_image(img_path: Path, cfg: dict, output_path: Path | None) -> tuple[int, str]:
     provider = cfg["ocr"]["provider"]
-
     print("=" * 60)
     print(f"  Integration Test: Lotte OCR ({provider})")
     print("=" * 60)
     print()
     print(f"[*] Image: {img_path.name} ({img_path.stat().st_size / 1024:.0f} KB)")
-    print()
-
-    print("[*] Checking provider...", end=" ")
-    sys.stdout.flush()
-    if not check_provider(cfg):
-        sys.exit(1)
-    print("OK")
     print()
 
     print("[*] Preprocessing image...", end=" ")
@@ -105,7 +86,7 @@ def main():
         print("OK")
     except Exception as e:
         print(f"FAIL: {e}")
-        sys.exit(3)
+        return 3, img_path.name
 
     print()
     print("[*] Running OCR...")
@@ -149,9 +130,9 @@ def main():
         result = "FAIL"
         exit_code = 2
 
-    if args.output:
-        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.output).write_text(
+    if output_path:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
             json.dumps({
                 "image": img_path.name, "provider": provider,
                 "ocr_time_s": round(ocr_time, 1),
@@ -163,7 +144,37 @@ def main():
     Path(processed).unlink(missing_ok=True)
     print(f"\n  Result: {result}")
     print("=" * 60)
-    sys.exit(exit_code)
+    return exit_code, img_path.name
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Integration test: OCR on Lotte brochure images")
+    parser.add_argument("--image", nargs="*", default=ALL_IMAGES, help="Brochure image(s) to process")
+    parser.add_argument("--output-dir", default="work", help="Directory to save JSON results")
+    args = parser.parse_args()
+
+    cfg = load_config()
+
+    print("[*] Checking provider...", end=" ")
+    sys.stdout.flush()
+    if not check_provider(cfg):
+        sys.exit(1)
+    print("OK")
+    print()
+
+    all_exit = 0
+    for img in args.image:
+        img_path = Path(img)
+        if not img_path.exists():
+            print(f"[!!] Skipping — image not found: {img_path}")
+            continue
+        output = Path(args.output_dir) / f"integration_test_lotte_{img_path.stem}.json"
+        code, _ = run_on_image(img_path, cfg, output)
+        if code != 0:
+            all_exit = code
+        print()
+
+    sys.exit(all_exit)
 
 
 if __name__ == "__main__":
