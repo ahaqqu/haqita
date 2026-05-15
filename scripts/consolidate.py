@@ -220,7 +220,7 @@ def append_to_price_history(history: dict, products: list[dict], today: str) -> 
 # Main consolidation flow
 # ---------------------------------------------------------------------------
 
-def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, output_dir: Path) -> None:
+def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, output_dir: Path, database_dir: Path) -> None:
     t_start = time.time()
 
     # 1. Discover input files
@@ -460,7 +460,8 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
     atomic_write_json(consolidated, str(latest_path))
 
     # 8. Update product catalog
-    catalog_path = output_dir / 'product_catalog.json'
+    database_dir.mkdir(parents=True, exist_ok=True)
+    catalog_path = database_dir / 'product_catalog.json'
     catalog_data = {}
     if catalog_path.exists():
         with open(catalog_path, encoding='utf-8') as f:
@@ -493,8 +494,8 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
     atomic_write_json(catalog_output, str(catalog_path))
 
     # 9. Append to price history
-    history_path = output_dir / 'price_history.json'
-    backup_path = output_dir / 'price_history.json.backup'
+    history_path = database_dir / 'price_history.json'
+    backup_path = database_dir / 'price_history.json.backup'
 
     if history_path.exists():
         shutil.copy2(str(history_path), str(backup_path))
@@ -522,7 +523,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
     atomic_write_json(history, str(history_path))
 
     # 10. Review queue
-    review_path = output_dir / 'review_queue.json'
+    review_path = database_dir / 'review_queue.json'
     review_data = []
     if review_path.exists():
         with open(review_path, encoding='utf-8') as f:
@@ -568,21 +569,22 @@ def main():
     parser.add_argument('--input-dir', type=str, help='Auto-detect store from filename')
     parser.add_argument('--lotte-dir', type=str, help='Explicit Lotte input directory')
     parser.add_argument('--superindo-dir', type=str, help='Explicit Superindo input directory')
-    parser.add_argument('--output-dir', type=str, default='output', help='Output directory')
+    parser.add_argument('--output-dir', type=str, default='output/consolidation', help='Consolidation output directory')
     parser.add_argument('--no-docker', action='store_true', help='Run natively')
     args = parser.parse_args()
 
     cfg = load_config()
     output_dir = Path(args.output_dir)
+    database_dir = Path('database')
 
     if args.input_dir:
         lotte_dir = Path(args.input_dir)
         superindo_dir = Path(args.input_dir)
     else:
-        lotte_dir = Path(args.lotte_dir) if args.lotte_dir else Path('output')
-        superindo_dir = Path(args.superindo_dir) if args.superindo_dir else Path('output')
+        lotte_dir = Path(args.lotte_dir) if args.lotte_dir else Path('output/ocr')
+        superindo_dir = Path(args.superindo_dir) if args.superindo_dir else Path('output/ocr')
 
-    consolidate(cfg, lotte_dir, superindo_dir, output_dir)
+    consolidate(cfg, lotte_dir, superindo_dir, output_dir, database_dir)
 
 
 if __name__ == '__main__':

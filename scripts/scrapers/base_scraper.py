@@ -119,8 +119,8 @@ class BaseScraper:
 
     # --- Override in subclass ---
     store_name: str = "unknown"
-    images_dir: Path = Path("data/scrape/unknown")
-    state_file: Path = Path("data/scrape/unknown_state.json")
+    images_dir: Path = Path("output/scrape/unknown")
+    state_file: Path = Path("output/scrape/unknown_state.json")
     headers: dict = field(default_factory=lambda: dict(DEFAULT_HEADERS))
 
     # --- Configurable thresholds ---

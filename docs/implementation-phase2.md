@@ -57,7 +57,7 @@
 ## 1. Architecture
 
 ```
-  Lotte OCR JSON (output/lotte_*.json)    Superindo OCR JSON (output/superindo_*.json)
+  Lotte OCR JSON (output/ocr/lotte_*.json)    Superindo OCR JSON (output/ocr/superindo_*.json)
                     │                                      │
                     └──────────────────┬───────────────────┘
                                        ▼
@@ -65,9 +65,10 @@
                                        │
                     ┌──────────────────┼──────────────────┐
                     ▼                  ▼                  ▼
-          consolidated_*.json   consolidated_     price_history.json
-                                latest.json       product_catalog.json
-                                review_queue.json
+  output/consolidation/          database/
+  consolidated_*.json            price_history.json
+  consolidated_latest.json       product_catalog.json
+                                 review_queue.json
                                        │
                                        ▼
                                   index.html
@@ -121,20 +122,28 @@ haqita/
 │       ├── matcher.py                  # NEW — Multi-tier matching pipeline
 │       └── promo_parser.py             # NEW — Indonesian promo text parser
 │
-├── data/
-│   └── scrape/
-│       ├── lotte/                      # Downloaded brochure images (Lotte)
-│       └── superindo/                  # Downloaded brochure images (Superindo)
+├── data/                               # Committed to git (static reference data)
+│   └── test/                           # Test images and expected assert files
 │
-├── output/
-│   ├── lotte_promos_YYYYMMDD_HHMMSS.json
-│   ├── superindo_promos_YYYYMMDD_HHMMSS.json
-│   ├── consolidated_YYYYMMDD_HHMMSS.json
-│   ├── consolidated_latest.json        # Always the latest run — HTML reads this
+├── output/                             # Generated, can be deleted (debugging)
+│   ├── scrape/
+│   │   ├── lotte/                      # Downloaded brochure images (Lotte)
+│   │   └── superindo/                  # Downloaded brochure images (Superindo)
+│   ├── ocr/
+│   │   ├── lotte_promos_YYYYMMDD_HHMMSS.json
+│   │   └── superindo_promos_YYYYMMDD_HHMMSS.json
+│   └── consolidation/
+│       ├── consolidated_YYYYMMDD_HHMMSS.json
+│       └── consolidated_latest.json    # Always the latest run — HTML reads this
+│
+├── database/                           # Generated, maintained (do not delete)
 │   ├── price_history.json              # Accumulated snapshots across runs
 │   ├── price_history.json.backup       # Auto-backup before every write
 │   ├── product_catalog.json            # Auto-built product registry
 │   └── review_queue.json               # Low-confidence matches for inspection
+│
+├── work/                               # Generated, temporary (test output, processing)
+│   └── tests/                          # Integration test results
 │
 ├── tests/
 │   ├── matching/                       # NEW

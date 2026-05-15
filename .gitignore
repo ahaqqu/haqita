@@ -1,6 +1,6 @@
 .env
 .vscode/
-output
+output/
 work/
 __pycache__/
 *.pyc

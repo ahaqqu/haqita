@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 # --- Store-specific configuration ---
 STORE_NAME = "Superindo"
-STATE_DIR = Path("data/scrape")
+STATE_DIR = Path("output/scrape")
 IMAGES_DIR = STATE_DIR / "superindo"
 STATE_FILE = STATE_DIR / "superindo_state.json"
 REGION_FILTER = "jabodetabek-palembang"
@@ -189,7 +189,7 @@ def main():
         return
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_file = Path("output") / f"superindo_promos_{timestamp}.json"
+    output_file = Path("output/ocr") / f"superindo_promos_{timestamp}.json"
 
     ocr_results = scraper.run_ocr_loop(new_images, existing_images, output_file)
 

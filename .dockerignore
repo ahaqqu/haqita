@@ -16,7 +16,7 @@ build/
 # Runtime data (mounted as volumes, don't bake into image)
 output/
 work/
-data/scrape/
+database/
 
 # Secrets
 .env

@@ -21,7 +21,7 @@ from scripts.ocr.ollama_client import call_ollama_ocr, extract_promo_date
 
 # --- Store-specific configuration ---
 STORE_NAME = "Lotte"
-STATE_DIR = Path("data/scrape")
+STATE_DIR = Path("output/scrape")
 IMAGES_DIR = STATE_DIR / "lotte"
 STATE_FILE = STATE_DIR / "lotte_state.json"
 LOTTE_URL = "https://www.lottemart.co.id/all-promo-mart"
@@ -192,7 +192,7 @@ def main():
         return
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_file = Path("output") / f"lotte_promos_{timestamp}.json"
+    output_file = Path("output/ocr") / f"lotte_promos_{timestamp}.json"
 
     ocr_results = scraper.run_ocr_loop(new_images, existing_images, output_file)
 

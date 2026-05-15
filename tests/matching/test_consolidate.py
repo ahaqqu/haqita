@@ -172,11 +172,14 @@ class TestEmptyStore:
     def test_zero_lotte_products(self, capsys):
         """Consolidation should continue with singles only if one store is empty."""
         with tempfile.TemporaryDirectory() as td:
-            output_dir = Path(td) / 'output'
-            output_dir.mkdir()
+            output_dir = Path(td) / 'output/consolidation'
+            database_dir = Path(td) / 'database'
+            ocr_dir = Path(td) / 'output/ocr'
+            ocr_dir.mkdir(parents=True)
+            output_dir.mkdir(parents=True)
 
             # Only Superindo file
-            superindo_file = Path(td) / 'superindo_promos.json'
+            superindo_file = ocr_dir / 'superindo_promos.json'
             superindo_file.write_text(json.dumps({
                 'store': 'Superindo',
                 'scraped_at': '2026-05-14T08:15:00',
@@ -197,7 +200,7 @@ class TestEmptyStore:
             cfg['consolidation']['gates']['gate4_embedding'] = False
             cfg['consolidation']['gates']['gate6_ai_verifier'] = False
 
-            consolidate(cfg, None, Path(td), output_dir)
+            consolidate(cfg, None, ocr_dir, output_dir, database_dir)
 
             latest = output_dir / 'consolidated_latest.json'
             assert latest.exists()
@@ -215,17 +218,19 @@ class TestFullPipeline:
     @pytest.fixture(autouse=True)
     def _setup(self):
         self.tmpdir = tempfile.mkdtemp()
-        self.output_dir = Path(self.tmpdir) / 'output'
-        self.output_dir.mkdir()
+        self.ocr_dir = Path(self.tmpdir) / 'output/ocr'
+        self.output_dir = Path(self.tmpdir) / 'output/consolidation'
+        self.database_dir = Path(self.tmpdir) / 'database'
+        self.ocr_dir.mkdir(parents=True)
 
         # Copy real test data
         lotte_src = TEST_DATA_DIR / 'lotte' / 'ocr-result' / 'gemini' / 'ht1.json'
         superindo_src = TEST_DATA_DIR / 'superindo' / 'ocr-result' / 'gemini' / 'sample_katalog_1.json'
 
         if lotte_src.exists():
-            shutil.copy(lotte_src, Path(self.tmpdir) / 'lotte_promos.json')
+            shutil.copy(lotte_src, self.ocr_dir / 'lotte_promos.json')
         if superindo_src.exists():
-            shutil.copy(superindo_src, Path(self.tmpdir) / 'superindo_promos.json')
+            shutil.copy(superindo_src, self.ocr_dir / 'superindo_promos.json')
 
         yield
 
@@ -237,7 +242,7 @@ class TestFullPipeline:
         cfg['consolidation']['gates']['gate4_embedding'] = False
         cfg['consolidation']['gates']['gate6_ai_verifier'] = False
 
-        consolidate(cfg, Path(self.tmpdir), Path(self.tmpdir), self.output_dir)
+        consolidate(cfg, self.ocr_dir, self.ocr_dir, self.output_dir, self.database_dir)
 
         latest = self.output_dir / 'consolidated_latest.json'
         assert latest.exists()
@@ -251,10 +256,10 @@ class TestFullPipeline:
         assert data['stats']['total_products_lotte'] > 0
         assert data['stats']['total_products_superindo'] > 0
 
-        # Check that output files were created
-        assert (self.output_dir / 'product_catalog.json').exists()
-        assert (self.output_dir / 'price_history.json').exists()
-        assert (self.output_dir / 'review_queue.json').exists()
+        # Check that database files were created
+        assert (self.database_dir / 'product_catalog.json').exists()
+        assert (self.database_dir / 'price_history.json').exists()
+        assert (self.database_dir / 'review_queue.json').exists()
 
         # Check consolidated products have required fields
         for p in data['products']:
