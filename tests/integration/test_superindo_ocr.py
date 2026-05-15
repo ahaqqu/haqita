@@ -84,7 +84,7 @@ def main():
     parser = argparse.ArgumentParser(description="Integration test: OCR on a single brochure image")
     parser.add_argument("--image", default=DEFAULT_IMAGE, help="Path to brochure image")
     parser.add_argument("--model", default=None, help="Ollama model name (auto-detected if omitted)")
-    parser.add_argument("--output", default=None, help="Save OCR results to this JSON file")
+    parser.add_argument("--output", default="work/integration_test_superindo.json", help="Save OCR results to this JSON file")
     args = parser.parse_args()
 
     img_path = Path(args.image)

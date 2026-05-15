@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from PIL import Image, ImageEnhance
+
+WORK_DIR = Path("work")
 
 
 def preprocess_for_ocr(img_path: str, cfg: dict) -> str:
@@ -13,16 +17,23 @@ def preprocess_for_ocr(img_path: str, cfg: dict) -> str:
     img = ImageEnhance.Contrast(img).enhance(cfg['ocr']['image_contrast_enhance'])
     img = ImageEnhance.Sharpness(img).enhance(cfg['ocr']['image_sharpness_enhance'])
 
-    processed_path = str(img_path).replace('.jpg', '_proc.jpg').replace('.jpeg', '_proc.jpg')
-    img.save(processed_path, 'JPEG', quality=92)
-    return processed_path
+    stem = Path(img_path).stem
+    out_path = WORK_DIR / f"{stem}_proc.jpg"
+    WORK_DIR.mkdir(parents=True, exist_ok=True)
+    img.save(str(out_path), 'JPEG', quality=92)
+    return str(out_path)
 
 
 def split_image_halves(img_path: str) -> tuple[str, str]:
     img = Image.open(img_path).convert('RGB')
     w, h = img.size
-    top_path = img_path.replace('.jpg', '_top.jpg').replace('.jpeg', '_top.jpg')
-    bot_path = img_path.replace('.jpg', '_bot.jpg').replace('.jpeg', '_bot.jpg')
-    img.crop((0, 0, w, h // 2)).save(top_path, 'JPEG', quality=92)
-    img.crop((0, h // 2, w, h)).save(bot_path, 'JPEG', quality=92)
-    return top_path, bot_path
+    stem = Path(img_path).stem
+
+    WORK_DIR.mkdir(parents=True, exist_ok=True)
+
+    top_path = WORK_DIR / f"{stem}_top.jpg"
+    bot_path = WORK_DIR / f"{stem}_bot.jpg"
+
+    img.crop((0, 0, w, h // 2)).save(str(top_path), 'JPEG', quality=92)
+    img.crop((0, h // 2, w, h)).save(str(bot_path), 'JPEG', quality=92)
+    return str(top_path), str(bot_path)
