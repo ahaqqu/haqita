@@ -299,9 +299,11 @@ def _load_config() -> dict:
     env_provider = os.getenv('OCR_PROVIDER')
     if env_provider:
         cfg['ocr']['provider'] = env_provider
-    env_key = os.getenv('GEMINI_API_KEY')
-    if env_key:
-        cfg['ocr']['gemini_api_key'] = env_key
+    if 'gemini' in cfg['ocr'] and not cfg['ocr']['gemini'].get('api_key'):
+        env_key = os.getenv('GEMINI_API_KEY')
+        if env_key:
+            cfg['ocr']['gemini']['api_key'] = env_key
+    cfg['store'] = 'superindo'
     return cfg
 
 
