@@ -141,7 +141,7 @@ scrapers:
 ocr:
   provider: ollama                    # "ollama" or "gemini" — override in .env
   model_ollama: qwen3-vl:7b           # Use 7b for accuracy; 2b as fallback if RAM limited
-  model_gemini: gemini-2.0-flash      # Used when OCR_PROVIDER=gemini in .env
+  model_gemini: gemini-3-flash-preview
   timeout_seconds: 120
   max_retries: 2
   temperature: 0                      # Always 0 for OCR — deterministic output

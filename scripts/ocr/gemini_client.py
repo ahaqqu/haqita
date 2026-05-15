@@ -19,7 +19,9 @@ def call_gemini_ocr(image_path: str, cfg: dict) -> list[dict]:
         raise ValueError("GEMINI_API_KEY not set in .env")
 
     client = genai.Client(api_key=api_key)
-    model = gemini_cfg.get('model', 'gemini-2.0-flash')
+    model = gemini_cfg.get('model')
+    if not model:
+        raise ValueError("Gemini model not configured in config.yaml under ocr.gemini.model")
 
     with open(image_path, 'rb') as f:
         img_bytes = f.read()
