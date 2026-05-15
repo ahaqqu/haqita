@@ -23,7 +23,6 @@ from tests.integration.test_base import run_store_tests
 
 STORE = "superindo"
 IMAGE_DIR = Path(__file__).resolve().parent.parent.parent / "data/test/superindo/image-brochure"
-ASSERTS_DIR = Path(__file__).resolve().parent / "asserts"
 
 
 def main():
@@ -35,7 +34,7 @@ def main():
     if args.image:
         images = [Path(p) for p in args.image]
 
-    exit_code = run_store_tests(STORE, IMAGE_DIR, ASSERTS_DIR, images=images)
+    exit_code = run_store_tests(STORE, IMAGE_DIR, images=images)
     sys.exit(exit_code)
 
 
