@@ -26,12 +26,12 @@ Then select option **1** (Run Lotte Promo Scraper) or **3** (Dry-run).
 
 ### Dry run (see what's new without OCR)
 ```cmd
-scripts\run_lotte_scraper.bat --dry-run
+python scripts/scrapers/lotte.py --dry-run
 ```
 
 ### Full scrape + OCR
 ```cmd
-scripts\run_lotte_scraper.bat
+python scripts/scrapers/lotte.py
 ```
 
 ### Direct Python
@@ -97,7 +97,7 @@ Saved incrementally after each image — a crash on image 4 preserves images 1-3
 | Path | Purpose |
 |---|---|
 | `scripts/scrapers/lotte.py` | Scraper script |
-| `scripts/run_lotte_scraper.bat` | Batch launcher |
+| `scripts/scrapers/base_scraper.py` | Shared scraper infrastructure |
 | `data/scrape/lotte/` | Downloaded promo images |
 | `data/scrape/lotte_state.json` | Processed image tracking |
 | `output/lotte_promos_*.json` | OCR extraction results |
