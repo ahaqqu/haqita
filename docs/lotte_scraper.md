@@ -7,13 +7,13 @@ Fetches promo flyers from Lotte Mart website, detects new promos via content has
 ```
 1. Fetch HTML     → GET https://www.lottemart.co.id/all-promo-mart
 2. Parse images   → BeautifulSoup → filter by keywords (promo, flyer, ht)
-3. Download       → Save to data/scape/lotte/<hash_prefix>_<filename>
+3. Download       → Save to data/scrape/lotte/<hash_prefix>_<filename>
 4. Filter         → Skip logos/icons (size < 50KB, dimensions < 300px)
 5. Deduplicate    → MD5 hash comparison against state history
 6. Skip old       → Already-processed hashes skipped
 7. OCR new        → Qwen3-VL extracts products + promo period
 8. Save results   → output/lotte_promos_YYYYMMDD_HHMMSS.json
-9. Update state   → data/scape/lotte_state.json
+9. Update state   → data/scrape/lotte_state.json
 ```
 
 ## Usage
@@ -82,7 +82,7 @@ Files saved with MD5 prefix (`ht1_588fe87e.jpeg`) to prevent overwrites — next
 
 Saved incrementally after each image — a crash on image 4 preserves images 1-3.
 
-### `data/scape/lotte_state.json`
+### `data/scrape/lotte_state.json`
 ```json
 {
   "last_run": "2026-05-14T07:30:00",
@@ -98,8 +98,8 @@ Saved incrementally after each image — a crash on image 4 preserves images 1-3
 |---|---|
 | `scripts/scrapers/lotte_qwen.py` | Scraper script |
 | `scripts/run_lotte_scraper.bat` | Batch launcher |
-| `data/scape/lotte/` | Downloaded promo images |
-| `data/scape/lotte_state.json` | Processed image tracking |
+| `data/scrape/lotte/` | Downloaded promo images |
+| `data/scrape/lotte_state.json` | Processed image tracking |
 | `output/lotte_promos_*.json` | OCR extraction results |
 
 ## Test Mode

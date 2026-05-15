@@ -16,7 +16,7 @@ from io import BytesIO
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from qwen_ocr_processor import extract_product_prices, extract_promo_date
 
-STATE_DIR = Path("data/scape")
+STATE_DIR = Path("data/scrape")
 IMAGES_DIR = STATE_DIR / "lotte"
 STATE_FILE = STATE_DIR / "lotte_state.json"
 

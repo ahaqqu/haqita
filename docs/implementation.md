@@ -384,8 +384,8 @@ Superindo has two promo pages:
 3. Find all .swiper-slide a.fancybox elements
 4. Extract image URLs from href attributes
 5. Filter: only scrape the default/active region (Jabodetabek & Palembang)
-6. Download images to data/scape/superindo/<md5_prefix>_<filename>
-7. Compute MD5 hash, compare with data/scape/superindo_state.json
+6. Download images to data/scrape/superindo/<md5_prefix>_<filename>
+7. Compute MD5 hash, compare with data/scrape/superindo_state.json
 8. For new images: run Qwen3-VL OCR (reuse functions from qwen_ocr_processor.py)
 9. Save results to output/superindo_promos_YYYYMMDD_HHMMSS.json
 ```
@@ -404,7 +404,7 @@ Superindo has two promo pages:
 
 The `data-fancybox` attribute value indicates the region. We filter for `jabodetabek-palembang`.
 
-**State file:** `data/scape/superindo_state.json` (separate from Lotte)
+**State file:** `data/scrape/superindo_state.json` (separate from Lotte)
 ```json
 {
   "last_run": "2026-05-14T08:15:00",
