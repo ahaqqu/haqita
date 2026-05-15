@@ -126,8 +126,9 @@ class SuperindoScraper(BaseScraper):
             else:
                 rejected.append({"raw": prod, "reason": reason, "image_source": entry["filename"]})
 
-        # Clean up processed temp file
-        Path(processed_path).unlink(missing_ok=True)
+        # Clean up processed temp file (only if different from source)
+        if processed_path != str(image_path):
+            Path(processed_path).unlink(missing_ok=True)
         return validated, rejected
 
     def build_output(self, ocr_results: list, skipped_count: int, status: str) -> dict:

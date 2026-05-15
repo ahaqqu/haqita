@@ -1,7 +1,7 @@
 """
 Integration test: OCR on Lotte Mart brochure images.
 Reads all images from data/test/lotte/image-brochure/.
-Compares output against tests/integration/asserts/<provider>/lotte/<image>.json.
+Compares output against data/test/lotte/ocr-result/<provider>/<image>.json.
 
 Usage:
     python tests/integration/test_lotte_ocr.py [--image path/to/image.jpg]

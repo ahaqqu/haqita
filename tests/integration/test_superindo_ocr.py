@@ -1,7 +1,7 @@
 """
 Integration test: OCR on Superindo brochure images.
 Reads all images from data/test/superindo/image-brochure/.
-Compares output against tests/integration/asserts/<provider>/superindo/<image>.json.
+Compares output against data/test/superindo/ocr-result/<provider>/<image>.json.
 
 Usage:
     python tests/integration/test_superindo_ocr.py [--image path/to/image.jpg]

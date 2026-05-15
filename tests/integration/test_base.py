@@ -165,7 +165,9 @@ def run_ocr_on_image(
         else:
             print("  [OK] Output matches expected result.")
 
-    Path(processed).unlink(missing_ok=True)
+    # Clean up processed temp file (only if different from source)
+    if str(processed) != str(img_path):
+        Path(processed).unlink(missing_ok=True)
     print(f"\n  Result: {result}")
     return exit_code, result
 
