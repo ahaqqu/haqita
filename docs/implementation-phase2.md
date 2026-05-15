@@ -10,6 +10,7 @@
 
 ## Table of Contents
 
+0. [Rules & Principles](#0-rules--principles)
 1. [Architecture](#1-architecture)
 2. [Project Structure](#2-project-structure)
 3. [Configuration](#3-configuration)
@@ -24,6 +25,32 @@
 12. [Implementation Order](#12-implementation-order)
 13. [Logging & User Output](#13-logging--user-output)
 14. [Bat Files](#14-bat-files)
+
+---
+
+## 0. Rules & Principles
+
+### Cross-Phase Awareness
+- **Phase 1 issues must be flagged**: Even when working on Phase 2, any problem or optimization candidate found in Phase 1 (scrapers, OCR) must be spoken out loud.
+- **Goal is smooth end-to-end flow**: Don't workaround Phase 2 problems caused by bad Phase 1 output. Always find the best solution, even if it means refactoring Phase 1.
+- **Confirm before refactoring**: Any refactor (Phase 1 or otherwise) must be confirmed with the user before implementation. Never silently change existing code.
+
+### Implementation Workflow
+- **Step-by-step**: Follow the Implementation Order (Section 12) strictly, one step at a time.
+- **Review gate**: After each step is done, ask the user to review. Wait for confirmation before proceeding to the next step.
+- **Commit discipline**: User commits and pushes after review. Never commit without explicit request.
+- **Branch rule**: Only commit to `feature/phase-2-consolidation`. Never commit to other branches.
+
+### Code Quality
+- **Clean code**: Add appropriate comments, especially for complex/technical logic in the matching pipeline.
+- **Isolated gates**: Each matching gate must be a clean, standalone function with clear input/output.
+- **Feature flags**: Every gate must be individually enable/disable-able via `config.yaml`.
+- **Logging**: Use appropriate log levels. Print important events and any operation that takes noticeable time — user must always understand what the system is doing.
+
+### Testing
+- **Unit vs Integration**: Pure functions → unit tests. External services or full pipeline → integration tests.
+- **All test items covered**: Every test item from implementation-v2.md §6.7 must have a corresponding test.
+- **Use real OCR data**: Integration tests use `data/test/*/ocr-result/*.json` files as input.
 
 ---
 
@@ -288,7 +315,7 @@ This is the schema produced by the scrapers and read by `consolidate.py`.
 }
 ```
 
-**Test JSON schema** (from `work/*.json`):
+**Test JSON schema** (from `data/test/*/ocr-result/*.json`):
 ```json
 {
   "image": "ht1.jpeg",
@@ -968,12 +995,12 @@ OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 | Empty store (zero products) | **Integration** | Needs full pipeline orchestration | `test_consolidate.py` |
 | price_history append + dedup | **Integration** | Needs full pipeline + file I/O | `test_consolidate.py` |
 | clean_price (all formats) | **Unit** | Pure function | `test_ocr_processor.py` |
-| Full end-to-end pipeline | **Integration** | Uses real `work/*.json` files | `test_consolidate.py` |
+| Full end-to-end pipeline | **Integration** | Uses real `data/test/*/ocr-result/*.json` files | `test_consolidate.py` |
 | Embedding model matching | **Integration** | Requires sentence-transformers model download | `test_matcher.py` (marked `@pytest.mark.slow`) |
 
 ### Test data
 
-Use `work/integration_test_lotte_ht1.json`, `work/integration_test_lotte_ht5.json`, and `work/integration_test_superindo.json` as input for integration tests.
+Use `data/test/lotte/ocr-result/integration_test_lotte_ht1.json`, `data/test/lotte/ocr-result/integration_test_lotte_ht5.json`, and `data/test/superindo/ocr-result//integration_test_superindo.json` as input for integration tests.
 
 ### Running tests
 
@@ -1140,7 +1167,7 @@ pause
 
 ## Appendix: OCR Data Observations
 
-From the test JSON files in `work/`:
+From the test JSON files in `data/test/*/ocr-result/*.json`:
 
 ### Lotte HT1 (6 products)
 - Packaged/frozen goods with brands
