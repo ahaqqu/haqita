@@ -383,7 +383,7 @@ echo ========================================
 echo  Running Consolidation (Docker)
 echo ========================================
 echo.
-docker compose up --build
+docker compose -f docker\docker-compose.yml up --build
 echo.
 pause
 goto STAGE_CONSOLIDATION

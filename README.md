@@ -200,8 +200,10 @@ haqita/
 ├── haqita.bat                        ← Interactive launch menu
 ├── config.yaml                       ← All tunable settings
 ├── .env                              ← Configuration (API keys, provider toggles)
-├── Dockerfile                        ← Docker image for consolidation pipeline
-├── docker-compose.yml                ← Docker service definition
+├── docker/                           ← Docker configuration
+│   ├── Dockerfile                    ← Python 3.12 + all deps
+│   ├── docker-compose.yml            ← Full pipeline in container
+│   └── .dockerignore                 ← Files excluded from build context
 ├── scripts/
 │   ├── scrapers/
 │   │   ├── base_scraper.py           ← Shared scraper infrastructure

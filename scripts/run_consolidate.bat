@@ -29,7 +29,7 @@ echo ========================================
 echo  Running Consolidation in Docker
 echo ========================================
 echo.
-docker compose up --build
+docker compose -f docker\docker-compose.yml up --build
 echo.
 pause
 exit /b 0

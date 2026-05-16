@@ -99,9 +99,10 @@ haqita/
 ├── config.yaml                         # All tunable settings — UPDATED
 ├── .env                                # Secrets and provider toggles (never committed)
 ├── .env.example                        # Template for .env — UPDATED
-├── Dockerfile                          # NEW — Python 3.12 + all deps
-├── docker-compose.yml                  # NEW — Full pipeline in container
-├── .dockerignore                       # NEW
+├── docker/
+│   ├── Dockerfile                    # NEW — Python 3.12 + all deps
+│   ├── docker-compose.yml            # NEW — Full pipeline in container
+│   └── .dockerignore                 # NEW
 │
 ├── scripts/
 │   ├── scrapers/

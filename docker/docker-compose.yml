@@ -1,10 +1,12 @@
 services:
   haqita:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     volumes:
       # Mount entire project so scripts can read/write data/output/work
-      - .:/app
-    env_file: .env
+      - ..:/app
+    env_file: ../.env
     # Allow container to reach Ollama running on Windows host
     extra_hosts:
       - "host.docker.internal:host-gateway"
