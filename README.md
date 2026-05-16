@@ -176,14 +176,27 @@ haqita.bat
 
 Launches an interactive menu organized by stages. Each stage can be run independently — if something fails, you can rerun from that stage onward.
 
+## Run Mode
+
+Set `RUN_MODE` in `.env` to control whether stages run natively or via Docker. This is an infrastructure choice that rarely changes.
+
+```env
+RUN_MODE=native   # or "docker"
+```
+
+| Mode | Description |
+|---|---|
+| `native` (default) | Runs Python scripts directly on your machine |
+| `docker` | Runs stages in Docker containers via `docker compose run --build` |
+
 ## Menu
 
 | Key | Action | Description |
 |---|---|---|
-| **1** | Full pipeline | Scrape → OCR → Consolidate (end-to-end, native) |
-| **2** | Stage 1: Scrape | Download brochure images (native or Docker) |
-| **3** | Stage 2: OCR | Extract products from scraped images (native or Docker) |
-| **4** | Stage 3: Consolidation | Match products across stores (native or Docker) |
+| **1** | Full pipeline | Scrape → OCR → Consolidate (end-to-end) |
+| **2** | Stage 1: Scrape | Download brochure images |
+| **3** | Stage 2: OCR | Extract products from scraped images |
+| **4** | Stage 3: Consolidation | Match products across stores |
 | **5** | Tests | Integration tests or matching pipeline tests |
 
 Each stage has a **dry-run** mode:
@@ -263,7 +276,7 @@ haqita/
 - Ollama with `qwen3-vl:7b` (configurable in config.yaml)
 - NVIDIA GPU recommended (~3.3 GiB VRAM), works on CPU
 - Windows 10+
-- Docker (for consolidation pipeline)
+- Docker (optional, only when `RUN_MODE=docker` in `.env`)
 
 Python packages: `requests`, `beautifulsoup4`, `Pillow`, `pyyaml`, `python-dotenv`, `google-genai`, `sentence-transformers`, `numpy`, `scikit-learn`, `pytest`
 

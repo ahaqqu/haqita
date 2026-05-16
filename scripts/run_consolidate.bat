@@ -1,21 +1,32 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Load .env if it exists
+if exist ".env" (
+    for /f "tokens=1,* delims==" %%a in (.env) do (
+        set "%%a=%%b"
+    )
+)
+
+:: Default to native if RUN_MODE not set
+if "!RUN_MODE!"=="" set RUN_MODE=native
+
 echo ========================================
 echo  Haqita — Consolidation Pipeline
 echo ========================================
+echo  Run mode: !RUN_MODE!
 echo.
 
-echo  [1] Run consolidation (Docker)
-echo  [2] Run consolidation (native Python)
+echo  [1] Run consolidation
+echo  [2] Dry-run (no database update)
 echo  [3] Run with custom input directory
 echo  [0] Back
 echo.
 
 set /p choice="Your choice: "
 
-if "%choice%"=="1" goto RUN_DOCKER
-if "%choice%"=="2" goto RUN_NATIVE
+if "%choice%"=="1" goto RUN
+if "%choice%"=="2" goto DRYRUN
 if "%choice%"=="3" goto RUN_CUSTOM
 if "%choice%"=="0" exit /b 0
 
@@ -23,24 +34,28 @@ echo Invalid choice.
 pause
 goto :EOF
 
-:RUN_DOCKER
+:RUN
 cls
 echo ========================================
-echo  Running Consolidation in Docker
+echo  Running Consolidation
 echo ========================================
 echo.
-docker compose -f docker\docker-compose.yml run --build consolidate
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build consolidate
+) else (
+    python scripts/consolidate.py
+)
 echo.
 pause
 exit /b 0
 
-:RUN_NATIVE
+:DRYRUN
 cls
 echo ========================================
-echo  Running Consolidation Natively
+echo  Consolidation Dry-run
 echo ========================================
 echo.
-python scripts/consolidate.py
+python scripts/consolidate.py --dry-run
 echo.
 pause
 exit /b 0
