@@ -56,6 +56,7 @@ echo  [1] Run normally
 echo  [2] Dry-run (preview, no changes)
 echo  [3] Verbose (detailed log file)
 echo  [4] Verbose + Dry-run
+echo  [5] Resume from last failed stage
 echo  [0] Back
 echo.
 
@@ -65,6 +66,7 @@ if "%fp_choice%"=="1" goto FULL_PIPELINE
 if "%fp_choice%"=="2" goto FULL_PIPELINE_DRYRUN
 if "%fp_choice%"=="3" goto FULL_PIPELINE_VERBOSE
 if "%fp_choice%"=="4" goto FULL_PIPELINE_VERBOSE_DRYRUN
+if "%fp_choice%"=="5" goto FULL_PIPELINE_RESUME
 if "%fp_choice%"=="0" goto MENU
 
 echo Invalid choice. Press any key to try again...
@@ -161,6 +163,24 @@ python scripts/orchestrator.py --full --verbose --dry-run
 
 echo ========================================
 echo  Dry-run complete.
+echo ========================================
+echo.
+pause
+goto MENU
+
+:FULL_PIPELINE_RESUME
+cls
+echo ========================================
+echo  Full Pipeline — Resume
+echo ========================================
+echo.
+echo  Checking stage status...
+echo.
+
+python scripts/orchestrator.py --full --resume
+
+echo ========================================
+echo  Resume complete.
 echo ========================================
 echo.
 pause
@@ -439,6 +459,7 @@ echo ========================================
 echo.
 echo  [1] Run consolidation
 echo  [2] Dry-run (no database update)
+echo  [3] Custom input directory
 echo  [0] Back
 echo.
 
@@ -446,6 +467,7 @@ set /p cons_choice="Your choice: "
 
 if "%cons_choice%"=="1" goto CONSOLIDATE_RUN
 if "%cons_choice%"=="2" goto CONSOLIDATE_DRYRUN
+if "%cons_choice%"=="3" goto CONSOLIDATE_CUSTOM
 if "%cons_choice%"=="0" goto MENU
 
 echo Invalid choice. Press any key to try again...
@@ -474,6 +496,19 @@ echo  Consolidation Dry-run
 echo ========================================
 echo.
 python scripts/consolidate.py --dry-run
+echo.
+pause
+goto STAGE_CONSOLIDATION
+
+:CONSOLIDATE_CUSTOM
+cls
+echo ========================================
+echo  Consolidation — Custom Input Directory
+echo ========================================
+echo.
+set /p dir="Input directory: "
+if "%dir%"=="" set dir=output
+python scripts/consolidate.py --input-dir "%dir%"
 echo.
 pause
 goto STAGE_CONSOLIDATION

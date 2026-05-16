@@ -251,6 +251,7 @@ def main():
     parser.add_argument("--stores", default="lotte,superindo", help="Comma-separated store names (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Preview what would run without making changes")
     parser.add_argument("--verbose", action="store_true", help="Detailed logging to file")
+    parser.add_argument("--resume", action="store_true", help="Resume from last failed stage")
     args = parser.parse_args()
 
     if not args.full and not args.stage:
@@ -270,12 +271,58 @@ def main():
         print("  Dry-run: YES")
     if args.verbose:
         print("  Verbose logging: YES")
+    if args.resume:
+        print("  Mode: Resume from last failed stage")
     print("=" * 60)
     print()
 
     t_start = time.time()
 
-    if args.full:
+    if args.full and args.resume:
+        # Check which stages are already complete
+        scrape_status = read_stage_status("scrape")
+        ocr_status = read_stage_status("ocr")
+        cons_status = read_stage_status("consolidate")
+
+        scrape_done = scrape_status and scrape_status.get("stores") and all(
+            info.get("status") in ("new_images", "no_new", "dry_run")
+            for info in scrape_status.get("stores", {}).values()
+        )
+        ocr_done = ocr_status and ocr_status.get("stores") and all(
+            info.get("status") in ("complete", "skipped", "dry_run")
+            for info in ocr_status.get("stores", {}).values()
+        )
+        cons_done = cons_status and cons_status.get("status") in ("complete", "dry_run")
+
+        if scrape_done:
+            logger.info("Scrape already complete, skipping")
+            print("  [SKIP] Scrape — already complete")
+        else:
+            print("  [RUN] Scrape")
+            scrape_result = run_scrape(stores, args.dry_run, logger)
+            scrape_status = scrape_result
+
+        print()
+
+        if ocr_done:
+            logger.info("OCR already complete, skipping")
+            print("  [SKIP] OCR — already complete")
+        else:
+            print("  [RUN] OCR")
+            ocr_result = run_ocr(stores, scrape_status, args.dry_run, logger)
+
+        print()
+
+        if cons_done:
+            logger.info("Consolidation already complete, skipping")
+            print("  [SKIP] Consolidation — already complete")
+        else:
+            print("  [RUN] Consolidation")
+            cons_result = run_consolidate(args.dry_run, logger)
+
+        print()
+
+    elif args.full:
         # Stage 1: Scrape all stores
         scrape_result = run_scrape(stores, args.dry_run, logger)
         print()
