@@ -11,14 +11,11 @@ echo ========================================
 echo   Haqita - Integration Tests
 echo ========================================
 echo.
-echo  This runs OCR on real brochure images
-echo  using Ollama. Ensure Ollama is running.
-echo.
-
 echo  [1] Superindo OCR test (default image)
-echo  [2] Lotte OCR test (default image)
+echo  [2] Lotte OCR test (default images)
 echo  [3] Run custom image through OCR
 echo  [4] Run all integration tests
+echo  [5] Matching pipeline tests (pytest)
 echo  [0] Back
 echo.
 
@@ -28,6 +25,7 @@ if "%choice%"=="1" goto TEST_SUPERINDO
 if "%choice%"=="2" goto TEST_LOTTE
 if "%choice%"=="3" goto TEST_CUSTOM
 if "%choice%"=="4" goto TEST_ALL
+if "%choice%"=="5" goto TEST_MATCHING
 if "%choice%"=="0" exit /b 0
 
 echo Invalid choice.
@@ -106,20 +104,43 @@ if !ALL_PASSED! equ 1 (
     echo [PASS] All integration tests passed.
 ) else (
     echo [WARN] Some tests failed (exit code != 0).
-    echo   Code 2 = model too small, not a pipeline error.
+    echo   Code 2 = no products found.
+    echo   Code 4 = output differs from assert.
 )
 echo.
 pause
 exit /b 0
 
+:TEST_MATCHING
+cls
+echo ========================================
+echo  Matching Pipeline Tests (pytest)
+echo ========================================
+echo.
+python -m pytest tests/matching/ -v
+set EXIT_CODE=!ERRORLEVEL!
+echo.
+if !EXIT_CODE! equ 0 (
+    echo [PASS] All matching tests passed.
+) else (
+    echo [FAIL] Some matching tests failed.
+)
+echo.
+pause
+exit /b !EXIT_CODE!
+
 :SHOW_RESULT
 echo.
 if !EXIT_CODE! equ 0 (
-    echo [PASS] Products extracted successfully.
+    echo [PASS] Products extracted successfully, matches assert.
 ) else if !EXIT_CODE! equ 1 (
-    echo [SKIP] Infrastructure not available (Ollama/model).
+    echo [SKIP] Infrastructure not available (Ollama/Gemini).
 ) else if !EXIT_CODE! equ 2 (
-    echo [INFO] OCR ran but no products found (model may be too small).
+    echo [INFO] OCR ran but no products found.
+) else if !EXIT_CODE! equ 3 (
+    echo [FAIL] Preprocessing error.
+) else if !EXIT_CODE! equ 4 (
+    echo [DIFF] Products extracted but differ from assert.
 ) else (
     echo [FAIL] Unexpected error (exit code !EXIT_CODE!).
 )

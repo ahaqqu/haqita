@@ -21,6 +21,7 @@ ocr:
     timeout_seconds: 300
     max_retries: 2
     temperature: 0
+    preprocess: true                    # Upscale + enhance before OCR (Ollama only)
     image_min_width_px: 1400
     image_contrast_enhance: 1.4
     image_sharpness_enhance: 1.2
@@ -31,19 +32,37 @@ ocr:
     max_retries: 2
 
 consolidation:
-  token_jaccard_min: 0.30
+  # Matching pipeline thresholds
+  token_jaccard_min: 0.30             # Below this: skip pair before embedding
   embedding_model: paraphrase-multilingual-MiniLM-L12-v2
-  embedding_auto_match: 0.85
-  embedding_ambiguous_low: 0.55
-  unit_tolerance_pct: 15
-  price_ratio_max: 3.0
-  ai_model: qwen3:4b
-  ai_batch_size: 20
+  embedding_auto_match: 0.85          # Embedding score >= this: auto-match
+  embedding_ambiguous_low: 0.55       # Below this: no match
+                                       # Between 0.55-0.85: send to AI verifier
+  unit_tolerance_pct: 15              # UnitParser: allow ±15% for OCR unit noise
+  price_ratio_max: 3.0                # Per-unit price ratio > this: flag match
+
+  # Feature flags for each gate (enable/disable individually)
+  gates:
+    gate0_unit_type: true
+    gate1_brand: true
+    gate2_token_jaccard: true
+    gate3_exact_match: true
+    gate4_embedding: true
+    gate5_price_plausibility: true
+    gate6_ai_verifier: true
+
+  # AI verifier (for ambiguous pairs)
+  ai_verifier:
+    provider: ollama                  # "ollama" or "gemini"
+    ai_model: qwen3:4b                # Ollama model
+    gemini_model: gemini-3-flash-preview  # Gemini model (if provider=gemini)
+    ai_batch_size: 20
 
 validation:
   min_price: 100
-  max_price: 1000000
+  max_price: 1_000_000
   min_product_name_length: 3
+  ocr_confidence_flag_threshold: 0.7  # Flag for review (don't reject)
 
 monitoring:
   review_queue_max: 100

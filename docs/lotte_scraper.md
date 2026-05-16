@@ -1,19 +1,19 @@
 # Lotte Promo Scraper
 
-Fetches promo flyers from Lotte Mart website, detects new promos via content hashing, and extracts product data using Qwen3-VL OCR.
+Fetches promo flyers from Lotte Mart website, detects new promos via content hashing, and extracts product data using OCR.
 
 ## How It Works
 
 ```
 1. Fetch HTML     → GET https://www.lottemart.co.id/all-promo-mart
 2. Parse images   → BeautifulSoup → filter by keywords (promo, flyer, ht)
-3. Download       → Save to data/scape/lotte/<hash_prefix>_<filename>
+3. Download       → Save to data/scrape/lotte/<hash_prefix>_<filename>
 4. Filter         → Skip logos/icons (size < 50KB, dimensions < 300px)
 5. Deduplicate    → MD5 hash comparison against state history
 6. Skip old       → Already-processed hashes skipped
-7. OCR new        → Qwen3-VL extracts products + promo period
+7. OCR new        → OCR extracts products + promo period
 8. Save results   → output/lotte_promos_YYYYMMDD_HHMMSS.json
-9. Update state   → data/scape/lotte_state.json
+9. Update state   → data/scrape/lotte_state.json
 ```
 
 ## Usage
@@ -26,18 +26,18 @@ Then select option **1** (Run Lotte Promo Scraper) or **3** (Dry-run).
 
 ### Dry run (see what's new without OCR)
 ```cmd
-scripts\run_lotte_scraper.bat --dry-run
+python scripts/scrapers/lotte.py --dry-run
 ```
 
 ### Full scrape + OCR
 ```cmd
-scripts\run_lotte_scraper.bat
+python scripts/scrapers/lotte.py
 ```
 
 ### Direct Python
 ```cmd
-python scripts/scrapers/lotte_qwen.py --dry-run
-python scripts/scrapers/lotte_qwen.py
+python scripts/scrapers/lotte.py --dry-run
+python scripts/scrapers/lotte.py
 ```
 
 ## New Promo Detection
@@ -82,7 +82,7 @@ Files saved with MD5 prefix (`ht1_588fe87e.jpeg`) to prevent overwrites — next
 
 Saved incrementally after each image — a crash on image 4 preserves images 1-3.
 
-### `data/scape/lotte_state.json`
+### `data/scrape/lotte_state.json`
 ```json
 {
   "last_run": "2026-05-14T07:30:00",
@@ -96,10 +96,10 @@ Saved incrementally after each image — a crash on image 4 preserves images 1-3
 
 | Path | Purpose |
 |---|---|
-| `scripts/scrapers/lotte_qwen.py` | Scraper script |
-| `scripts/run_lotte_scraper.bat` | Batch launcher |
-| `data/scape/lotte/` | Downloaded promo images |
-| `data/scape/lotte_state.json` | Processed image tracking |
+| `scripts/scrapers/lotte.py` | Scraper script |
+| `scripts/scrapers/base_scraper.py` | Shared scraper infrastructure |
+| `data/scrape/lotte/` | Downloaded promo images |
+| `data/scrape/lotte_state.json` | Processed image tracking |
 | `output/lotte_promos_*.json` | OCR extraction results |
 
 ## Test Mode
@@ -116,7 +116,7 @@ Uses `data/test/lotte/html-scape/All Promo Mart.html` and assets from its `All P
 
 - Python 3.8+
 - `requests`, `beautifulsoup4`, `Pillow`
-- Ollama with `qwen3-vl:2b` (auto-pulled by batch file)
+- Ollama with `qwen3-vl:7b` (configurable in config.yaml)
 - Internet connection for live scraping
 
 ## Configuration
