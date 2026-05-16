@@ -29,9 +29,6 @@ logger = logging.getLogger(__name__)
 
 # --- Store-specific configuration ---
 STORE_NAME = "Superindo"
-STATE_DIR = Path("output/scrape")
-IMAGES_DIR = STATE_DIR / "superindo"
-STATE_FILE = STATE_DIR / "superindo_state.json"
 REGION_FILTER = "jabodetabek-palembang"
 
 
@@ -54,8 +51,6 @@ class SuperindoScraper(BaseScraper):
     """Superindo promo scraper using swiper/fancybox image detection."""
 
     store_name = STORE_NAME
-    images_dir = IMAGES_DIR
-    state_file = STATE_FILE
     headers = DEFAULT_HEADERS
 
     def __init__(self, cfg: dict):

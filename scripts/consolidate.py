@@ -317,6 +317,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
                 'promo_type': la.get('_promo_type', 'single'),
                 'period': la.get('period'),
                 'valid_until': la.get('_valid_until'),
+                'image_path': la.get('image_path'),
             },
             {
                 'store': 'Superindo',
@@ -327,6 +328,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
                 'promo_type': sb.get('_promo_type', 'single'),
                 'period': sb.get('period'),
                 'valid_until': sb.get('_valid_until'),
+                'image_path': sb.get('image_path'),
             },
         ]
 
@@ -391,6 +393,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
             'promo': p.get('promo'),
             'period': p.get('period'),
             'valid_until': p.get('_valid_until'),
+            'image_path': p.get('image_path'),
         })
 
     for p in superindo_only:
@@ -412,6 +415,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
             'promo': p.get('promo'),
             'period': p.get('period'),
             'valid_until': p.get('_valid_until'),
+            'image_path': p.get('image_path'),
         })
 
     # Match methods summary
@@ -592,8 +596,8 @@ def main():
         lotte_dir = Path(args.input_dir)
         superindo_dir = Path(args.input_dir)
     else:
-        lotte_dir = Path(args.lotte_dir) if args.lotte_dir else Path('output/ocr')
-        superindo_dir = Path(args.superindo_dir) if args.superindo_dir else Path('output/ocr')
+        lotte_dir = Path(args.lotte_dir) if args.lotte_dir else Path('database/ocr/lotte')
+        superindo_dir = Path(args.superindo_dir) if args.superindo_dir else Path('database/ocr/superindo')
 
     consolidate(cfg, lotte_dir, superindo_dir, output_dir, database_dir, args.dry_run)
 

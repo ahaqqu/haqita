@@ -125,22 +125,30 @@ haqita/
 ├── data/                               # Committed to git (static reference data)
 │   └── test/                           # Test images and expected assert files
 │
-├── output/                             # Generated, can be deleted (debugging)
-│   ├── scrape/
-│   │   ├── lotte/                      # Downloaded brochure images (Lotte)
-│   │   └── superindo/                  # Downloaded brochure images (Superindo)
-│   ├── ocr/
-│   │   ├── lotte_promos_YYYYMMDD_HHMMSS.json
-│   │   └── superindo_promos_YYYYMMDD_HHMMSS.json
-│   └── consolidation/
-│       ├── consolidated_YYYYMMDD_HHMMSS.json
-│       └── consolidated_latest.json    # Always the latest run — HTML reads this
-│
 ├── database/                           # Generated, maintained (do not delete)
+│   ├── scrape/
+│   │   ├── lotte/
+│   │   │   ├── state.json              # MD5 tracking for already-seen images
+│   │   │   └── 20260516/               # Images from today's scrape (date-based)
+│   │   └── superindo/
+│   │       ├── state.json
+│   │       └── 20260516/
+│   ├── ocr/
+│   │   ├── lotte/
+│   │   │   ├── state.json              # Tracks OCR'd images (saves API quota)
+│   │   │   └── lotte_promos_*.json     # OCR results with image_path
+│   │   └── superindo/
+│   │       ├── state.json
+│   │       └── superindo_promos_*.json
 │   ├── price_history.json              # Accumulated snapshots across runs
 │   ├── price_history.json.backup       # Auto-backup before every write
 │   ├── product_catalog.json            # Auto-built product registry
 │   └── review_queue.json               # Low-confidence matches for inspection
+│
+├── output/                             # Generated, can be deleted (debugging)
+│   └── consolidation/
+│       ├── consolidated_YYYYMMDD_HHMMSS.json
+│       └── consolidated_latest.json    # Always the latest run — HTML reads this
 │
 ├── work/                               # Generated, temporary (test output, processing)
 │   └── tests/                          # Integration test results

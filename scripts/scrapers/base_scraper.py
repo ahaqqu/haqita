@@ -109,18 +109,18 @@ class BaseScraper:
 
     Subclass must implement:
     - store_name: str
-    - images_dir: Path
-    - state_file: Path
     - headers: dict
     - collect_image_refs() -> list[tuple[str, str]]  # (url, original_ref)
     - run_ocr(image_path: Path, entry: dict) -> tuple[list[dict], list[dict]]
     - build_output(ocr_results, skipped_count, status) -> dict
+
+    Paths (computed at runtime):
+    - images_dir: database/scrape/<store>/<YYYYMMDD>/
+    - state_file: database/scrape/<store>/state.json
     """
 
     # --- Override in subclass ---
     store_name: str = "unknown"
-    images_dir: Path = Path("output/scrape/unknown")
-    state_file: Path = Path("output/scrape/unknown_state.json")
     headers: dict = field(default_factory=lambda: dict(DEFAULT_HEADERS))
 
     # --- Configurable thresholds ---
@@ -129,6 +129,23 @@ class BaseScraper:
 
     def __init__(self):
         self.proxies = get_proxy_config()
+        self._images_dir: Path | None = None
+        self._state_file: Path | None = None
+
+    @property
+    def images_dir(self) -> Path:
+        """Images saved to database/scrape/<store>/<YYYYMMDD>/."""
+        if self._images_dir is None:
+            date_str = datetime.now().strftime("%Y%m%d")
+            self._images_dir = Path(f"database/scrape/{self.store_name.lower()}/{date_str}")
+        return self._images_dir
+
+    @property
+    def state_file(self) -> Path:
+        """State file at database/scrape/<store>/state.json."""
+        if self._state_file is None:
+            self._state_file = Path(f"database/scrape/{self.store_name.lower()}/state.json")
+        return self._state_file
 
     def ensure_dirs(self) -> None:
         """Create images directory if it doesn't exist."""
@@ -249,6 +266,14 @@ class BaseScraper:
                 products = []
                 rejected = []
             t1 = time.time()
+
+            # Attach image_path to each product for UI brochure reference
+            rel_path = str(img_path).replace('\\', '/')
+            for p in products:
+                p['image_path'] = rel_path
+            for r in rejected:
+                if 'raw' in r:
+                    r['raw']['image_path'] = rel_path
 
             result = {
                 "filename": img["filename"],

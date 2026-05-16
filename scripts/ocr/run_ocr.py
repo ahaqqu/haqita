@@ -2,7 +2,8 @@
 Standalone OCR — extract products from scraped brochure images.
 
 Reads images from output/scrape/<store>/, writes JSON to output/ocr/.
-Can process all images or a specific one.
+Tracks processed images in output/ocr/<store>_ocr_state.json to avoid
+re-OCR-ing the same images (saves API quota).
 
 Usage:
     python scripts/ocr/run_ocr.py [options]
@@ -31,6 +32,9 @@ from scripts.ocr.image_preprocess import preprocess_for_ocr
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
+# OCR state directory
+OCR_STATE_DIR = Path("database/ocr")
+
 
 def load_config(store: str) -> dict:
     """Load config.yaml with .env overrides."""
@@ -49,16 +53,48 @@ def load_config(store: str) -> dict:
     return cfg
 
 
-def discover_images(scrape_dir: Path, specific: str | None = None) -> list[Path]:
-    """Find images to process in scrape directory."""
+def load_ocr_state(store: str) -> dict:
+    """Load OCR state. Tracks which images have been OCR'd."""
+    state_file = OCR_STATE_DIR / store / "state.json"
+    if state_file.exists():
+        return json.loads(state_file.read_text(encoding='utf-8'))
+    return {'processed': [], 'last_run': None}
+
+
+def save_ocr_state(store: str, state: dict) -> None:
+    """Save OCR state."""
+    OCR_STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state_file = OCR_STATE_DIR / store / "state.json"
+    state_file.write_text(
+        json.dumps(state, indent=2, ensure_ascii=False),
+        encoding='utf-8',
+    )
+
+
+def discover_images(scrape_dir: Path, state: dict, specific: str | None = None) -> tuple[list[Path], list[str]]:
+    """
+    Find images to process. Skips already-OCR'd images.
+
+    Returns: (new_images_to_process, already_processed_filenames)
+    """
+    processed = set(state.get('processed', []))
+
     if specific:
         p = scrape_dir / specific
         if not p.exists():
             print(f"[!!] Image not found: {p}")
-            return []
-        return [p]
+            return [], []
+        if p.name in processed:
+            print(f"[!] Image '{p.name}' was already OCR'd. Processing anyway (specific request).")
+            return [p], []
+        return [p], []
+
     exts = {'.jpg', '.jpeg', '.png', '.webp'}
-    return sorted(p for p in scrape_dir.iterdir() if p.suffix.lower() in exts)
+    all_images = sorted(p for p in scrape_dir.iterdir() if p.suffix.lower() in exts)
+
+    new = [p for p in all_images if p.name not in processed]
+    old = [p.name for p in all_images if p.name in processed]
+    return new, old
 
 
 def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None = None, dry_run: bool = False) -> None:
@@ -72,23 +108,44 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
         print("  Dry-run: YES (no file saved)")
     if specific:
         print(f"  Image: {specific}")
-    else:
-        print("  Image: all")
     print("=" * 60)
     print()
 
-    images = discover_images(scrape_dir, specific)
-    if not images:
-        print("[!!] No images found to process.")
+    if not scrape_dir.exists():
+        print(f"[!!] Scrape directory not found: {scrape_dir}")
+        print("    Run Stage 1 (Scrape) first.")
         return
 
-    print(f"[*] Found {len(images)} image(s)\n")
+    # Load state to skip already-processed images
+    state = load_ocr_state(store)
+    new_images, processed_images = discover_images(scrape_dir, state, specific)
+
+    if specific:
+        # Specific image: process it regardless of state
+        images_to_process = new_images if new_images else [scrape_dir / specific]
+        processed_count = 0
+    else:
+        images_to_process = new_images
+        processed_count = len(processed_images)
+        if processed_count > 0:
+            print(f"[*] {processed_count} image(s) already OCR'd (skipped)")
+
+    if not images_to_process:
+        if specific:
+            print(f"[!!] Image not found: {specific}")
+        else:
+            print("[*] No new images to OCR. All images already processed.")
+            print("    Run Stage 1 (Scrape) to download new brochures first.")
+        return
+
+    print(f"[*] Found {len(images_to_process)} new image(s) to process\n")
 
     all_products = []
     all_rejected = []
+    processed_filenames = []
 
-    for idx, img_path in enumerate(images, 1):
-        print(f"[{idx}/{len(images)}] {img_path.name} ({img_path.stat().st_size / 1024:.0f} KB)")
+    for idx, img_path in enumerate(images_to_process, 1):
+        print(f"[{idx}/{len(images_to_process)}] {img_path.name} ({img_path.stat().st_size / 1024:.0f} KB)")
 
         print("    Preprocessing...", end=" ")
         sys.stdout.flush()
@@ -106,8 +163,10 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
             for prod in products_raw:
                 clean, reason = validate_product(prod, img_path.name)
                 if clean:
+                    clean['image_path'] = str(img_path).replace('\\', '/')
                     validated.append(clean)
                 else:
+                    prod['image_path'] = str(img_path).replace('\\', '/')
                     rejected.append({"raw": prod, "reason": reason})
         except Exception as e:
             print(f"    [ERR] OCR failed: {e}")
@@ -125,6 +184,7 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
 
         all_products.extend(validated)
         all_rejected.extend(rejected)
+        processed_filenames.append(img_path.name)
 
         if str(processed) != str(img_path):
             Path(processed).unlink(missing_ok=True)
@@ -132,7 +192,7 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
 
     if dry_run:
         print(f"[*] Dry-run complete: {len(all_products)} products, {len(all_rejected)} rejected")
-        print("    No file saved.")
+        print("    No file saved. State not updated.")
         return
 
     if not all_products and not all_rejected:
@@ -147,7 +207,8 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
         "store": store.title(),
         "scraped_at": datetime.now().isoformat(),
         "ocr_provider": provider,
-        "images_processed": len(images),
+        "images_processed": len(images_to_process),
+        "images": processed_filenames,
         "products": all_products,
         "rejected": all_rejected,
         "stats": {
@@ -160,8 +221,15 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
         json.dumps(output, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
+
+    # Update state
+    state['processed'].extend(processed_filenames)
+    state['last_run'] = datetime.now().isoformat()
+    save_ocr_state(store, state)
+
     print(f"[*] Saved to {output_file}")
-    print(f"    {len(all_products)} products, {len(all_rejected)} rejected")
+    print(f"[*] State updated: {len(processed_filenames)} image(s) marked as processed")
+    print(f"    Total: {len(all_products)} products, {len(all_rejected)} rejected")
 
 
 def main():
@@ -173,8 +241,8 @@ def main():
     args = parser.parse_args()
 
     cfg = load_config(args.store)
-    scrape_dir = Path(f'output/scrape/{args.store}')
-    output_dir = Path('output/ocr')
+    scrape_dir = Path(f'database/scrape/{args.store}')
+    output_dir = Path(f'database/ocr/{args.store}')
 
     run_ocr(cfg, scrape_dir, output_dir, args.image, args.dry_run)
 

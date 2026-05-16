@@ -17,9 +17,13 @@ Each stage runs independently. If something fails, rerun from that stage onward.
   └─────────────┘     └──────────────┘     └──────────────────┘
         │                     │                       │
         ▼                     ▼                       ▼
-  output/scrape/        output/ocr/             output/consolidation/
-  └─ lotte/             ├─ lotte_promos_*.json  ├─ consolidated_latest.json
-  └─ superindo/         └─ superindo_promos_*.json └─ consolidated_YYYYMMDD_*.json
+  database/scrape/        database/ocr/           output/consolidation/
+  └─ lotte/               └─ lotte/               ├─ consolidated_latest.json
+  │  └─ state.json          │  └─ state.json      └─ consolidated_YYYYMMDD_*.json
+  │  └─ 20260516/           │  └─ lotte_promos_*.json
+  └─ superindo/             └─ superindo/
+     └─ state.json              └─ state.json
+     └─ 20260516/               └─ superindo_promos_*.json
                                                 (debuggable, can be deleted)
                                                        │
                                                        ▼
@@ -64,8 +68,8 @@ Downloads current promo brochure images from supermarket websites.
 | | |
 |---|---|
 | **Input** | Superindo / Lotte Mart website URLs (from `config.yaml`) |
-| **Output** | Brochure images in `output/scrape/<store>/` (JPG/PNG) |
-| **State** | `output/scrape/<store>/state.json` — tracks already-seen images to avoid re-downloading |
+| **Output** | Brochure images in `database/scrape/<store>/<YYYYMMDD>/` (JPG/PNG) |
+| **State** | `database/scrape/<store>/state.json` — MD5 tracking to skip already-seen images |
 | **Dry-run** | Reports new images without downloading |
 
 ### Stage 2: OCR
@@ -74,8 +78,9 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
 
 | | |
 |---|---|
-| **Input** | Brochure images in `output/scrape/<store>/` |
-| **Output** | `output/ocr/<store>_promos_YYYYMMDD_HHMMSS.json` |
+| **Input** | Brochure images in `database/scrape/<store>/<YYYYMMDD>/` |
+| **Output** | `database/ocr/<store>/<store>_promos_YYYYMMDD_HHMMSS.json` |
+| **State** | `database/ocr/<store>/state.json` — tracks OCR'd images to avoid re-processing (saves API quota) |
 | **Schema** | See below |
 | **Dry-run** | Prints extracted products without saving JSON |
 
@@ -136,9 +141,9 @@ Merges OCR results from both stores, matches same products across stores, comput
       "brand": "Indomie",
       "unit": "85 g",
       "unit_type": "weight",
-      "stores": [
-        { "store": "Lotte", "price": 15500, "effective_unit_price": 3100, "bundle_size": 5, "promo": "DAPAT 5 pcs" },
-        { "store": "Superindo", "price": 3500, "effective_unit_price": 3500, "bundle_size": 1 }
+        "stores": [
+        { "store": "Lotte", "price": 15500, "effective_unit_price": 3100, "bundle_size": 5, "promo": "DAPAT 5 pcs", "image_path": "database/scrape/lotte/20260516/promo_abc123.jpg" },
+        { "store": "Superindo", "price": 3500, "effective_unit_price": 3500, "bundle_size": 1, "image_path": "database/scrape/superindo/20260516/promo_def456.jpg" }
       ],
       "price_min": 3100,
       "price_max": 3500,
@@ -216,20 +221,33 @@ haqita/
 │       └── matcher.py                ← Multi-tier matching pipeline (7 gates)
 ├── data/                             ← Committed to git (static reference data)
 │   └── test/                         ← Test images and expected assert files
-├── output/                             ← Generated, can be deleted (debugging)
-│   ├── scrape/
-│   │   ├── lotte/                    ← Downloaded brochure images
-│   │   └── superindo/
-│   ├── ocr/
-│   │   ├── lotte_promos_*.json       ← Per-store OCR output
-│   │   └── superindo_promos_*.json
-│   └── consolidation/
-│       ├── consolidated_latest.json  ← Always latest — HTML reads this
-│       └── consolidated_YYYYMMDD_HHMMSS.json  ← Timestamped archives
 ├── database/                         ← Generated, maintained (do not delete)
+│   ├── scrape/
+│   │   ├── lotte/
+│   │   │   ├── state.json            ← MD5 tracking for already-seen images
+│   │   │   └── 20260516/             ← Images from today's scrape (date-based)
+│   │   └── superindo/
+│   │       ├── state.json
+│   │       └── 20260516/
+│   ├── ocr/
+│   │   ├── lotte/
+│   │   │   ├── state.json            ← Tracks OCR'd images (saves quota)
+│   │   │   └── lotte_promos_*.json   ← OCR results with image_path
+│   │   └── superindo/
+│   │       ├── state.json
+│   │       └── superindo_promos_*.json
 │   ├── price_history.json            ← Accumulated price snapshots
 │   ├── product_catalog.json          ← Auto-built product registry
 │   └── review_queue.json             ← Low-confidence matches
+├── output/                           ← Generated, can be deleted (debugging)
+│   └── consolidation/
+│       ├── consolidated_latest.json  ← Always latest — HTML reads this
+│       ├── consolidated_YYYYMMDD_HHMMSS.json  ← Timestamped archives
+│       └── dry_run_*.json            ← Dry-run output
+│   └── consolidation/
+│       ├── consolidated_latest.json  ← Always latest — HTML reads this
+│       ├── consolidated_YYYYMMDD_HHMMSS.json  ← Timestamped archives
+│       └── dry_run_*.json            ← Dry-run output
 ├── work/                             ← Generated, temporary (test output, processing)
 │   └── tests/                        ← Integration test results
 └── docs/

@@ -21,9 +21,6 @@ from scripts.ocr.ollama_client import call_ollama_ocr, extract_promo_date
 
 # --- Store-specific configuration ---
 STORE_NAME = "Lotte"
-STATE_DIR = Path("output/scrape")
-IMAGES_DIR = STATE_DIR / "lotte"
-STATE_FILE = STATE_DIR / "lotte_state.json"
 LOTTE_URL = "https://www.lottemart.co.id/all-promo-mart"
 
 HEADERS = {
@@ -66,8 +63,6 @@ class LotteScraper(BaseScraper):
     """Lotte Mart promo scraper using keyword-based image detection."""
 
     store_name = STORE_NAME
-    images_dir = IMAGES_DIR
-    state_file = STATE_FILE
     headers = HEADERS
 
     def __init__(self, cfg: dict = None):

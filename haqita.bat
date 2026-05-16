@@ -239,10 +239,16 @@ echo  OCR — Specific Image
 echo ========================================
 echo.
 echo  Lotte images:
-dir /b output\scrape\lotte\*.jpg output\scrape\lotte\*.jpeg output\scrape\lotte\*.png output\scrape\lotte\*.webp 2>nul
+dir /b /s database\scrape\lotte\*.jpg database\scrape\lotte\*.jpeg database\scrape\lotte\*.png database\scrape\lotte\*.webp 2>nul
 echo.
 echo  Superindo images:
-dir /b output\scrape\superindo\*.jpg output\scrape\superindo\*.jpeg output\scrape\superindo\*.png output\scrape\superindo\*.webp 2>nul
+dir /b /s database\scrape\superindo\*.jpg database\scrape\superindo\*.jpeg database\scrape\superindo\*.png database\scrape\superindo\*.webp 2>nul
+echo.
+echo  Lotte OCR results:
+dir /b database\ocr\lotte\*.json 2>nul
+echo.
+echo  Superindo OCR results:
+dir /b database\ocr\superindo\*.json 2>nul
 echo.
 set /p img="Enter filename: "
 if "%img%"=="" goto STAGE_OCR
