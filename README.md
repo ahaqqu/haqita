@@ -191,20 +191,56 @@ RUN_MODE=native   # or "docker"
 
 ## Menu
 
-| Key | Action | Description |
+Run `haqita.bat` to access the interactive menu:
+
+```
+========================================
+       Haqita - Grocery Price Tool
+========================================
+ Run mode: native
+
+ [1] Run full pipeline
+ [2] Stage 1: Scrape
+ [3] Stage 2: OCR
+ [4] Stage 3: Consolidation
+ [5] Tests
+ [6] Health check
+ [0] Exit
+```
+
+### Full Pipeline (Option 1)
+
+Selecting **[1]** opens a submenu with run modes:
+
+| Choice | Mode | Description |
 |---|---|---|
-| **1** | Full pipeline | Scrape → OCR → Consolidate (end-to-end) |
-| **2** | Stage 1: Scrape | Download brochure images |
-| **3** | Stage 2: OCR | Extract products from scraped images |
-| **4** | Stage 3: Consolidation | Match products across stores |
-| **5** | Tests | Integration tests or matching pipeline tests |
+| **1** | Normal | Scrape → OCR → Consolidate (writes to database) |
+| **2** | Dry-run | Preview all stages, no database changes |
+| **3** | Verbose | Full run with detailed log in `database/logs/` |
+| **4** | Verbose + Dry-run | Preview with detailed log, no changes |
 
-Each stage has a **dry-run** mode:
-- **Scrape dry-run**: Reports new images without downloading
-- **OCR dry-run**: Prints extracted products without saving JSON
-- **Consolidation dry-run**: Runs full pipeline but outputs to `output/consolidation/dry_run_*.json` instead of updating `database/`
+The orchestrator chains all 3 stages automatically. Each stage writes its status to `database/stage_results/` as JSON, so the next stage knows what to process. Only stores with new images get OCR'd, saving API quota.
 
-The **full pipeline** option ([1]) chains all 3 stages automatically with no dry-run — it scrapes, OCRs, and consolidates to the database in one go.
+### Individual Stages (Options 2–4)
+
+Each stage has its own submenu with dry-run support:
+- **Scrape** ([2]): Download brochure images, or dry-run to report new images only
+- **OCR** ([3]): Extract products from scraped images, or dry-run to preview output
+- **Consolidation** ([4]): Match products across stores, or dry-run without updating database
+
+### Health Check (Option 6)
+
+Runs pre-flight verification: Python version, required packages, config validity, OCR/AI provider connectivity, and directory structure.
+
+### Stage Communication
+
+Stages communicate via JSON status files in `database/stage_results/`:
+
+| File | Contents |
+|---|---|
+| `scrape_status.json` | Per-store new image counts |
+| `ocr_status.json` | Per-store product extraction results |
+| `consolidate_status.json` | Consolidation completion status |
 
 ## Project Structure
 
@@ -229,7 +265,8 @@ haqita/
 │   │   ├── image_preprocess.py       ← Image preprocessing
 │   │   └── prompts/                  ← Store-specific OCR prompts
 │   ├── consolidate.py                ← Phase 2: Merge + match + output JSON
-│   ├── run_consolidate.bat           ← Windows launcher for consolidation
+│   ├── orchestrator.py               ← Pipeline orchestrator (scrape → OCR → consolidate)
+│   ├── health_check.py               ← Pre-flight verification
 │   └── matching/                     ← Phase 2: Product matching pipeline
 │       ├── normalizer.py             ← Name/unit/brand normalization
 │       ├── promo_parser.py           ← Indonesian promo text parser

@@ -1,0 +1,15 @@
+{
+  "stage": "scrape",
+  "timestamp": "2026-05-16T18:28:14.836630",
+  "stores": {
+    "lotte": {
+      "status": "dry_run",
+      "new_count": 0
+    },
+    "superindo": {
+      "status": "dry_run",
+      "new_count": 0
+    }
+  },
+  "total_new": 0
+}

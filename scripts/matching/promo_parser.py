@@ -121,21 +121,56 @@ _MONTHS = {
 def parse_valid_until(period: str | None) -> str | None:
     """
     Extract the end date from a period string.
-    "7 - 20 Mei 2026" → "2026-05-20"
+
+    Supported formats:
+        "7 - 20 Mei 2026"       → "2026-05-20"
+        "14-17 Mei 2026"        → "2026-05-17"
+        "Berlaku 1-15 Mei 2026" → "2026-05-15"
+        "s/d 20 Mei 2026"       → "2026-05-20"
+        "Valid until 15 May 2026" → "2026-05-15"
+        "20 Mei 2026"           → "2026-05-20"
     """
     if not period:
         return None
-    # Match: "7 - 20 Mei 2026" or "14-17 Mei 2026"
+
+    # Range: "7 - 20 Mei 2026", "14-17 Mei 2026", "Berlaku 1-15 Mei 2026"
     m = re.search(
         r'(\d{1,2})\s*[-–—]\s*(\d{1,2})\s+(\w+)\s+(\d{4})',
         period,
     )
-    if not m:
-        return None
-    day = int(m.group(2))
-    month_str = m.group(3).lower()[:3]
-    year = m.group(4)
-    month = _MONTHS.get(month_str)
-    if not month:
-        return None
-    return f"{year}-{month}-{day:02d}"
+    if m:
+        day = int(m.group(2))
+        month_str = m.group(3).lower()[:3]
+        year = m.group(4)
+        month = _MONTHS.get(month_str)
+        if month:
+            return f"{year}-{month}-{day:02d}"
+
+    # Single end date: "s/d 20 Mei 2026", "sd. 20 Mei 2026", "sampai 20 Mei 2026"
+    m = re.search(
+        r'(?:s[/\.]?d|sampai|until)\s+(\d{1,2})\s+(\w+)\s+(\d{4})',
+        period,
+        re.IGNORECASE,
+    )
+    if m:
+        day = int(m.group(1))
+        month_str = m.group(2).lower()[:3]
+        year = m.group(3)
+        month = _MONTHS.get(month_str)
+        if month:
+            return f"{year}-{month}-{day:02d}"
+
+    # Bare single date: "20 Mei 2026"
+    m = re.search(
+        r'(\d{1,2})\s+(\w+)\s+(\d{4})',
+        period,
+    )
+    if m:
+        day = int(m.group(1))
+        month_str = m.group(2).lower()[:3]
+        year = m.group(3)
+        month = _MONTHS.get(month_str)
+        if month:
+            return f"{year}-{month}-{day:02d}"
+
+    return None

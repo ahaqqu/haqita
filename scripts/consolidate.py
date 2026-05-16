@@ -220,8 +220,19 @@ def append_to_price_history(history: dict, products: list[dict], today: str) -> 
 # Main consolidation flow
 # ---------------------------------------------------------------------------
 
-def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, output_dir: Path, database_dir: Path, dry_run: bool = False) -> None:
+def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, output_dir: Path, database_dir: Path, dry_run: bool = False, verbose: bool = False, log_file: Path | None = None) -> None:
     t_start = time.time()
+
+    if verbose and log_file:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        logger = logging.getLogger('consolidate_verbose')
+        logger.setLevel(logging.DEBUG)
+        fh = logging.FileHandler(log_file, encoding='utf-8', mode='w')
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+        logger.addHandler(fh)
+    else:
+        logger = None
 
     if dry_run:
         print("[*] Dry-run mode: database will not be updated\n")
@@ -288,9 +299,37 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
 
     # 5. Run matching pipeline
     print("[*] Running matching pipeline ...")
-    matched_pairs, lotte_only, superindo_only, review_items = match_products(
+    matched_pairs, lotte_only, superindo_only, review_items, gate_rejections = match_products(
         lotte_products, superindo_products, cfg, embedding_model,
     )
+
+    if logger:
+        logger.info("=== Matching Pipeline Results ===")
+        logger.info("Matched pairs: %d", len(matched_pairs))
+        for mp in matched_pairs:
+            logger.info("  MATCH [%s] %s (Lotte) <-> %s (Superindo)",
+                        mp['match_method'],
+                        mp['lotte'].get('name', ''),
+                        mp['superindo'].get('name', ''))
+        logger.info("Lotte only: %d", len(lotte_only))
+        for p in lotte_only:
+            logger.info("  LOTTE_ONLY: %s", p.get('name', ''))
+        logger.info("Superindo only: %d", len(superindo_only))
+        for p in superindo_only:
+            logger.info("  SUPERINDO_ONLY: %s", p.get('name', ''))
+        logger.info("Review queue: %d", len(review_items))
+        for r in review_items:
+            logger.info("  REVIEW [%s]: %s <-> %s",
+                        r.get('reason', ''),
+                        r.get('product_a', {}).get('name', ''),
+                        r.get('product_b', {}).get('name', ''))
+        logger.info("Gate rejections: %d", len(gate_rejections))
+        for rej in gate_rejections:
+            logger.info("  REJECTED [%s] %s (Lotte) vs %s (Superindo): %s",
+                        rej['gate'],
+                        rej['lotte'],
+                        rej['superindo'],
+                        rej['reason'])
 
     # 6. Build consolidated output
     print("[*] Building consolidated output ...")
@@ -586,11 +625,17 @@ def main():
     parser.add_argument('--output-dir', type=str, default='output/consolidation', help='Consolidation output directory')
     parser.add_argument('--dry-run', action='store_true', help='Output to console, no database update')
     parser.add_argument('--no-docker', action='store_true', help='Run natively')
+    parser.add_argument('--verbose', action='store_true', help='Write detailed match results to log file')
     args = parser.parse_args()
 
     cfg = load_config()
     output_dir = Path(args.output_dir)
     database_dir = Path('database')
+
+    log_file = None
+    if args.verbose:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_file = database_dir / 'logs' / f'consolidate_{timestamp}.log'
 
     if args.input_dir:
         lotte_dir = Path(args.input_dir)
@@ -599,7 +644,7 @@ def main():
         lotte_dir = Path(args.lotte_dir) if args.lotte_dir else Path('database/ocr/lotte')
         superindo_dir = Path(args.superindo_dir) if args.superindo_dir else Path('database/ocr/superindo')
 
-    consolidate(cfg, lotte_dir, superindo_dir, output_dir, database_dir, args.dry_run)
+    consolidate(cfg, lotte_dir, superindo_dir, output_dir, database_dir, args.dry_run, args.verbose, log_file)
 
 
 if __name__ == '__main__':
