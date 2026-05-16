@@ -24,11 +24,17 @@ Items to address after Phase 2 is complete.
 
 ## Future Improvements
 
-### [ ] Dockerize scrapers
-- Currently only consolidation runs in Docker. Consider Dockerizing scrapers too for consistency.
+### [x] Dockerize scrapers and OCR
+- **Status**: DONE — All stages now have Docker support:
+  - `docker/docker-compose.yml` has services for `scrape`, `scrape-lotte`, `scrape-superindo`, `ocr`, `ocr-lotte`, `ocr-superindo`, `consolidate`, and `pipeline`
+  - `haqita.bat` offers Docker option for each stage
+  - Ollama runs on host via `ollama serve`, Docker connects via `host.docker.internal:11434`
 
-### [ ] Ollama model upgrade
-- `lotte_qwen.py` still references `qwen3-vl:2b` while config uses `qwen3-vl:7b`. Align.
+### [x] Ollama model alignment
+- **Status**: DONE — All references use `qwen3-vl:7b` (configured in `config.yaml`).
 
-### [ ] Add Superindo "Promo Koran" scraping
-- Currently only "Katalog Super Hemat" is implemented.
+### [x] Superindo "Promo Koran" scraping
+- **Status**: DONE — Both URLs configured in `config.yaml`:
+  - `https://www.superindo.co.id/promosi/katalog-super-hemat/`
+  - `https://www.superindo.co.id/promosi/promo-koran/`
+  - Code routes to correct parser based on URL path.

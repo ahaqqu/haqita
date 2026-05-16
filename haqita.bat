@@ -2,11 +2,22 @@
 title Haqita - Grocery Price Tool
 setlocal enabledelayedexpansion
 
+:: Load .env if it exists
+if exist ".env" (
+    for /f "tokens=1,* delims==" %%a in (.env) do (
+        set "%%a=%%b"
+    )
+)
+
+:: Default to native if RUN_MODE not set
+if "!RUN_MODE!"=="" set RUN_MODE=native
+
 :MENU
 cls
 echo ========================================
 echo        Haqita - Grocery Price Tool
 echo ========================================
+echo  Run mode: !RUN_MODE!
 echo.
 echo  [1] Run full pipeline (Scrape → OCR → Consolidate)
 echo  [2] Stage 1: Scrape
@@ -39,6 +50,7 @@ echo ========================================
 echo  Running Full Pipeline
 echo ========================================
 echo.
+echo  Mode: !RUN_MODE!
 echo  Stage 1: Scrape all stores
 echo  Stage 2: OCR all scraped images
 echo  Stage 3: Consolidate (update database)
@@ -47,34 +59,38 @@ echo  Press any key to start, or Ctrl+C to cancel...
 pause >nul
 echo.
 
-echo ========================================
-echo  Stage 1: Scrape
-echo ========================================
-echo.
-echo --- Lotte Mart ---
-python scripts/scrapers/lotte.py
-echo.
-echo --- Superindo ---
-python scripts/scrapers/superindo.py
-echo.
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build pipeline
+) else (
+    echo ========================================
+    echo  Stage 1: Scrape
+    echo ========================================
+    echo.
+    echo --- Lotte Mart ---
+    python scripts/scrapers/lotte.py
+    echo.
+    echo --- Superindo ---
+    python scripts/scrapers/superindo.py
+    echo.
 
-echo ========================================
-echo  Stage 2: OCR
-echo ========================================
-echo.
-echo --- Lotte ---
-python scripts/ocr/run_ocr.py --store lotte
-echo.
-echo --- Superindo ---
-python scripts/ocr/run_ocr.py --store superindo
-echo.
+    echo ========================================
+    echo  Stage 2: OCR
+    echo ========================================
+    echo.
+    echo --- Lotte ---
+    python scripts/ocr/run_ocr.py --store lotte
+    echo.
+    echo --- Superindo ---
+    python scripts/ocr/run_ocr.py --store superindo
+    echo.
 
-echo ========================================
-echo  Stage 3: Consolidation
-echo ========================================
-echo.
-python scripts/consolidate.py
-echo.
+    echo ========================================
+    echo  Stage 3: Consolidation
+    echo ========================================
+    echo.
+    python scripts/consolidate.py
+    echo.
+)
 
 echo ========================================
 echo  Pipeline complete.
@@ -118,7 +134,11 @@ echo ========================================
 echo  Scrape Lotte Mart
 echo ========================================
 echo.
-python scripts/scrapers/lotte.py
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build scrape-lotte
+) else (
+    python scripts/scrapers/lotte.py
+)
 echo.
 pause
 goto STAGE_SCRAPE
@@ -129,7 +149,11 @@ echo ========================================
 echo  Scrape Superindo
 echo ========================================
 echo.
-python scripts/scrapers/superindo.py
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build scrape-superindo
+) else (
+    python scripts/scrapers/superindo.py
+)
 echo.
 pause
 goto STAGE_SCRAPE
@@ -140,11 +164,15 @@ echo ========================================
 echo  Scrape All Stores
 echo ========================================
 echo.
-echo --- Lotte Mart ---
-python scripts/scrapers/lotte.py
-echo.
-echo --- Superindo ---
-python scripts/scrapers/superindo.py
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build scrape
+) else (
+    echo --- Lotte Mart ---
+    python scripts/scrapers/lotte.py
+    echo.
+    echo --- Superindo ---
+    python scripts/scrapers/superindo.py
+)
 echo.
 pause
 goto STAGE_SCRAPE
@@ -201,7 +229,11 @@ echo ========================================
 echo  OCR — Lotte
 echo ========================================
 echo.
-python scripts/ocr/run_ocr.py --store lotte
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build ocr-lotte
+) else (
+    python scripts/ocr/run_ocr.py --store lotte
+)
 echo.
 pause
 goto STAGE_OCR
@@ -212,7 +244,11 @@ echo ========================================
 echo  OCR — Superindo
 echo ========================================
 echo.
-python scripts/ocr/run_ocr.py --store superindo
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build ocr-superindo
+) else (
+    python scripts/ocr/run_ocr.py --store superindo
+)
 echo.
 pause
 goto STAGE_OCR
@@ -223,11 +259,15 @@ echo ========================================
 echo  OCR — Both Stores
 echo ========================================
 echo.
-echo --- Lotte ---
-python scripts/ocr/run_ocr.py --store lotte
-echo.
-echo --- Superindo ---
-python scripts/ocr/run_ocr.py --store superindo
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build ocr
+) else (
+    echo --- Lotte ---
+    python scripts/ocr/run_ocr.py --store lotte
+    echo.
+    echo --- Superindo ---
+    python scripts/ocr/run_ocr.py --store superindo
+)
 echo.
 pause
 goto STAGE_OCR
@@ -348,42 +388,14 @@ goto STAGE_CONSOLIDATION
 :CONSOLIDATE_RUN
 cls
 echo ========================================
-echo  Consolidation
+echo  Running Consolidation
 echo ========================================
 echo.
-echo  [1] Run natively
-echo  [2] Run in Docker
-echo  [0] Back
-echo.
-
-set /p run_choice="Your choice: "
-
-if "%run_choice%"=="1" goto CONSOLIDATE_NATIVE
-if "%run_choice%"=="2" goto CONSOLIDATE_DOCKER
-if "%run_choice%"=="0" goto STAGE_CONSOLIDATION
-
-echo Invalid choice. Press any key to try again...
-pause >nul
-goto CONSOLIDATE_RUN
-
-:CONSOLIDATE_NATIVE
-cls
-echo ========================================
-echo  Running Consolidation (native)
-echo ========================================
-echo.
-python scripts/consolidate.py
-echo.
-pause
-goto STAGE_CONSOLIDATION
-
-:CONSOLIDATE_DOCKER
-cls
-echo ========================================
-echo  Running Consolidation (Docker)
-echo ========================================
-echo.
-docker compose -f docker\docker-compose.yml up --build
+if "!RUN_MODE!"=="docker" (
+    docker compose -f docker\docker-compose.yml run --build consolidate
+) else (
+    python scripts/consolidate.py
+)
 echo.
 pause
 goto STAGE_CONSOLIDATION

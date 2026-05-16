@@ -180,10 +180,10 @@ Launches an interactive menu organized by stages. Each stage can be run independ
 
 | Key | Action | Description |
 |---|---|---|
-| **1** | Full pipeline | Scrape → OCR → Consolidate (end-to-end) |
-| **2** | Stage 1: Scrape | Download brochure images (Lotte, Superindo, All, or dry-run) |
-| **3** | Stage 2: OCR | Extract products from scraped images (all, specific, or dry-run) |
-| **4** | Stage 3: Consolidation | Match products across stores (run or dry-run) |
+| **1** | Full pipeline | Scrape → OCR → Consolidate (end-to-end, native) |
+| **2** | Stage 1: Scrape | Download brochure images (native or Docker) |
+| **3** | Stage 2: OCR | Extract products from scraped images (native or Docker) |
+| **4** | Stage 3: Consolidation | Match products across stores (native or Docker) |
 | **5** | Tests | Integration tests or matching pipeline tests |
 
 Each stage has a **dry-run** mode:
