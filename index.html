@@ -623,6 +623,19 @@ function retryFetch(url, retries = 3, delay = 1000) {
   });
 }
 
+async function tryLoadWithFallback(basePath, fallbackPath, filename) {
+  const tryPath = (path) => retryFetch(`${path}/${filename}`);
+  try {
+    const resp = await tryPath(basePath);
+    if (resp.ok) return { data: await resp.json(), from: basePath, isSample: false };
+  } catch (e) {}
+  try {
+    const resp = await tryPath(fallbackPath);
+    if (resp.ok) return { data: await resp.json(), from: fallbackPath, isSample: true };
+  } catch (e) {}
+  return { data: null, from: null, isSample: false };
+}
+
 function validateData(data, type) {
   if (!data) return { valid: false, error: "No data received" };
   if (type === "consolidated") {
@@ -797,7 +810,7 @@ function buildDetailPanel(product) {
     const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
     const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
     const unitPrice = s.effective_unit_price ? ` · ${formatIDR(s.effective_unit_price)}/pc` : "";
-    const brochureLink = s.image_path ? `<a class="brochure-link" href="${s.image_path}" target="_blank">View Brochure</a>` : "";
+    const brochureLink = s.image_path ? `<a class="brochure-link" href="${s.image_path}" target="_blank" onclick="event.stopPropagation(); fetch(this.href).then(r=>{if(!r.ok)this.style.display='none'}).catch(()=>this.style.display='none')">View Brochure</a>` : "";
     const diff = product.price_gap && !isCheapest ? ` +${formatIDR(product.price_gap)}` : "";
     const cheapestBadge = isCheapest ? ` ✓ Cheapest` : "";
     return `<div class="detail-store-row ${isCheapest ? 'cheapest' : ''}">
@@ -1009,20 +1022,20 @@ function startAutoRefresh(intervalMs = 300000) {
 async function loadData(isRefresh = false) {
   if (!isRefresh) renderLoading();
   document.getElementById("warning-banner").style.display = "none";
+  document.getElementById("sample-banner").style.display = "none";
   try {
-    const [consResult, histResult] = await Promise.allSettled([
-      retryFetch("output/html/active_promo.json"),
-      retryFetch("output/html/price_history.json")
-    ]);
+    const OUTPUT_PATH = "output/html";
+    const SAMPLE_PATH = "data/sample/html";
+    const consLoad = await tryLoadWithFallback(OUTPUT_PATH, SAMPLE_PATH, "active_promo.json");
+    const histLoad = await tryLoadWithFallback(OUTPUT_PATH, SAMPLE_PATH, "price_history.json");
     let consOk = false, histOk = false;
-    if (consResult.status === "fulfilled" && consResult.value.ok) {
-      const data = await consResult.value.json();
-      const v = validateData(data, "consolidated");
-      if (v.valid) { consolidatedData = data; consOk = true; }
+    if (consLoad.data) {
+      const v = validateData(consLoad.data, "consolidated");
+      if (v.valid) { consolidatedData = consLoad.data; consOk = true; }
       else { renderError(v.error); return; }
     }
-    if (histResult.status === "fulfilled" && histResult.value.ok) {
-      priceHistoryData = await histResult.value.json();
+    if (histLoad.data) {
+      priceHistoryData = histLoad.data;
       histOk = true;
     }
     if (!consOk && !histOk) {
@@ -1037,7 +1050,15 @@ async function loadData(isRefresh = false) {
     }
     const isSample = consolidatedData?.is_sample === true || priceHistoryData?.is_sample === true;
     if (isSample) {
-      document.getElementById("sample-banner").style.display = "flex";
+      const banner = document.getElementById("sample-banner");
+      banner.style.display = "flex";
+      if (consLoad.from === SAMPLE_PATH && histLoad.from === SAMPLE_PATH) {
+        banner.innerHTML = "Displaying sample data. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
+      } else if (consLoad.from === SAMPLE_PATH) {
+        banner.innerHTML = "Displaying sample active_promo.json. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
+      } else {
+        banner.innerHTML = "Displaying sample price_history.json. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
+      }
     }
     displayHints = consolidatedData?.display_hints || getDefaultDisplayHints();
     if (consolidatedData?.generated_at) {
