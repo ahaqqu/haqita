@@ -1,6 +1,6 @@
 """
 Consolidation script — merge OCR results from Lotte & Superindo,
-match same products across stores, output consolidated JSON.
+match same products across stores, write to database.
 
 Usage:
     python scripts/consolidate.py [options]
@@ -9,8 +9,8 @@ Options:
     --input-dir DIR          Auto-detect store from filename, pick latest per store
     --lotte-dir DIR          Explicit Lotte input directory
     --superindo-dir DIR      Explicit Superindo input directory
-    --output-dir DIR         Output directory (default: output/)
-    --no-docker              Run natively (not in Docker)
+    --dry-run                Preview without database update
+    --verbose                Write detailed match results to log file
 """
 
 import argparse
@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.matching.matcher import load_embedding_model, match_products
 from scripts.matching.normalizer import parse_unit_to_base, unit_type
 from scripts.matching.promo_parser import parse_promo, parse_period
+from scripts.matching.consolidation import generate_consolidated_from_history
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -226,173 +227,10 @@ def append_to_price_history(history: dict, products: list[dict], today: str) -> 
 
 
 # ---------------------------------------------------------------------------
-# Generate consolidated output from database (price_history + catalog)
-# ---------------------------------------------------------------------------
-
-def generate_consolidated_from_history(history: dict, catalog: dict, today: str) -> dict:
-    """
-    Rebuild active_promo.json from database/price_history.json + product_catalog.json.
-    """
-    from datetime import datetime
-
-    snapshots = history.get('snapshots', [])
-
-    # Filter active promos
-    active = []
-    for snap in snapshots:
-        vu = snap.get('valid_until')
-        if vu is None or vu >= today:
-            active.append(snap)
-
-    # Get latest snapshot per (product_key, store) — dedup by date
-    latest = {}
-    for snap in active:
-        pkey = snap.get('product_key') or snap.get('key', '')
-        store = snap.get('store', '')
-        key = (pkey, store)
-        if key not in latest or snap.get('date', '') > latest[key].get('date', ''):
-            latest[key] = snap
-
-    # Group by product_key
-    product_groups = {}
-    for (pkey, store), snap in latest.items():
-        if pkey not in product_groups:
-            product_groups[pkey] = []
-        product_groups[pkey].append(snap)
-
-    # Build products and singles
-    consolidated_products = []
-    singles = []
-
-    for pkey, stores_snaps in product_groups.items():
-        cat = catalog.get(pkey, {})
-
-        name = stores_snaps[0].get('name', '')
-        brand = stores_snaps[0].get('brand') or cat.get('brand')
-        unit = stores_snaps[0].get('unit') or cat.get('unit')
-        unit_type_str = stores_snaps[0].get('unit_type', cat.get('unit_type', 'unknown'))
-        unit_value_g = stores_snaps[0].get('unit_value_g', cat.get('unit_value_g'))
-
-        if len(stores_snaps) >= 2:
-            store_entries = []
-            for snap in stores_snaps:
-                store_entries.append({
-                    'store': snap['store'],
-                    'price': snap.get('price', 0),
-                    'effective_unit_price': snap.get('effective_unit_price', snap.get('price', 0)),
-                    'bundle_size': snap.get('bundle_size', 1),
-                    'promo': snap.get('promo'),
-                    'promo_type': snap.get('promo_type', 'single'),
-                    'valid_from': snap.get('valid_from'),
-                    'valid_until': snap.get('valid_until'),
-                    'image_path': snap.get('image_path'),
-                })
-
-            eff_prices = [s['effective_unit_price'] for s in store_entries if s['effective_unit_price'] > 0]
-            price_min = min(eff_prices) if eff_prices else 0
-            price_max = max(eff_prices) if eff_prices else 0
-            cheapest = None
-            if eff_prices:
-                cheapest_store = min(store_entries, key=lambda s: s['effective_unit_price'] if s['effective_unit_price'] > 0 else float('inf'))
-                cheapest = cheapest_store['store']
-            price_gap = price_max - price_min if price_min > 0 else 0
-            savings_pct = round((price_gap / price_max * 100), 1) if price_max > 0 else 0.0
-
-            has_promo = any(s['promo'] for s in store_entries)
-            promo_parts = []
-            for s in store_entries:
-                if s['promo']:
-                    promo_parts.append(f"{s['promo']} di {s['store']}")
-            promo_summary = '; '.join(promo_parts) if promo_parts else ''
-
-            valid_dates = [s['valid_until'] for s in store_entries if s['valid_until']]
-            valid_until = min(valid_dates) if valid_dates else None
-
-            match_method = None
-            match_confidence = None
-            for snap in stores_snaps:
-                mm = snap.get('match_method')
-                mc = snap.get('match_confidence')
-                if mm and (match_method is None or mc > match_confidence):
-                    match_method = mm
-                    match_confidence = mc
-
-            consolidated_products.append({
-                'key': pkey,
-                'name': name,
-                'brand': brand,
-                'unit': unit,
-                'unit_type': unit_type_str,
-                'unit_value_g': unit_value_g,
-                'stores': store_entries,
-                'price_min': price_min,
-                'price_max': price_max,
-                'cheapest_store': cheapest,
-                'price_gap': price_gap,
-                'savings_pct': savings_pct,
-                'has_promo': has_promo,
-                'promo_summary': promo_summary,
-                'valid_until': valid_until,
-                'match_method': match_method or 'unknown',
-                'match_confidence': match_confidence or 0.5,
-            })
-        else:
-            snap = stores_snaps[0]
-            singles.append({
-                'key': pkey,
-                'name': name,
-                'brand': brand,
-                'unit': unit,
-                'unit_type': unit_type_str,
-                'unit_value_g': unit_value_g,
-                'store': snap['store'],
-                'price': snap.get('price', 0),
-                'effective_unit_price': snap.get('effective_unit_price', snap.get('price', 0)),
-                'promo': snap.get('promo'),
-                'valid_from': snap.get('valid_from'),
-                'valid_until': snap.get('valid_until'),
-                'image_path': snap.get('image_path'),
-            })
-
-    matched_count = len(consolidated_products)
-    lotte_count = sum(1 for s in singles if s['store'] == 'Lotte')
-    superindo_count = sum(1 for s in singles if s['store'] == 'Superindo')
-
-    match_methods = {}
-    for p in consolidated_products:
-        m = p.get('match_method', 'unknown')
-        match_methods[m] = match_methods.get(m, 0) + 1
-
-    return {
-        'generated_at': datetime.now().isoformat(),
-        'scrape_dates': {},
-        'source_files': [],
-        'display_hints': {
-            'stores': ['Lotte', 'Superindo'],
-            'store_colors': {'Lotte': '#0057A8', 'Superindo': '#E8211D'},
-            'currency': 'IDR',
-            'locale': 'id-ID',
-        },
-        'products': consolidated_products,
-        'singles': singles,
-        'stats': {
-            'total_products_lotte': matched_count + lotte_count,
-            'total_products_superindo': matched_count + superindo_count,
-            'matched_across_stores': matched_count,
-            'lotte_only': lotte_count,
-            'superindo_only': superindo_count,
-            'match_methods': match_methods,
-            'flagged_for_review': 0,
-            'validation_rejected': 0,
-        },
-    }
-
-
-# ---------------------------------------------------------------------------
 # Main consolidation flow
 # ---------------------------------------------------------------------------
 
-def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, output_dir: Path, database_dir: Path, dry_run: bool = False, verbose: bool = False, log_file: Path | None = None) -> None:
+def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, database_dir: Path, dry_run: bool = False, verbose: bool = False, log_file: Path | None = None) -> None:
     t_start = time.time()
 
     if verbose and log_file:
@@ -630,7 +468,6 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
         })
 
     # 7. Update database, then generate consolidated output from it
-    output_dir.mkdir(parents=True, exist_ok=True)
     today = datetime.now().strftime('%Y-%m-%d')
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -813,14 +650,11 @@ def main():
     parser.add_argument('--input-dir', type=str, help='Auto-detect store from filename')
     parser.add_argument('--lotte-dir', type=str, help='Explicit Lotte input directory')
     parser.add_argument('--superindo-dir', type=str, help='Explicit Superindo input directory')
-    parser.add_argument('--output-dir', type=str, default='output/consolidation', help='Consolidation output directory')
-    parser.add_argument('--dry-run', action='store_true', help='Output to console, no database update')
-    parser.add_argument('--no-docker', action='store_true', help='Run natively')
+    parser.add_argument('--dry-run', action='store_true', help='Preview without database update')
     parser.add_argument('--verbose', action='store_true', help='Write detailed match results to log file')
     args = parser.parse_args()
 
     cfg = load_config()
-    output_dir = Path(args.output_dir)
     database_dir = Path('database')
 
     log_file = None
@@ -835,7 +669,7 @@ def main():
         lotte_dir = Path(args.lotte_dir) if args.lotte_dir else Path('database/ocr/lotte')
         superindo_dir = Path(args.superindo_dir) if args.superindo_dir else Path('database/ocr/superindo')
 
-    consolidate(cfg, lotte_dir, superindo_dir, output_dir, database_dir, args.dry_run, args.verbose, log_file)
+    consolidate(cfg, lotte_dir, superindo_dir, database_dir, args.dry_run, args.verbose, log_file)
 
 
 if __name__ == '__main__':

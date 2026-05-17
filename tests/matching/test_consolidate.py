@@ -12,12 +12,12 @@ from scripts.consolidate import (
     append_to_price_history,
     consolidate,
     extract_products,
-    generate_consolidated_from_history,
     load_config,
     load_price_history,
     make_product_key,
     update_catalog,
 )
+from scripts.matching.consolidation import generate_consolidated_from_history
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TEST_DATA_DIR = PROJECT_ROOT / 'data' / 'test'
@@ -397,11 +397,9 @@ class TestEmptyStore:
     def test_zero_lotte_products(self, capsys):
         """Consolidation should continue with singles only if one store is empty."""
         with tempfile.TemporaryDirectory() as td:
-            output_dir = Path(td) / 'output/consolidation'
             database_dir = Path(td) / 'database'
             ocr_dir = Path(td) / 'output/ocr'
             ocr_dir.mkdir(parents=True)
-            output_dir.mkdir(parents=True)
 
             # Only Superindo file
             superindo_file = ocr_dir / 'superindo_promos.json'
@@ -425,7 +423,7 @@ class TestEmptyStore:
             cfg['consolidation']['gates']['gate4_embedding'] = False
             cfg['consolidation']['gates']['gate6_ai_verifier'] = False
 
-            consolidate(cfg, None, ocr_dir, output_dir, database_dir)
+            consolidate(cfg, None, ocr_dir, database_dir)
 
             # Stage 3 writes only to database core files
             assert (database_dir / 'product_catalog.json').exists()
@@ -446,7 +444,6 @@ class TestFullPipeline:
     def _setup(self):
         self.tmpdir = tempfile.mkdtemp()
         self.ocr_dir = Path(self.tmpdir) / 'output/ocr'
-        self.output_dir = Path(self.tmpdir) / 'output/consolidation'
         self.database_dir = Path(self.tmpdir) / 'database'
         self.ocr_dir.mkdir(parents=True)
 
@@ -469,7 +466,7 @@ class TestFullPipeline:
         cfg['consolidation']['gates']['gate4_embedding'] = False
         cfg['consolidation']['gates']['gate6_ai_verifier'] = False
 
-        consolidate(cfg, self.ocr_dir, self.ocr_dir, self.output_dir, self.database_dir)
+        consolidate(cfg, self.ocr_dir, self.ocr_dir, self.database_dir)
 
         # Stage 3 writes only to database core files
         assert (self.database_dir / 'product_catalog.json').exists()
