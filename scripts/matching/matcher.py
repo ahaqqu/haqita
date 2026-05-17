@@ -165,7 +165,11 @@ Reply with exactly one word: YES or NO"""
 
 def _detect_docker() -> bool:
     """Detect if running inside Docker."""
-    return os.path.exists('/.dockerenv')
+    return (
+        os.path.exists('/.dockerenv')
+        or os.path.exists('/proc/1/cgroup')
+        or os.getenv('container') is not None
+    )
 
 
 def _ollama_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
@@ -291,16 +295,18 @@ def match_products(
     superindo_products: list[dict],
     cfg: dict,
     embedding_model=None,
-) -> tuple[list, list, list, list]:
+) -> tuple[list, list, list, list, list]:
     """
     Run full matching pipeline.
 
-    Returns: (matched_pairs, lotte_only, superindo_only, review_items)
+    Returns: (matched_pairs, lotte_only, superindo_only, review_items, gate_rejections)
+        gate_rejections: list of {lotte, superindo, gate, reason} for debugging
     """
     matched_pairs: list[dict] = []
     lotte_only: list[dict] = []
     superindo_only: list[dict] = list(superindo_products)
     review_items: list[dict] = []
+    gate_rejections: list[dict] = []
 
     matched_b_indices: set[int] = set()
 
@@ -317,6 +323,7 @@ def match_products(
         best_match: dict | None = None
         best_score = 0.0
         best_method = ''
+        last_rejection: dict | None = None
 
         for idx_b, prod_b in enumerate(superindo_products):
             if idx_b in matched_b_indices:
@@ -325,6 +332,12 @@ def match_products(
             # Gate 0
             r = gate0_unit_type(prod_a, prod_b, cfg)
             if r == GateResult.SKIP:
+                last_rejection = {
+                    'lotte': prod_a.get('name', ''),
+                    'superindo': prod_b.get('name', ''),
+                    'gate': 'gate0_unit_type',
+                    'reason': f"incompatible units '{prod_a.get('unit', '')}' vs '{prod_b.get('unit', '')}'",
+                }
                 continue
             if r == GateResult.MATCH:
                 continue
@@ -332,11 +345,26 @@ def match_products(
             # Gate 1
             r = gate1_brand(prod_a, prod_b, cfg)
             if r == GateResult.SKIP:
+                last_rejection = {
+                    'lotte': prod_a.get('name', ''),
+                    'superindo': prod_b.get('name', ''),
+                    'gate': 'gate1_brand',
+                    'reason': f"different brands '{prod_a.get('brand', '')}' vs '{prod_b.get('brand', '')}'",
+                }
                 continue
 
             # Gate 2
             r = gate2_token_jaccard(prod_a, prod_b, cfg)
             if r == GateResult.SKIP:
+                from scripts.matching.normalizer import token_overlap
+                score = token_overlap(prod_a.get('name', ''), prod_b.get('name', ''))
+                threshold = cfg.get('consolidation', {}).get('token_jaccard_min', 0.30)
+                last_rejection = {
+                    'lotte': prod_a.get('name', ''),
+                    'superindo': prod_b.get('name', ''),
+                    'gate': 'gate2_token_jaccard',
+                    'reason': f"token overlap {score:.2f} below threshold {threshold}",
+                }
                 continue
 
             # Gate 3
@@ -346,6 +374,7 @@ def match_products(
                 best_score = 1.0
                 best_method = 'exact'
                 matched_b_indices.add(idx_b)
+                last_rejection = None
                 break
 
             # Gate 4
@@ -358,6 +387,7 @@ def match_products(
                     best_score = score
                     best_method = 'embedding'
                     matched_b_indices.add(idx_b)
+                last_rejection = None
                 continue
             elif r == GateResult.AMBIGUOUS:
                 from sklearn.metrics.pairwise import cosine_similarity
@@ -366,6 +396,7 @@ def match_products(
                     best_match = prod_b
                     best_score = score
                     best_method = 'ai'
+                last_rejection = None
                 continue
 
             # Gate 5 (price plausibility) — only if we have a candidate
@@ -387,10 +418,10 @@ def match_products(
                 'match_confidence': round(best_score, 4),
                 'match_method': best_method,
             })
-            if idx_b in matched_b_indices:
-                pass
         else:
             lotte_only.append(prod_a)
+            if last_rejection:
+                gate_rejections.append(last_rejection)
 
     # Remaining unmatched Superindo products
     superindo_only = [p for idx, p in enumerate(superindo_products) if idx not in matched_b_indices]
@@ -418,15 +449,21 @@ def match_products(
             if result == 'NO':
                 to_remove.append(i)
             elif result is None:
+                mp = ai_matched[i]
                 review_items.append({
-                    'product_a': ambiguous_pairs[i],
-                    'product_b': ambiguous_pairs[i],
+                    'product_a': mp['lotte'],
+                    'product_b': mp['superindo'],
                     'reason': 'ai_verifier_unexpected',
                 })
-            for i in reversed(to_remove):
-                removed = matched_pairs.pop(i)
-                lotte_only.append(removed['lotte'])
-                # Re-add superindo to singles if not matched elsewhere
-                superindo_only.append(removed['superindo'])
+        for i in reversed(to_remove):
+            removed = matched_pairs.pop(i)
+            lotte_only.append(removed['lotte'])
+            superindo_only.append(removed['superindo'])
+            gate_rejections.append({
+                'lotte': removed['lotte'].get('name', ''),
+                'superindo': removed['superindo'].get('name', ''),
+                'gate': 'gate6_ai_verifier',
+                'reason': 'ai_verifier_said_no',
+            })
 
-    return matched_pairs, lotte_only, superindo_only, review_items
+    return matched_pairs, lotte_only, superindo_only, review_items, gate_rejections

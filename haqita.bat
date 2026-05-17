@@ -19,21 +19,23 @@ echo        Haqita - Grocery Price Tool
 echo ========================================
 echo  Run mode: !RUN_MODE!
 echo.
-echo  [1] Run full pipeline (Scrape → OCR → Consolidate)
+echo  [1] Run full pipeline
 echo  [2] Stage 1: Scrape
 echo  [3] Stage 2: OCR
 echo  [4] Stage 3: Consolidation
 echo  [5] Tests
+echo  [6] Health check
 echo  [0] Exit
 echo.
 
 set /p choice="Your choice: "
 
-if "%choice%"=="1" goto FULL_PIPELINE
+if "%choice%"=="1" goto FULL_PIPELINE_MENU
 if "%choice%"=="2" goto STAGE_SCRAPE
 if "%choice%"=="3" goto STAGE_OCR
 if "%choice%"=="4" goto STAGE_CONSOLIDATION
 if "%choice%"=="5" goto STAGE_TESTS
+if "%choice%"=="6" goto HEALTH_CHECK
 if "%choice%"=="0" goto END
 
 echo Invalid choice. Press any key to try again...
@@ -43,6 +45,33 @@ goto MENU
 :: ============================================================
 :: Full Pipeline
 :: ============================================================
+
+:FULL_PIPELINE_MENU
+cls
+echo ========================================
+echo  Full Pipeline Options
+echo ========================================
+echo.
+echo  [1] Run normally
+echo  [2] Dry-run (preview, no changes)
+echo  [3] Verbose (detailed log file)
+echo  [4] Verbose + Dry-run
+echo  [5] Resume from last failed stage
+echo  [0] Back
+echo.
+
+set /p fp_choice="Your choice: "
+
+if "%fp_choice%"=="1" goto FULL_PIPELINE
+if "%fp_choice%"=="2" goto FULL_PIPELINE_DRYRUN
+if "%fp_choice%"=="3" goto FULL_PIPELINE_VERBOSE
+if "%fp_choice%"=="4" goto FULL_PIPELINE_VERBOSE_DRYRUN
+if "%fp_choice%"=="5" goto FULL_PIPELINE_RESUME
+if "%fp_choice%"=="0" goto MENU
+
+echo Invalid choice. Press any key to try again...
+pause >nul
+goto FULL_PIPELINE_MENU
 
 :FULL_PIPELINE
 cls
@@ -62,38 +91,96 @@ echo.
 if "!RUN_MODE!"=="docker" (
     docker compose -f docker\docker-compose.yml run --build pipeline
 ) else (
-    echo ========================================
-    echo  Stage 1: Scrape
-    echo ========================================
-    echo.
-    echo --- Lotte Mart ---
-    python scripts/scrapers/lotte.py
-    echo.
-    echo --- Superindo ---
-    python scripts/scrapers/superindo.py
-    echo.
-
-    echo ========================================
-    echo  Stage 2: OCR
-    echo ========================================
-    echo.
-    echo --- Lotte ---
-    python scripts/ocr/run_ocr.py --store lotte
-    echo.
-    echo --- Superindo ---
-    python scripts/ocr/run_ocr.py --store superindo
-    echo.
-
-    echo ========================================
-    echo  Stage 3: Consolidation
-    echo ========================================
-    echo.
-    python scripts/consolidate.py
-    echo.
+    python scripts/orchestrator.py --full
 )
 
 echo ========================================
 echo  Pipeline complete.
+echo ========================================
+echo.
+pause
+goto MENU
+
+:FULL_PIPELINE_DRYRUN
+cls
+echo ========================================
+echo  Running Full Pipeline — Dry-run
+echo ========================================
+echo.
+echo  Mode: !RUN_MODE!
+echo  No changes will be made to the database.
+echo.
+echo  Press any key to start, or Ctrl+C to cancel...
+pause >nul
+echo.
+
+python scripts/orchestrator.py --full --dry-run
+
+echo ========================================
+echo  Dry-run complete.
+echo ========================================
+echo.
+pause
+goto MENU
+
+:FULL_PIPELINE_VERBOSE
+cls
+echo ========================================
+echo  Running Full Pipeline — Verbose
+echo ========================================
+echo.
+echo  Mode: !RUN_MODE!
+echo  Detailed log will be written to database/logs/
+echo.
+echo  Press any key to start, or Ctrl+C to cancel...
+pause >nul
+echo.
+
+python scripts/orchestrator.py --full --verbose
+
+echo ========================================
+echo  Pipeline complete.
+echo ========================================
+echo.
+pause
+goto MENU
+
+:FULL_PIPELINE_VERBOSE_DRYRUN
+cls
+echo ========================================
+echo  Running Full Pipeline — Verbose + Dry-run
+echo ========================================
+echo.
+echo  Mode: !RUN_MODE!
+echo  Detailed log will be written to database/logs/
+echo  No changes will be made to the database.
+echo.
+echo  Press any key to start, or Ctrl+C to cancel...
+pause >nul
+echo.
+
+python scripts/orchestrator.py --full --verbose --dry-run
+
+echo ========================================
+echo  Dry-run complete.
+echo ========================================
+echo.
+pause
+goto MENU
+
+:FULL_PIPELINE_RESUME
+cls
+echo ========================================
+echo  Full Pipeline — Resume
+echo ========================================
+echo.
+echo  Checking stage status...
+echo.
+
+python scripts/orchestrator.py --full --resume
+
+echo ========================================
+echo  Resume complete.
 echo ========================================
 echo.
 pause
@@ -372,6 +459,7 @@ echo ========================================
 echo.
 echo  [1] Run consolidation
 echo  [2] Dry-run (no database update)
+echo  [3] Custom input directory
 echo  [0] Back
 echo.
 
@@ -379,6 +467,7 @@ set /p cons_choice="Your choice: "
 
 if "%cons_choice%"=="1" goto CONSOLIDATE_RUN
 if "%cons_choice%"=="2" goto CONSOLIDATE_DRYRUN
+if "%cons_choice%"=="3" goto CONSOLIDATE_CUSTOM
 if "%cons_choice%"=="0" goto MENU
 
 echo Invalid choice. Press any key to try again...
@@ -407,6 +496,19 @@ echo  Consolidation Dry-run
 echo ========================================
 echo.
 python scripts/consolidate.py --dry-run
+echo.
+pause
+goto STAGE_CONSOLIDATION
+
+:CONSOLIDATE_CUSTOM
+cls
+echo ========================================
+echo  Consolidation — Custom Input Directory
+echo ========================================
+echo.
+set /p dir="Input directory: "
+if "%dir%"=="" set dir=output
+python scripts/consolidate.py --input-dir "%dir%"
 echo.
 pause
 goto STAGE_CONSOLIDATION
@@ -459,8 +561,19 @@ pause
 goto STAGE_TESTS
 
 :: ============================================================
-:: Exit
+:: Health Check
 :: ============================================================
+
+:HEALTH_CHECK
+cls
+echo ========================================
+echo  Health Check
+echo ========================================
+echo.
+python scripts/health_check.py --verbose
+echo.
+pause
+goto MENU
 
 :: ============================================================
 :: Exit
