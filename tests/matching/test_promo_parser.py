@@ -1,7 +1,7 @@
 """Unit tests for scripts/matching/promo_parser.py"""
 
 import pytest
-from scripts.matching.promo_parser import parse_promo, parse_valid_until, PromoResult
+from scripts.matching.promo_parser import parse_promo, parse_period, PromoResult
 
 
 # ---------------------------------------------------------------------------
@@ -68,27 +68,51 @@ class TestParsePromo:
 
 
 # ---------------------------------------------------------------------------
-# parse_valid_until
+# parse_period
 # ---------------------------------------------------------------------------
 
-class TestParseValidUntil:
-    def test_standard_period(self):
-        assert parse_valid_until("7 - 20 Mei 2026") == "2026-05-20"
+class TestParsePeriod:
+    def test_range_both_dates(self):
+        start, end = parse_period("7 - 20 Mei 2026")
+        assert start == "2026-05-07"
+        assert end == "2026-05-20"
 
     def test_different_month(self):
-        assert parse_valid_until("14 - 17 Mei 2026") == "2026-05-17"
+        start, end = parse_period("14 - 17 Mei 2026")
+        assert start == "2026-05-14"
+        assert end == "2026-05-17"
 
     def test_oktober(self):
-        assert parse_valid_until("1 - 15 Okt 2026") == "2026-10-15"
+        start, end = parse_period("1 - 15 Okt 2026")
+        assert start == "2026-10-01"
+        assert end == "2026-10-15"
 
     def test_none(self):
-        assert parse_valid_until(None) is None
+        start, end = parse_period(None)
+        assert start is None
+        assert end is None
 
     def test_empty(self):
-        assert parse_valid_until("") is None
+        start, end = parse_period("")
+        assert start is None
+        assert end is None
 
     def test_unparseable(self):
-        assert parse_valid_until("some random text") is None
+        start, end = parse_period("some random text")
+        assert start is None
+        assert end is None
 
     def test_august_alias(self):
-        assert parse_valid_until("1 - 10 Agu 2026") == "2026-08-10"
+        start, end = parse_period("1 - 10 Agu 2026")
+        assert start == "2026-08-01"
+        assert end == "2026-08-10"
+
+    def test_single_end_date(self):
+        start, end = parse_period("s/d 20 Mei 2026")
+        assert start is None
+        assert end == "2026-05-20"
+
+    def test_bare_single_date(self):
+        start, end = parse_period("20 Mei 2026")
+        assert start is None
+        assert end == "2026-05-20"
