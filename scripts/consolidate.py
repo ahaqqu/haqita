@@ -188,7 +188,7 @@ def load_price_history(path: Path) -> dict:
     if path.exists():
         with open(path, encoding='utf-8') as f:
             return json.load(f)
-    return {'snapshots': [], 'metadata': {'last_updated': '', 'total_runs': 0, 'schema_version': '1.1'}}
+    return {'snapshots': [], 'metadata': {'last_updated': '', 'total_runs': 0, 'schema_version': '1.2'}}
 
 
 def append_to_price_history(history: dict, products: list[dict], today: str) -> dict:
@@ -606,7 +606,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
                 superindo_file.name if superindo_file else '',
             ],
             'display_hints': {
-                'stores': ['Lotte', 'Superindo'],
+                'stores': {'Lotte': 'Lotte Mart', 'Superindo': 'Superindo'},
                 'store_colors': {'Lotte': '#0057A8', 'Superindo': '#E8211D'},
                 'currency': 'IDR',
                 'locale': 'id-ID',

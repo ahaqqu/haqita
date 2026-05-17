@@ -1,0 +1,155 @@
+{
+  "is_sample": true,
+  "generated_at": "2026-05-14T08:30:00",
+  "scrape_dates": {
+    "Lotte": "2026-05-14T07:00:00",
+    "Superindo": "2026-05-14T07:30:00"
+  },
+  "source_files": [
+    "lotte_products_20260514.json",
+    "superindo_products_20260514.json"
+  ],
+  "display_hints": {
+    "stores": {
+      "Lotte": "Lotte Mart",
+      "Superindo": "Superindo"
+    },
+    "store_colors": {
+      "Lotte": "#0057A8",
+      "Superindo": "#E8211D"
+    },
+    "currency": "IDR",
+    "locale": "id-ID"
+  },
+  "products": [
+    {
+      "key": "indomie-goreng--indomie--85g",
+      "name": "Indomie Goreng",
+      "brand": "Indomie",
+      "unit": "85 g",
+      "unit_type": "noodle",
+      "unit_value_g": 85,
+      "stores": [
+        {
+          "store": "Lotte",
+          "price": 15500,
+          "effective_unit_price": 3100,
+          "bundle_size": 5,
+          "promo": "DAPAT 5 pcs",
+          "promo_type": "bundle_buy",
+          "valid_from": "2026-05-07",
+          "valid_until": "2026-05-20",
+          "image_path": "database/scrape/lotte/promo_lotte_001.jpg"
+        },
+        {
+          "store": "Superindo",
+          "price": 17500,
+          "effective_unit_price": 3500,
+          "bundle_size": 5,
+          "promo": "BELI 5 FREE 1",
+          "promo_type": "bundle_buy",
+          "valid_from": "2026-05-10",
+          "valid_until": "2026-05-20",
+          "image_path": "database/scrape/superindo/promo_superindo_001.jpg"
+        }
+      ],
+      "price_min": 3100,
+      "price_max": 3500,
+      "cheapest_store": "Lotte",
+      "price_gap": 400,
+      "savings_pct": 11.4,
+      "has_promo": true,
+      "promo_summary": "DAPAT 5 pcs di Lotte; BELI 5 FREE 1 di Superindo",
+      "valid_until": "2026-05-20",
+      "match_method": "exact",
+      "match_confidence": 1.0
+    },
+    {
+      "key": "kecap-manis-abc--abc--600ml",
+      "name": "ABC Kecap Manis",
+      "brand": "ABC",
+      "unit": "600 ml",
+      "unit_type": "sauce",
+      "unit_value_g": 600,
+      "stores": [
+        {
+          "store": "Lotte",
+          "price": 18900,
+          "effective_unit_price": 18900,
+          "bundle_size": 1,
+          "promo": null,
+          "promo_type": "single",
+          "valid_from": "2026-05-14",
+          "valid_until": "2026-05-20",
+          "image_path": null
+        },
+        {
+          "store": "Superindo",
+          "price": 19500,
+          "effective_unit_price": 19500,
+          "bundle_size": 1,
+          "promo": null,
+          "promo_type": "single",
+          "valid_from": "2026-05-14",
+          "valid_until": "2026-05-20",
+          "image_path": null
+        }
+      ],
+      "price_min": 18900,
+      "price_max": 19500,
+      "cheapest_store": "Lotte",
+      "price_gap": 600,
+      "savings_pct": 3.1,
+      "has_promo": false,
+      "promo_summary": "",
+      "valid_until": "2026-05-20",
+      "match_method": "embedding",
+      "match_confidence": 0.85
+    }
+  ],
+  "singles": [
+    {
+      "key": "minuman-energizer--red-bull--250ml",
+      "name": "Red Bull Energy Drink",
+      "brand": "Red Bull",
+      "unit": "250 ml",
+      "unit_type": "beverage",
+      "unit_value_g": 250,
+      "store": "Lotte",
+      "price": 18500,
+      "effective_unit_price": 18500,
+      "promo": "DISCON 10%",
+      "valid_from": "2026-05-14",
+      "valid_until": "2026-05-20",
+      "image_path": "database/scrape/lotte/promo_lotte_002.jpg"
+    },
+    {
+      "key": "mie-goreng-pedas--mie-goreng--80g",
+      "name": "Mie Goreng Pedas",
+      "brand": "Mie Goreng",
+      "unit": "80 g",
+      "unit_type": "noodle",
+      "unit_value_g": 80,
+      "store": "Superindo",
+      "price": 4500,
+      "effective_unit_price": 4500,
+      "promo": null,
+      "valid_from": "2026-05-14",
+      "valid_until": null,
+      "image_path": null
+    }
+  ],
+  "stats": {
+    "total_products_lotte": 4,
+    "total_products_superindo": 4,
+    "matched_across_stores": 2,
+    "lotte_only": 1,
+    "superindo_only": 1,
+    "match_methods": {
+      "exact": 1,
+      "embedding": 1
+    },
+    "flagged_for_review": 0,
+    "validation_rejected": 0
+  }
+}

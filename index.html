@@ -474,6 +474,26 @@ footer {
   font-size: 0.8rem;
 }
 
+.sample-banner {
+  background: var(--amber-light);
+  color: var(--amber);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  margin: 0.5rem 1.5rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  display: none;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.sample-banner::before {
+  content: "⚠";
+  margin-right: 0.5rem;
+}
+
 @media print {
   #search-bar, #controls, #load-more, .freshness-bar { display: none !important; }
   #product-grid { display: block !important; }
@@ -517,6 +537,10 @@ footer {
 <div class="warning-banner" id="warning-banner">
   <span id="warning-text"></span>
   <button id="warning-retry">Retry</button>
+</div>
+
+<div class="sample-banner" id="sample-banner">
+  Displaying sample data for development/testing. <a href="#" onclick="location.reload()" style="color:var(--amber);margin-left:0.5rem">Refresh to load real data</a>
 </div>
 
 <main id="product-grid"></main>
@@ -629,13 +653,14 @@ function renderWarning(msg) {
 }
 
 function normalizeProduct(product) {
+  const key = product.key || product.product_key || "";
   if (product.stores && Array.isArray(product.stores)) {
-    return { ...product, stores: product.stores };
+    return { ...product, product_key: key, stores: product.stores };
   }
   if (product.store) {
-    return { ...product, stores: [{ store: product.store, price: product.price, effective_unit_price: product.effective_unit_price, promo: product.promo, valid_until: product.valid_until, image_path: product.image_path }] };
+    return { ...product, product_key: key, stores: [{ store: product.store, price: product.price, effective_unit_price: product.effective_unit_price, promo: product.promo, valid_until: product.valid_until, image_path: product.image_path }] };
   }
-  return { ...product, stores: [] };
+  return { ...product, product_key: key, stores: [] };
 }
 
 function isProductInStore(product, store) {
@@ -706,13 +731,15 @@ function buildStoreRows(product) {
 }
 
 function buildMatchedCard(product) {
+  const normalized = normalizeProduct(product);
+  const key = normalized.product_key || "";
   const cheapestStore = product.cheapest_store || "";
   const storeKey = cheapestStore.toLowerCase().replace(/\s+/g, "");
   const savingsText = product.savings_pct ? `Save ${product.savings_pct}% vs ${product.most_expensive_store || "other"}` : "";
   const validText = product.valid_until ? `Valid until ${formatDate(product.valid_until)}` : "";
   const confBadge = product.match_confidence != null && product.match_confidence < 0.8
     ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
-  return `<div class="product-card" data-key="${product.product_key}" role="button" tabindex="0">
+  return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
     <div class="card-header">
       <div>
         <div class="product-name">${product.name || "Unknown"}</div>
@@ -724,12 +751,13 @@ function buildMatchedCard(product) {
     ${savingsText ? `<div class="savings-pill">${savingsText}</div>` : ""}
     ${validText ? `<div class="valid-until">${validText}</div>` : ""}
     ${confBadge}
-    <div class="detail-panel" id="detail-${product.product_key}"></div>
+    <div class="detail-panel" id="detail-${key}"></div>
   </div>`;
 }
 
 function buildSingleCard(product) {
   const normalized = normalizeProduct(product);
+  const key = normalized.product_key || "";
   const s = normalized.stores[0] || {};
   const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
   const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
@@ -737,7 +765,7 @@ function buildSingleCard(product) {
   const validText = product.valid_until ? `Valid until ${formatDate(product.valid_until)}` : "";
   const confBadge = product.match_confidence != null && product.match_confidence < 0.8
     ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
-  return `<div class="product-card" data-key="${product.product_key}" role="button" tabindex="0">
+  return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
     <div class="card-header">
       <div>
         <div class="product-name">${product.name || "Unknown"}</div>
@@ -755,12 +783,13 @@ function buildSingleCard(product) {
     <div class="single-badge">(Only available at ${storeName})</div>
     ${validText ? `<div class="valid-until">${validText}</div>` : ""}
     ${confBadge}
-    <div class="detail-panel" id="detail-${product.product_key}"></div>
+    <div class="detail-panel" id="detail-${key}"></div>
   </div>`;
 }
 
 function buildDetailPanel(product) {
   const normalized = normalizeProduct(product);
+  const key = normalized.product_key || "";
   const cheapestStore = (product.cheapest_store || "").toLowerCase().replace(/\s+/g, "");
   let storeRows = normalized.stores.map(s => {
     const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
@@ -790,7 +819,7 @@ function buildDetailPanel(product) {
   <div class="detail-section">
     <h4>Price Trend</h4>
     <div class="chart-container">
-      <canvas id="chart-${product.product_key}"></canvas>
+      <canvas id="chart-${key}"></canvas>
     </div>
   </div>
   ${confText ? `<div class="detail-section"><p style="font-size:0.82rem;color:var(--gray-500)">${confText}</p></div>` : ""}`;
@@ -859,7 +888,7 @@ function expandCard(key) {
   } else {
     card.classList.add("expanded");
     const allProducts = getAllProducts();
-    const product = allProducts.find(p => p.product_key === key);
+    const product = allProducts.find(p => (p.key || p.product_key) === key);
     if (product) {
       const detail = document.getElementById(`detail-${key}`);
       if (detail) {
@@ -997,7 +1026,7 @@ async function loadData(isRefresh = false) {
       histOk = true;
     }
     if (!consOk && !histOk) {
-      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files.");
+      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
       return;
     }
     if (!consOk) {
@@ -1006,8 +1035,14 @@ async function loadData(isRefresh = false) {
     if (!histOk) {
       if (!isRefresh) renderWarning("Price history unavailable. Charts will not display.");
     }
+    const isSample = consolidatedData?.is_sample === true || priceHistoryData?.is_sample === true;
+    if (isSample) {
+      document.getElementById("sample-banner").style.display = "flex";
+    }
     displayHints = consolidatedData?.display_hints || getDefaultDisplayHints();
-    if (consolidatedData?.metadata?.last_updated) {
+    if (consolidatedData?.generated_at) {
+      updateFreshnessBar(consolidatedData.generated_at);
+    } else if (consolidatedData?.metadata?.last_updated) {
       updateFreshnessBar(consolidatedData.metadata.last_updated);
     }
     renderCards();

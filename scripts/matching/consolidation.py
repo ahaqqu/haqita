@@ -92,7 +92,7 @@ def generate_consolidated_from_history(history: dict, catalog: dict, today: str)
             for snap in stores_snaps:
                 mm = snap.get("match_method")
                 mc = snap.get("match_confidence")
-                if mm and (match_method is None or mc > match_confidence):
+                if mm and (match_confidence is None or (mc is not None and mc > match_confidence)):
                     match_method = mm
                     match_confidence = mc
 
@@ -147,7 +147,7 @@ def generate_consolidated_from_history(history: dict, catalog: dict, today: str)
         "scrape_dates": {},
         "source_files": [],
         "display_hints": {
-            "stores": ["Lotte", "Superindo"],
+            "stores": {"Lotte": "Lotte Mart", "Superindo": "Superindo"},
             "store_colors": {"Lotte": "#0057A8", "Superindo": "#E8211D"},
             "currency": "IDR",
             "locale": "id-ID",

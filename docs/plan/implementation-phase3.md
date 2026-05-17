@@ -72,8 +72,7 @@ Each snapshot in `price_history.json` now carries all fields needed to rebuild t
       "effective_unit_price": 3100,
       "promo": "DAPAT 5 pcs",
       "promo_type": "bundle_buy",
-      "start_period": "2026-05-07",
-      "end_period": "2026-05-20",
+      "valid_from": "2026-05-07",
       "valid_until": "2026-05-20",
       "bundle_size": 5,
       "match_method": "exact",
@@ -93,11 +92,10 @@ Each snapshot in `price_history.json` now carries all fields needed to rebuild t
 
 | Field | Type | Purpose |
 |---|---|---|
-| `valid_until` | string or null | Expiry date (= end_period) — used to filter active promos |
+| `valid_from` | string or null | ISO date of promo start |
+| `valid_until` | string or null | Expiry date — used to filter active promos |
 | `bundle_size` | int | Units per bundle (for effective price display) |
 | `promo_type` | string | "bundle_buy", "get_free", "single", etc. |
-| `start_period` | string or null | ISO date of promo start |
-| `end_period` | string or null | ISO date of promo end (= valid_until) |
 | `match_method` | string | "exact", "embedding", "ai" — for grouping matches |
 | `match_confidence` | float | Confidence score — for UI badge |
 | `image_path` | string or null | Path to brochure image — for "View Brochure" feature |
