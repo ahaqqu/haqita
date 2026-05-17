@@ -101,6 +101,51 @@ echo.
 pause
 goto MENU
 
+:FULL_PIPELINE_VERBOSE
+cls
+echo ========================================
+echo  Running Full Pipeline — Verbose
+echo ========================================
+echo.
+echo  Mode: !RUN_MODE!
+echo  Detailed log will be written to output/logs/
+echo.
+echo  Press any key to start, or Ctrl+C to cancel...
+pause >nul
+echo.
+
+python scripts/orchestrator.py --full --verbose
+
+echo ========================================
+echo  Pipeline complete.
+echo ========================================
+echo.
+pause
+goto MENU
+
+:FULL_PIPELINE_VERBOSE_DRYRUN
+cls
+echo ========================================
+echo  Running Full Pipeline — Dry-run + verbose
+echo ========================================
+echo.
+echo  Mode: !RUN_MODE!
+echo  Detailed log will be written to output/logs/
+echo  No changes will be made to the database.
+echo.
+echo  Press any key to start, or Ctrl+C to cancel...
+pause >nul
+echo.
+
+python scripts/orchestrator.py --full --verbose --dry-run
+
+echo ========================================
+echo  Dry-run complete.
+echo ========================================
+echo.
+pause
+goto MENU
+
 :FULL_PIPELINE_RESUME
 cls
 echo ========================================
