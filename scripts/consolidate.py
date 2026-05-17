@@ -231,7 +231,7 @@ def append_to_price_history(history: dict, products: list[dict], today: str) -> 
 
 def generate_consolidated_from_history(history: dict, catalog: dict, today: str) -> dict:
     """
-    Rebuild consolidated_latest.json from database/price_history.json + product_catalog.json.
+    Rebuild active_promo.json from database/price_history.json + product_catalog.json.
     """
     from datetime import datetime
 
@@ -788,15 +788,11 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
             },
         }
 
-    # 8. Write consolidated output
-    dated_path = output_dir / f'consolidated_{timestamp}.json'
-    latest_path = output_dir / 'consolidated_latest.json'
-
-    print(f"[*] Writing {dated_path.name}")
+    # 8. Write dated snapshot to database for audit trail
+    database_dir.mkdir(parents=True, exist_ok=True)
+    dated_path = database_dir / f'consolidated_{timestamp}.json'
+    print(f"[*] Writing {dated_path.name} to database/")
     atomic_write_json(consolidated, str(dated_path))
-
-    print("[*] Writing consolidated_latest.json (atomic)")
-    atomic_write_json(consolidated, str(latest_path))
 
     # 11. Print summary
     elapsed = time.time() - t_start

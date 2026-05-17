@@ -7,8 +7,7 @@ Merges OCR results from both stores, matches same products across stores, comput
 | | |
 |---|---|
 | **Input** | Latest `database/ocr/<store>/<store>_promos_*.json` |
-| **Output** | `output/consolidation/consolidated_latest.json` (always overwritten) |
-| | `output/consolidation/consolidated_YYYYMMDD_HHMMSS.json` (timestamped archive) |
+| **Output** | `database/consolidated_YYYYMMDD_HHMMSS.json` (timestamped archive in database) |
 | **Database** | `database/price_history.json` — accumulated price snapshots |
 | | `database/product_catalog.json` — auto-built product registry |
 | | `database/review_queue.json` — low-confidence matches for inspection |

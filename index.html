@@ -982,7 +982,7 @@ async function loadData(isRefresh = false) {
   document.getElementById("warning-banner").style.display = "none";
   try {
     const [consResult, histResult] = await Promise.allSettled([
-      retryFetch("output/html/consolidated_latest.json"),
+      retryFetch("output/html/active_promo.json"),
       retryFetch("output/html/price_history.json")
     ]);
     let consOk = false, histOk = false;

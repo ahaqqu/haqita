@@ -427,9 +427,9 @@ class TestEmptyStore:
 
             consolidate(cfg, None, ocr_dir, output_dir, database_dir)
 
-            latest = output_dir / 'consolidated_latest.json'
-            assert latest.exists()
-            with open(latest, encoding='utf-8') as f:
+            db_files = list(database_dir.glob('consolidated_*.json'))
+            assert len(db_files) == 1
+            with open(db_files[0], encoding='utf-8') as f:
                 data = json.load(f)
             assert data['stats']['total_products_lotte'] == 0
             assert data['stats']['total_products_superindo'] == 1
@@ -469,10 +469,10 @@ class TestFullPipeline:
 
         consolidate(cfg, self.ocr_dir, self.ocr_dir, self.output_dir, self.database_dir)
 
-        latest = self.output_dir / 'consolidated_latest.json'
-        assert latest.exists()
+        db_files = list(self.database_dir.glob('consolidated_*.json'))
+        assert len(db_files) == 1
 
-        with open(latest, encoding='utf-8') as f:
+        with open(db_files[0], encoding='utf-8') as f:
             data = json.load(f)
 
         assert 'products' in data
