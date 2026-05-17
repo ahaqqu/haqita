@@ -307,6 +307,15 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         model_name = cfg.get('consolidation', {}).get('embedding_model', 'paraphrase-multilingual-MiniLM-L12-v2')
         embedding_model = load_embedding_model(model_name)
 
+    # 4b. Setup Ollama if AI verifier uses it
+    ai_provider = cfg.get('consolidation', {}).get('ai_verifier', {}).get('provider', 'ollama')
+    if ai_provider == 'ollama' and cfg.get('consolidation', {}).get('gates', {}).get('gate6_ai_verifier', True):
+        ollama_model = cfg.get('consolidation', {}).get('ai_verifier', {}).get('ai_model', 'qwen3:4b')
+        from scripts.setup_ollama import setup_ollama
+        if not setup_ollama(model=ollama_model):
+            raise RuntimeError("Ollama is required for AI verification but failed to start. Aborting.")
+        print("[*] Ollama ready for AI verification")
+
     # 5. Run matching pipeline
     print("[*] Running matching pipeline ...")
     matched_pairs, lotte_only, superindo_only, review_items, gate_rejections = match_products(

@@ -14,8 +14,10 @@ Usage:
 """
 
 import argparse
+import http.server
 import json
 import logging
+import socketserver
 import subprocess
 import sys
 import time
@@ -278,6 +280,8 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Preview what would run without making changes")
     parser.add_argument("--verbose", action="store_true", help="Detailed logging to file")
     parser.add_argument("--resume", action="store_true", help="Resume from last failed stage")
+    parser.add_argument("--serve", action="store_true", help="Start HTTP server after pipeline completes")
+    parser.add_argument("--port", type=int, default=8080, help="HTTP server port (default: 8080)")
     args = parser.parse_args()
 
     if not args.full and not args.stage:
@@ -398,6 +402,21 @@ def main():
     print("  Pipeline Complete")
     print(f"  Time: {elapsed:.1f}s")
     print("=" * 60)
+
+    # Start HTTP server if --serve flag provided
+    if args.serve:
+        class QuietHandler(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, format, *args):
+                pass
+
+        try:
+            print(f"\n[*] Starting HTTP server on http://localhost:{args.port}")
+            print(f"[*] Open http://localhost:{args.port}/index.html to view results")
+            print("[*] Press Ctrl+C to stop\n")
+            with socketserver.TCPServer(("", args.port), QuietHandler) as httpd:
+                httpd.serve_forever()
+        except Exception as e:
+            logger.error(f"Failed to start HTTP server: {e}")
 
 
 if __name__ == "__main__":

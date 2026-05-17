@@ -93,7 +93,7 @@ echo.
 if "!RUN_MODE!"=="docker" (
     docker compose -f docker\docker-compose.yml run --build pipeline
 ) else (
-    python scripts/orchestrator.py --full
+    python scripts/orchestrator.py --full --serve
 )
 
 echo ========================================

@@ -3,7 +3,9 @@ Full pipeline — Docker entry point.
 Runs scrape → OCR → consolidation sequentially.
 """
 
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
@@ -14,6 +16,7 @@ from scripts.ocr.run_ocr import main as ocr_main
 from scripts.consolidate import main as consolidate_main
 from scripts.publish_html import main as publish_html_main
 
+
 def _run_stage(name, func, *args):
     print()
     print("=" * 60)
@@ -22,7 +25,35 @@ def _run_stage(name, func, *args):
     print()
     func(*args)
 
+
+def start_http_server(port: int = 8080) -> subprocess.Popen | None:
+    """Start HTTP server in background."""
+    try:
+        import http.server
+        import socketserver
+
+        # Change to project root
+        root = Path(__file__).resolve().parent.parent
+
+        class QuietHandler(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, format, *args):
+                pass  # Suppress logging
+
+        handler = lambda *args, **kwargs: QuietHandler(*args, directory=str(root), **kwargs)
+        httpd = socketserver.TCPServer(("", port), handler)
+        httpd.serve_forever()
+    except Exception as e:
+        print(f"[!] Failed to start HTTP server: {e}")
+        return None
+
+
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Full pipeline")
+    parser.add_argument("--serve", action="store_true", help="Start HTTP server after pipeline")
+    parser.add_argument("--port", type=int, default=8080, help="HTTP server port")
+    args = parser.parse_args()
+
     print("=" * 60)
     print("  Full Pipeline (Docker)")
     print("  Scrape → OCR → Consolidate")
@@ -51,3 +82,9 @@ if __name__ == "__main__":
     print("=" * 60)
     print("  Pipeline complete.")
     print("=" * 60)
+
+    if args.serve:
+        print(f"\n[*] Starting HTTP server on http://localhost:{args.port}")
+        print(f"[*] Open http://localhost:{args.port}/index.html to view results")
+        print("[*] Press Ctrl+C to stop")
+        start_http_server(args.port)
