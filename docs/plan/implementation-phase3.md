@@ -27,15 +27,108 @@ Based on `docs/mockup/haqita-ux.html` — a mobile-first mockup with:
 
 The `index.html` adapts this visual language for a **desktop browser** (responsive grid, not phone frames).
 
+## Architecture: `consolidated_latest.json` is Derived from Database
+
+`consolidated_latest.json` is a **temporary derived view** — it must be regeneratable from `database/`.
+The `output/` directory is safe to delete; `database/` is the source of truth.
+
+### How `consolidated_latest.json` is Generated
+
+```
+database/price_history.json  (append-only snapshots with valid_until, match info)
+database/product_catalog.json (product metadata)
+       │
+       ▼
+consolidate.py → generate_consolidated_from_history()
+       │
+       ▼
+output/consolidation/consolidated_latest.json  (derived, safe to delete)
+       │
+       ▼
+publish_html.py → output/html/consolidated_latest.json  (for browser)
+```
+
+### Extended `price_history.json` Schema (v1.2)
+
+Each snapshot in `price_history.json` now carries all fields needed to rebuild the consolidated view:
+
+```json
+{
+  "snapshots": [
+    {
+      "product_key": "indomie-goreng--indomie--85g",
+      "name": "Indomie Goreng",
+      "brand": "Indomie",
+      "unit": "85 g",
+      "date": "2026-05-14",
+      "store": "Lotte",
+      "price": 15500,
+      "effective_unit_price": 3100,
+      "promo": "DAPAT 5 pcs",
+      "promo_type": "bundle_buy",
+      "start_period": "2026-05-07",
+      "end_period": "2026-05-20",
+      "valid_until": "2026-05-20",
+      "bundle_size": 5,
+      "match_method": "exact",
+      "match_confidence": 1.0,
+      "image_path": "database/scrape/lotte/promo_abc123.jpg"
+    }
+  ],
+  "metadata": {
+    "last_updated": "2026-05-14T08:20:00",
+    "total_runs": 1,
+    "schema_version": "1.2"
+  }
+}
+```
+
+**New fields** (vs schema v1.1):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `valid_until` | string or null | Expiry date (= end_period) — used to filter active promos |
+| `bundle_size` | int | Units per bundle (for effective price display) |
+| `promo_type` | string | "bundle_buy", "get_free", "single", etc. |
+| `start_period` | string or null | ISO date of promo start |
+| `end_period` | string or null | ISO date of promo end (= valid_until) |
+| `match_method` | string | "exact", "embedding", "ai" — for grouping matches |
+| `match_confidence` | float | Confidence score — for UI badge |
+| `image_path` | string or null | Path to brochure image — for "View Brochure" feature |
+
+**Backward compatibility:** Snapshots without new fields use defaults:
+`valid_until=null` (treated as active), `bundle_size=1`, `match_method="unknown"`, `match_confidence=0.5`.
+
+### `generate_consolidated_from_history()` Logic
+
+```python
+def generate_consolidated_from_history(history: dict, catalog: dict, today: str) -> dict:
+    """
+    Rebuild consolidated_latest.json from database/price_history.json + product_catalog.json.
+
+    1. Filter snapshots: valid_until >= today OR valid_until is null (treat as active)
+    2. Get latest snapshot per (product_key, store) — dedup by date
+    3. Group by product_key:
+       - 2+ stores → matched product (build stores[] array)
+       - 1 store → single
+    4. Compute display fields: price_min, price_max, cheapest_store, price_gap, savings_pct
+    5. Return consolidated dict with same schema as current output
+    """
+```
+
+This function replaces the direct build-from-matching-results approach. The matching pipeline
+still runs (to populate price_history with match_method/match_confidence), but the consolidated
+output is always derived from the database — ensuring still-valid promos from previous runs
+carry forward even if dropped from the current scrape.
+
 ## JSON Output Path
 
 Per project convention, HTML-only outputs go to `output/html/`:
-- `output/html/consolidated_latest.json` — copy from `output/consolidation/`
+- `output/html/consolidated_latest.json` — copy from `output/consolidation/` (derived from database)
 - `output/html/price_history.json` — copy from `database/`
 
 A new **Stage 4: Publish HTML** script (`scripts/publish_html.py`) handles these copies.
-`consolidate.py` is not modified — the publish stage is isolated so it can later read from
-a database server instead of JSON files.
+The publish stage is isolated so it can later read from a database server instead of JSON files.
 
 **Important:** `index.html` uses `fetch()` to load JSON files via HTTP. Opening the file
 directly from the filesystem (`file://`) will fail in most browsers due to CORS
@@ -113,8 +206,10 @@ Then open `http://localhost:8080` in a browser. Alternatives: VS Code Live Serve
 │  ┌─────────────────────────────────────────────┐   │
 │  │ ● Lotte     Rp 3.100  ✓ Cheapest            │   │  ← green border
 │  │   Dapat 5 pcs · Rp 620/pc                   │   │
+│  │   [View Brochure]                           │   │  ← link to image
 │  ├─────────────────────────────────────────────┤   │
 │  │ ● Superindo Rp 3.500  +Rp 400               │   │
+│  │   [View Brochure]                           │   │
 │  └─────────────────────────────────────────────┘   │
 │                                                     │
 │  Price Trend                                        │
@@ -127,6 +222,10 @@ Then open `http://localhost:8080` in a browser. Alternatives: VS Code Live Serve
 │  Match confidence: 100% (exact match)               │
 └─────────────────────────────────────────────────────┘
 ```
+
+- **[View Brochure]** link per store entry — opens the brochure image in a new tab
+  (or lightbox modal). Link uses the HTTP server path (e.g., `database/scrape/lotte/...`).
+  Hidden when `image_path` is null or file doesn't exist.
 
 ### Empty State
 
@@ -207,7 +306,7 @@ Then open `http://localhost:8080` in a browser. Alternatives: VS Code Live Serve
 | `normalizeProduct(product)` | Normalize any product type to standard internal format with `.stores` array |
 | `buildMatchedCard(product)` | Matched product card HTML |
 | `buildSingleCard(product)` | Single-store card HTML |
-| `expandCard(key)` | Toggle detail panel with comparison + chart, updates URL hash |
+| `expandCard(key)` | Toggle detail panel with comparison + chart + brochure links, updates URL hash |
 | `drawBarChart(canvas, productKey, history)` | Canvas 2D bar chart — noop if <2 snapshots or key not found |
 | `validatePriceHistoryKey(productKey)` | Check product key exists in price_history before rendering chart |
 | `setupKeyboardNav()` | Add `role="button"`, `tabindex="0"`, Enter/Space handlers to cards |
@@ -222,6 +321,38 @@ Then open `http://localhost:8080` in a browser. Alternatives: VS Code Live Serve
 | Sort controls | Name / Cheapest / Savings / Expiry (singles sort to bottom for Savings) |
 
 ## Implementation Steps
+
+### Step 0: Extend `price_history.json` Schema + Add `generate_consolidated_from_history()`
+
+**Modify `scripts/consolidate.py`:**
+
+1. **Extend price_history append** — Add new fields to each snapshot:
+   - `valid_until` — from `parse_valid_until(period)` (same as end_period)
+   - `bundle_size` — from `promo_result.unit_count`
+   - `promo_type` — from `promo_result.promo_type`
+   - `start_period` — ISO date parsed from period string (first date)
+   - `end_period` — ISO date parsed from period string (last date, same as valid_until)
+   - `match_method` — from matching pipeline result
+   - `match_confidence` — from matching pipeline result
+   - `image_path` — from OCR output (path to brochure image)
+
+2. **Add `generate_consolidated_from_history(history, catalog, today)`** function:
+   - Filter snapshots: `valid_until >= today` OR `valid_until is null` (treat as active)
+   - Get latest snapshot per `(product_key, store)` — dedup by date
+   - Group by `product_key`:
+     - 2+ stores → matched product (build `stores[]` array)
+     - 1 store → single
+   - Compute display fields: `price_min`, `price_max`, `cheapest_store`, `price_gap`, `savings_pct`
+   - Return consolidated dict with same schema as current output
+
+3. **Update consolidation flow** — After matching and appending to price_history:
+   - Call `generate_consolidated_from_history()` instead of building directly from matching results
+   - Write result to `output/consolidation/consolidated_latest.json`
+   - Write dated snapshot to `output/consolidation/consolidated_YYYYMMDD_HHMMSS.json`
+
+**Key behavior change:** Still-valid promos from previous runs carry forward automatically
+because `price_history.json` is append-only. Products dropped from the current scrape but
+with `valid_until` not yet passed will still appear in the consolidated output.
 
 ### Step 1: Create `output/html/.gitkeep`
 
@@ -342,6 +473,10 @@ Single self-contained file (~800-1000 lines): HTML + CSS + vanilla JS.
   without manual reload. Only refreshes when tab is visible (uses `visibilitychange`).
 - **Print stylesheet**: `@media print` rules hide search, filters, and "Load More" button;
   single-column layout; page break after every 10 products; includes timestamp footer
+- **Brochure viewer**: Each store entry in the expanded detail panel has a
+  `[View Brochure]` link that opens the source brochure image in a new tab.
+  Uses the `image_path` field from `consolidated_latest.json`. Hidden when
+  `image_path` is null or empty.
 
 **Usage Notes:**
 - `index.html` uses `fetch()` which requires an HTTP server — cannot be opened as `file://`
@@ -355,13 +490,15 @@ Create `output/html/consolidated_latest.json` with realistic test data (2 matche
 `display_hints`, `products` (with `stores[]`), `singles` (with `store` string), and `stats`.
 
 Create `output/html/price_history.json` with at least one product having ≥2 snapshots so
-the bar chart can be visually verified during development.
+the bar chart can be visually verified during development. Use the extended schema v1.2
+with `valid_until`, `bundle_size`, `promo_type`, `start_period`, `end_period`, `match_method`, `match_confidence`, `image_path` fields.
 
 ## Files to Create/Modify
 
 | File | Action | Description |
 |---|---|---|
 | `output/html/.gitkeep` | **Create** | Ensure directory exists |
+| `scripts/consolidate.py` | **Modify** | Extend price_history schema (v1.2), add `generate_consolidated_from_history()`, update consolidation flow |
 | `scripts/publish_html.py` | **Create** | Stage 4: copy JSON to `output/html/` |
 | `scripts/orchestrator.py` | Modify | Add Stage 4 (`--stage publish-html`, `--full`, `--resume` paths) |
 | `scripts/pipeline.py` | Modify | Add Stage 4 after consolidation |
@@ -369,7 +506,7 @@ the bar chart can be visually verified during development.
 | `docker/docker-compose.yml` | Modify | Add `publish-html` service, update `pipeline` service |
 | `index.html` | **Create** | ~800-1000 lines: HTML + CSS + vanilla JS with search, keyboard nav, URL hashes |
 | `output/html/consolidated_latest.json` | **Create** | Sample test data (mirrors real `consolidate.py` output structure) |
-| `output/html/price_history.json` | **Create** | Sample price history (≥1 product with ≥2 entries for chart testing) |
+| `output/html/price_history.json` | **Create** | Sample price history (schema v1.2, ≥1 product with ≥2 entries for chart testing) |
 
 ## Out of Scope (Future Phases)
 
@@ -377,3 +514,4 @@ the bar chart can be visually verified during development.
 - Bottom navigation
 - Brosur upload
 - User accounts / avatar
+- Database migration (price_history.json → SQL view for active_promos)
