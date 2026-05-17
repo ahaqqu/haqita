@@ -660,7 +660,7 @@ def main():
     log_file = None
     if args.verbose:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        log_file = database_dir / 'logs' / f'consolidate_{timestamp}.log'
+        log_file = Path('output/logs') / f'consolidate_{timestamp}.log'
 
     if args.input_dir:
         lotte_dir = Path(args.input_dir)

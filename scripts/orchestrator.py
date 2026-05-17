@@ -141,20 +141,14 @@ def run_ocr(stores: list[str], scrape_status: dict | None, dry_run: bool, logger
     store_results = {}
     total_products = 0
 
-    # Determine which stores need OCR
-    if scrape_status:
-        stores_with_new = [
-            s for s, info in scrape_status.get("stores", {}).items()
-            if info.get("status") == "new_images" and s in stores
-        ]
-    else:
-        # No scrape status — OCR all requested stores (idempotent, skips already processed)
-        stores_with_new = stores
+    # Always run OCR - let it decide what to skip based on its own state
+    # OCR has built-in logic to skip already-processed images via state file
+    stores_with_new = stores
 
     if not stores_with_new:
-        logger.info("No stores with new images. Skipping OCR.")
+        logger.info("No stores requested. Skipping OCR.")
         for store in stores:
-            store_results[store] = {"status": "skipped", "reason": "no_new_images"}
+            store_results[store] = {"status": "skipped", "reason": "no_stores_requested"}
         write_stage_status("ocr", {"stores": store_results, "total_products": 0}, logger)
         return {"stores": store_results, "total_products": 0}
 

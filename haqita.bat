@@ -132,7 +132,7 @@ echo  Running Full Pipeline — Verbose
 echo ========================================
 echo.
 echo  Mode: !RUN_MODE!
-echo  Detailed log will be written to database/logs/
+echo  Detailed log will be written to output/logs/
 echo.
 echo  Press any key to start, or Ctrl+C to cancel...
 pause >nul
@@ -154,7 +154,7 @@ echo  Running Full Pipeline — Verbose + Dry-run
 echo ========================================
 echo.
 echo  Mode: !RUN_MODE!
-echo  Detailed log will be written to database/logs/
+echo  Detailed log will be written to output/logs/
 echo  No changes will be made to the database.
 echo.
 echo  Press any key to start, or Ctrl+C to cancel...

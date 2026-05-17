@@ -90,7 +90,7 @@ def discover_images(scrape_dir: Path, state: dict, specific: str | None = None) 
         return [p], []
 
     exts = {'.jpg', '.jpeg', '.png', '.webp'}
-    all_images = sorted(p for p in scrape_dir.iterdir() if p.suffix.lower() in exts)
+    all_images = sorted(p for p in scrape_dir.rglob('*') if p.is_file() and p.suffix.lower() in exts)
 
     new = [p for p in all_images if p.name not in processed]
     old = [p.name for p in all_images if p.name in processed]
