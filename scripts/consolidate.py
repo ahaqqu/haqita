@@ -312,8 +312,14 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
     if ai_provider == 'ollama' and cfg.get('consolidation', {}).get('gates', {}).get('gate6_ai_verifier', True):
         ollama_model = cfg.get('consolidation', {}).get('ai_verifier', {}).get('ai_model', 'qwen3:4b')
         from scripts.setup_ollama import setup_ollama
-        if not setup_ollama(model=ollama_model):
-            raise RuntimeError("Ollama is required for AI verification but failed to start. Aborting.")
+        ollama_success = setup_ollama(model=ollama_model)
+        if not ollama_success:
+            import os
+            run_mode = os.getenv("RUN_MODE", "").lower()
+            if run_mode == "docker":
+                raise RuntimeError("Ollama failed to connect. In Docker mode, ensure Ollama is running on host with OLLAMA_BASE_URL=http://host.docker.internal:11434. Also ensure model is pulled: ollama pull qwen3:4b")
+            else:
+                raise RuntimeError("Ollama failed to start. Ensure 'ollama serve' is running and 'ollama pull qwen3:4b' has been executed.")
         print("[*] Ollama ready for AI verification")
 
     # 5. Run matching pipeline

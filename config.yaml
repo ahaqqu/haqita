@@ -53,9 +53,9 @@ consolidation:
 
   # AI verifier (for ambiguous pairs)
   ai_verifier:
-    provider: ollama                  # "ollama" or "gemini"
-    ai_model: qwen3:4b                # Ollama model
-    gemini_model: gemini-3-flash-preview  # Gemini model (if provider=gemini)
+    provider: gemini                 # "ollama" or "gemini"
+    ai_model: qwen3:4b               # Ollama model
+    gemini_model: gemini-2.5-flash  # Gemini model (if provider=gemini)
     ai_batch_size: 20
 
 validation:
