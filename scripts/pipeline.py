@@ -12,6 +12,7 @@ from scripts.scrapers.lotte import main as lotte_main
 from scripts.scrapers.superindo import main as superindo_main
 from scripts.ocr.run_ocr import main as ocr_main
 from scripts.consolidate import main as consolidate_main
+from scripts.publish_html import main as publish_html_main
 
 def _run_stage(name, func, *args):
     print()
@@ -41,6 +42,10 @@ if __name__ == "__main__":
     # Stage 3: Consolidate
     sys.argv = ["consolidate.py"]
     _run_stage("Consolidate", consolidate_main)
+
+    # Stage 4: Publish HTML
+    sys.argv = ["publish_html.py"]
+    _run_stage("Publish HTML", publish_html_main)
 
     print()
     print("=" * 60)

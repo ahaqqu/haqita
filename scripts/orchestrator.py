@@ -244,10 +244,42 @@ def run_consolidate(dry_run: bool, logger: logging.Logger) -> dict:
     return status
 
 
+def run_publish_html(dry_run: bool, logger: logging.Logger) -> dict:
+    """Run publish HTML stage. Returns status dict."""
+    logger.info("=== Stage 4: Publish HTML ===")
+    publish_script = SCRIPTS / "publish_html.py"
+
+    if not publish_script.exists():
+        logger.error("Publish HTML script not found: %s", publish_script)
+        return {"status": "error", "error": "publish_html_script_not_found"}
+
+    cmd = [sys.executable, str(publish_script)]
+    if dry_run:
+        cmd.append("--dry-run")
+
+    logger.debug("Running: %s", " ".join(cmd))
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+
+    if result.returncode != 0:
+        logger.error("Publish HTML failed (exit %d): %s", result.returncode, result.stderr.strip())
+        return {"status": "error", "error": result.stderr.strip()[:200]}
+
+    if result.stdout.strip():
+        for line in result.stdout.splitlines():
+            print(f"  {line}")
+
+    status = {"status": "complete"}
+    if dry_run:
+        status["status"] = "dry_run"
+
+    write_stage_status("publish_html", status, logger)
+    return status
+
+
 def main():
     parser = argparse.ArgumentParser(description="Haqita Pipeline Orchestrator")
-    parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate")
-    parser.add_argument("--stage", choices=["scrape", "ocr", "consolidate"], help="Run a single stage")
+    parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate, publish-html")
+    parser.add_argument("--stage", choices=["scrape", "ocr", "consolidate", "publish-html"], help="Run a single stage")
     parser.add_argument("--stores", default="lotte,superindo", help="Comma-separated store names (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Preview what would run without making changes")
     parser.add_argument("--verbose", action="store_true", help="Detailed logging to file")
@@ -283,6 +315,7 @@ def main():
         scrape_status = read_stage_status("scrape")
         ocr_status = read_stage_status("ocr")
         cons_status = read_stage_status("consolidate")
+        publish_status = read_stage_status("publish_html")
 
         scrape_done = scrape_status and scrape_status.get("stores") and all(
             info.get("status") in ("new_images", "no_new", "dry_run")
@@ -293,6 +326,7 @@ def main():
             for info in ocr_status.get("stores", {}).values()
         )
         cons_done = cons_status and cons_status.get("status") in ("complete", "dry_run")
+        publish_done = publish_status and publish_status.get("status") in ("complete", "dry_run")
 
         if scrape_done:
             logger.info("Scrape already complete, skipping")
@@ -322,6 +356,15 @@ def main():
 
         print()
 
+        if publish_done:
+            logger.info("Publish HTML already complete, skipping")
+            print("  [SKIP] Publish HTML — already complete")
+        else:
+            print("  [RUN] Publish HTML")
+            publish_result = run_publish_html(args.dry_run, logger)
+
+        print()
+
     elif args.full:
         # Stage 1: Scrape all stores
         scrape_result = run_scrape(stores, args.dry_run, logger)
@@ -335,6 +378,10 @@ def main():
         cons_result = run_consolidate(args.dry_run, logger)
         print()
 
+        # Stage 4: Publish HTML (always runs)
+        publish_result = run_publish_html(args.dry_run, logger)
+        print()
+
     elif args.stage == "scrape":
         scrape_result = run_scrape(stores, args.dry_run, logger)
 
@@ -345,6 +392,9 @@ def main():
 
     elif args.stage == "consolidate":
         cons_result = run_consolidate(args.dry_run, logger)
+
+    elif args.stage == "publish-html":
+        publish_result = run_publish_html(args.dry_run, logger)
 
     elapsed = time.time() - t_start
 

@@ -45,6 +45,11 @@ services:
     <<: *base
     command: python scripts/consolidate.py
 
+  # Stage 4: Publish HTML
+  publish-html:
+    <<: *base
+    command: python scripts/publish_html.py
+
   # Full pipeline (scrape → ocr → consolidate)
   pipeline:
     <<: *base

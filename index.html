@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haqita — Grocery Price Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #2d7a4f;
+  --green-light: #e8f5ee;
+  --green-mid: #4a9e6a;
+  --red: #c0392b;
+  --red-light: #fdf0ee;
+  --amber: #b45309;
+  --amber-light: #fef3cd;
+  --gray-50: #f4f4f2;
+  --gray-100: #e8e8e4;
+  --gray-300: #c0bfb8;
+  --gray-500: #8a8880;
+  --gray-700: #4a4945;
+  --gray-900: #1a1916;
+  --off-white: #f9f9f7;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --lotte: #0057A8;
+  --superindo: #E8211D;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--off-white);
+  color: var(--gray-900);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: white;
+  border-bottom: 1px solid var(--gray-100);
+  padding: 1rem 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: -0.02em;
+}
+
+.freshness-bar {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.freshness-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+#search-bar {
+  max-width: 1200px;
+  margin: 1rem auto 0;
+  padding: 0 1.5rem;
+  width: 100%;
+}
+
+#search-bar input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: white;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#search-bar input:focus {
+  outline: none;
+  border-color: var(--green-mid);
+  box-shadow: 0 0 0 3px var(--green-light);
+}
+
+#controls {
+  max-width: 1200px;
+  margin: 1rem auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chip {
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  border: 1px solid var(--gray-100);
+  background: white;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--gray-700);
+}
+
+.chip:hover { border-color: var(--gray-300); }
+.chip.active {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+
+.sort-select {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: white;
+  cursor: pointer;
+  color: var(--gray-700);
+}
+
+main#product-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.5rem 1.5rem 2rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  flex: 1;
+}
+
+@media (max-width: 1200px) { #product-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { #product-grid { grid-template-columns: 1fr; } }
+
+.product-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s;
+  position: relative;
+}
+
+.product-card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+.product-card.expanded {
+  grid-column: 1 / -1;
+  box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.product-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--gray-900);
+}
+
+.product-unit {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin-top: 0.15rem;
+}
+
+.price-tag {
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--green);
+  white-space: nowrap;
+}
+
+.store-rows { margin-top: 0.75rem; }
+
+.store-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.store-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.store-name { flex: 1; color: var(--gray-700); }
+.store-price { font-family: 'DM Mono', monospace; font-size: 0.9rem; }
+
+.savings-pill {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.25rem 0.6rem;
+  background: var(--green-light);
+  color: var(--green);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.valid-until {
+  font-size: 0.78rem;
+  color: var(--gray-500);
+  margin-top: 0.4rem;
+}
+
+.single-badge {
+  font-size: 0.78rem;
+  color: var(--gray-500);
+  font-style: italic;
+  margin-top: 0.3rem;
+}
+
+.low-conf-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: var(--amber-light);
+  color: var(--amber);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin-top: 0.4rem;
+}
+
+.detail-panel {
+  display: none;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-100);
+}
+
+.product-card.expanded .detail-panel { display: block; }
+
+.detail-section { margin-bottom: 1rem; }
+.detail-section h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detail-store-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.35rem;
+}
+
+.detail-store-row.cheapest {
+  background: var(--green-light);
+  border: 1px solid var(--green-mid);
+}
+
+.detail-store-row .brochure-link {
+  font-size: 0.78rem;
+  color: var(--green);
+  text-decoration: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.detail-store-row .brochure-link:hover { text-decoration: underline; }
+
+.chart-container {
+  width: 100%;
+  height: 120px;
+  position: relative;
+}
+
+.chart-container canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.no-history {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  text-align: center;
+  padding: 1.5rem;
+}
+
+#load-more {
+  display: none;
+  text-align: center;
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+}
+
+#load-more button {
+  padding: 0.6rem 1.5rem;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  background: white;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--gray-700);
+  transition: all 0.15s;
+}
+
+#load-more button:hover {
+  border-color: var(--green-mid);
+  color: var(--green);
+}
+
+footer {
+  background: white;
+  border-top: 1px solid var(--gray-100);
+  padding: 1rem 1.5rem;
+  font-size: 0.82rem;
+  color: var(--gray-500);
+}
+
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.review-warning {
+  color: var(--amber);
+  font-weight: 500;
+}
+
+#loading, #error-state, #empty-state, #no-results {
+  display: none;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  width: 100%;
+}
+
+.skeleton-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.skeleton-line {
+  height: 14px;
+  background: var(--gray-100);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-line.short { width: 60%; }
+.skeleton-line.medium { width: 80%; }
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+
+.skeleton-line {
+  background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-50) 50%, var(--gray-100) 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+#error-state .error-box, #empty-state .empty-box, #no-results .no-results-box {
+  background: white;
+  border-radius: var(--radius);
+  padding: 2rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+#error-state h3 { color: var(--red); margin-bottom: 0.5rem; }
+#empty-state h3 { color: var(--gray-700); margin-bottom: 0.5rem; }
+#no-results h3 { color: var(--gray-700); margin-bottom: 0.5rem; }
+
+#error-state p, #empty-state p, #no-results p {
+  color: var(--gray-500);
+  margin-bottom: 1rem;
+}
+
+.retry-btn {
+  padding: 0.5rem 1.2rem;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.retry-btn:hover { background: var(--green-mid); }
+
+.warning-banner {
+  background: var(--amber-light);
+  color: var(--amber);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  margin: 0.5rem 1.5rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.warning-banner button {
+  background: none;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+@media print {
+  #search-bar, #controls, #load-more, .freshness-bar { display: none !important; }
+  #product-grid { display: block !important; }
+  .product-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+  .product-card:nth-child(10n) { page-break-after: always; }
+  body { background: white; color: black; }
+  footer::after { content: "Printed: " attr(data-timestamp); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">Haqita</div>
+    <div class="freshness-bar">
+      <span class="freshness-dot"></span>
+      <span id="freshness-text">Loading...</span>
+    </div>
+  </div>
+</header>
+
+<div id="search-bar">
+  <input type="text" id="search-input" placeholder="Search products..." autocomplete="off">
+</div>
+
+<div id="controls">
+  <div class="filter-chips">
+    <button class="chip active" data-filter="all">All</button>
+    <button class="chip" data-filter="lotte">Lotte</button>
+    <button class="chip" data-filter="superindo">Superindo</button>
+  </div>
+  <select class="sort-select" id="sort-select">
+    <option value="cheapest">Sort: Cheapest</option>
+    <option value="name">Sort: Name</option>
+    <option value="savings">Sort: Savings</option>
+    <option value="expiry">Sort: Expiry</option>
+  </select>
+</div>
+
+<div class="warning-banner" id="warning-banner">
+  <span id="warning-text"></span>
+  <button id="warning-retry">Retry</button>
+</div>
+
+<main id="product-grid"></main>
+
+<div id="loading">
+  <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
+  <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
+  <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
+</div>
+
+<div id="error-state">
+  <div class="error-box">
+    <h3>Failed to load data</h3>
+    <p id="error-message">Could not fetch product data.</p>
+    <button class="retry-btn" onclick="loadData()">Retry</button>
+  </div>
+</div>
+
+<div id="empty-state">
+  <div class="empty-box">
+    <h3>No data yet</h3>
+    <p>Run the pipeline to scrape and consolidate product prices.</p>
+  </div>
+</div>
+
+<div id="no-results">
+  <div class="no-results-box">
+    <h3>No products match "<span id="no-results-query"></span>"</h3>
+    <p>Try a different search term.</p>
+  </div>
+</div>
+
+<div id="load-more">
+  <button id="load-more-btn">Load More</button>
+</div>
+
+<footer id="footer">
+  <div class="footer-inner">
+    <span id="footer-stats"></span>
+    <span id="footer-review"></span>
+  </div>
+</footer>
+
+<script>
+let consolidatedData = null;
+let priceHistoryData = null;
+let displayHints = null;
+let currentFilter = 'all';
+let currentSort = 'cheapest';
+let currentSearch = '';
+let currentPage = 1;
+const PAGE_SIZE = 20;
+let expandedKey = null;
+
+function getDefaultDisplayHints() {
+  return {
+    currency: "Rp",
+    locale: "en-ID",
+    stores: { lotte: "Lotte Mart", superindo: "Superindo" },
+    store_colors: { lotte: "#0057A8", superindo: "#E8211D" }
+  };
+}
+
+function formatIDR(n) {
+  if (n == null) return "-";
+  return displayHints.currency + " " + n.toLocaleString("id-ID");
+}
+
+function formatDate(isoDate) {
+  if (!isoDate) return "";
+  const d = new Date(isoDate);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
+}
+
+function retryFetch(url, retries = 3, delay = 1000) {
+  return fetch(url).catch(err => {
+    if (retries <= 0) throw err;
+    return new Promise(resolve => setTimeout(resolve, delay)).then(() => retryFetch(url, retries - 1, delay * 2));
+  });
+}
+
+function validateData(data, type) {
+  if (!data) return { valid: false, error: "No data received" };
+  if (type === "consolidated") {
+    if (!data.products && !data.singles) return { valid: false, error: "Missing products/singles in consolidated data" };
+  }
+  return { valid: true };
+}
+
+function renderLoading() {
+  document.getElementById("loading").style.display = "block";
+  document.getElementById("product-grid").style.display = "none";
+  document.getElementById("error-state").style.display = "none";
+  document.getElementById("empty-state").style.display = "none";
+  document.getElementById("no-results").style.display = "none";
+}
+
+function renderError(msg) {
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("product-grid").style.display = "none";
+  document.getElementById("error-state").style.display = "block";
+  document.getElementById("error-message").textContent = msg;
+}
+
+function renderWarning(msg) {
+  const banner = document.getElementById("warning-banner");
+  banner.style.display = "flex";
+  document.getElementById("warning-text").textContent = msg;
+}
+
+function normalizeProduct(product) {
+  if (product.stores && Array.isArray(product.stores)) {
+    return { ...product, stores: product.stores };
+  }
+  if (product.store) {
+    return { ...product, stores: [{ store: product.store, price: product.price, effective_unit_price: product.effective_unit_price, promo: product.promo, valid_until: product.valid_until, image_path: product.image_path }] };
+  }
+  return { ...product, stores: [] };
+}
+
+function isProductInStore(product, store) {
+  const normalized = normalizeProduct(product);
+  return normalized.stores.some(s => (s.store || "").toLowerCase().includes(store.toLowerCase()));
+}
+
+function searchProducts(query) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (product) => {
+    const name = (product.name || "").toLowerCase();
+    const brand = (product.brand || "").toLowerCase();
+    const unit = (product.unit || "").toLowerCase();
+    return name.includes(q) || brand.includes(q) || unit.includes(q);
+  };
+}
+
+function getAllProducts() {
+  const products = consolidatedData.products || [];
+  const singles = consolidatedData.singles || [];
+  return [...products, ...singles];
+}
+
+function getFilteredSortedProducts() {
+  let all = getAllProducts();
+  if (currentFilter !== "all") {
+    all = all.filter(p => isProductInStore(p, currentFilter));
+  }
+  if (currentSearch) {
+    const fn = searchProducts(currentSearch);
+    all = all.filter(fn);
+  }
+  all = [...all].sort((a, b) => {
+    if (currentSort === "name") return (a.name || "").localeCompare(b.name || "");
+    if (currentSort === "cheapest") return (a.price_min || 0) - (b.price_min || 0);
+    if (currentSort === "savings") {
+      const aGap = a.price_gap || 0;
+      const bGap = b.price_gap || 0;
+      if (aGap === 0 && bGap === 0) return 0;
+      if (aGap === 0) return 1;
+      if (bGap === 0) return -1;
+      return bGap - aGap;
+    }
+    if (currentSort === "expiry") {
+      const aDate = a.valid_until || "9999-12-31";
+      const bDate = b.valid_until || "9999-12-31";
+      return aDate.localeCompare(bDate);
+    }
+    return 0;
+  });
+  return all;
+}
+
+function buildStoreRows(product) {
+  const normalized = normalizeProduct(product);
+  return normalized.stores.map(s => {
+    const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
+    const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "#c0bfb8";
+    const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
+    const promoText = s.promo ? ` (${s.promo})` : "";
+    return `<div class="store-row">
+      <span class="store-dot" style="background:${color}"></span>
+      <span class="store-name">${storeName}</span>
+      <span class="store-price">${formatIDR(s.price)}${promoText}</span>
+    </div>`;
+  }).join("");
+}
+
+function buildMatchedCard(product) {
+  const cheapestStore = product.cheapest_store || "";
+  const storeKey = cheapestStore.toLowerCase().replace(/\s+/g, "");
+  const savingsText = product.savings_pct ? `Save ${product.savings_pct}% vs ${product.most_expensive_store || "other"}` : "";
+  const validText = product.valid_until ? `Valid until ${formatDate(product.valid_until)}` : "";
+  const confBadge = product.match_confidence != null && product.match_confidence < 0.8
+    ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
+  return `<div class="product-card" data-key="${product.product_key}" role="button" tabindex="0">
+    <div class="card-header">
+      <div>
+        <div class="product-name">${product.name || "Unknown"}</div>
+        <div class="product-unit">${product.unit || ""}</div>
+      </div>
+      <div class="price-tag">${formatIDR(product.price_min)}</div>
+    </div>
+    <div class="store-rows">${buildStoreRows(product)}</div>
+    ${savingsText ? `<div class="savings-pill">${savingsText}</div>` : ""}
+    ${validText ? `<div class="valid-until">${validText}</div>` : ""}
+    ${confBadge}
+    <div class="detail-panel" id="detail-${product.product_key}"></div>
+  </div>`;
+}
+
+function buildSingleCard(product) {
+  const normalized = normalizeProduct(product);
+  const s = normalized.stores[0] || {};
+  const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
+  const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
+  const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
+  const validText = product.valid_until ? `Valid until ${formatDate(product.valid_until)}` : "";
+  const confBadge = product.match_confidence != null && product.match_confidence < 0.8
+    ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
+  return `<div class="product-card" data-key="${product.product_key}" role="button" tabindex="0">
+    <div class="card-header">
+      <div>
+        <div class="product-name">${product.name || "Unknown"}</div>
+        <div class="product-unit">${product.unit || ""}</div>
+      </div>
+      <div class="price-tag">${formatIDR(s.price || product.price_min)}</div>
+    </div>
+    <div class="store-rows">
+      <div class="store-row">
+        <span class="store-dot" style="background:${color}"></span>
+        <span class="store-name">${storeName}</span>
+        <span class="store-price">${formatIDR(s.price || product.price_min)}</span>
+      </div>
+    </div>
+    <div class="single-badge">(Only available at ${storeName})</div>
+    ${validText ? `<div class="valid-until">${validText}</div>` : ""}
+    ${confBadge}
+    <div class="detail-panel" id="detail-${product.product_key}"></div>
+  </div>`;
+}
+
+function buildDetailPanel(product) {
+  const normalized = normalizeProduct(product);
+  const cheapestStore = (product.cheapest_store || "").toLowerCase().replace(/\s+/g, "");
+  let storeRows = normalized.stores.map(s => {
+    const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
+    const isCheapest = storeKey === cheapestStore;
+    const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
+    const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
+    const unitPrice = s.effective_unit_price ? ` · ${formatIDR(s.effective_unit_price)}/pc` : "";
+    const brochureLink = s.image_path ? `<a class="brochure-link" href="${s.image_path}" target="_blank">View Brochure</a>` : "";
+    const diff = product.price_gap && !isCheapest ? ` +${formatIDR(product.price_gap)}` : "";
+    const cheapestBadge = isCheapest ? ` ✓ Cheapest` : "";
+    return `<div class="detail-store-row ${isCheapest ? 'cheapest' : ''}">
+      <span class="store-dot" style="background:${color}"></span>
+      <span class="store-name">${storeName}${cheapestBadge}</span>
+      <span class="store-price">${formatIDR(s.price)}${unitPrice}${diff}</span>
+      ${brochureLink}
+    </div>`;
+  }).join("");
+
+  const confText = product.match_confidence != null
+    ? `Match confidence: ${Math.round(product.match_confidence * 100)}% (${product.match_method || "unknown"})`
+    : "";
+
+  return `<div class="detail-section">
+    <h4>Price Comparison</h4>
+    ${storeRows}
+  </div>
+  <div class="detail-section">
+    <h4>Price Trend</h4>
+    <div class="chart-container">
+      <canvas id="chart-${product.product_key}"></canvas>
+    </div>
+  </div>
+  ${confText ? `<div class="detail-section"><p style="font-size:0.82rem;color:var(--gray-500)">${confText}</p></div>` : ""}`;
+}
+
+function drawBarChart(canvas, productKey, history) {
+  if (!canvas || !history || !history.snapshots) return;
+  const snapshots = history.snapshots.filter(s => s.product_key === productKey).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  if (snapshots.length < 2) {
+    canvas.parentElement.innerHTML = '<div class="no-history">No history available</div>';
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const w = rect.width;
+  const h = rect.height;
+  const padding = { top: 10, right: 10, bottom: 25, left: 10 };
+  const chartW = w - padding.left - padding.right;
+  const chartH = h - padding.top - padding.bottom;
+  const prices = snapshots.map(s => s.price || 0);
+  const maxPrice = Math.max(...prices);
+  const barWidth = Math.min(30, (chartW / snapshots.length) * 0.6);
+  const gap = (chartW - barWidth * snapshots.length) / (snapshots.length + 1);
+  ctx.fillStyle = "var(--green-mid)";
+  snapshots.forEach((s, i) => {
+    const barH = (s.price / maxPrice) * chartH;
+    const x = padding.left + gap + i * (barWidth + gap);
+    const y = padding.top + chartH - barH;
+    ctx.fillStyle = "#4a9e6a";
+    ctx.fillRect(x, y, barWidth, barH);
+    ctx.fillStyle = "#8a8880";
+    ctx.font = "10px 'Plus Jakarta Sans', sans-serif";
+    ctx.textAlign = "center";
+    const d = new Date(s.date);
+    ctx.fillText(d.getDate() + "/" + (d.getMonth() + 1), x + barWidth / 2, h - 5);
+  });
+}
+
+function validatePriceHistoryKey(productKey) {
+  if (!priceHistoryData || !priceHistoryData.snapshots) return false;
+  return priceHistoryData.snapshots.some(s => s.product_key === productKey);
+}
+
+function expandCard(key) {
+  const card = document.querySelector(`.product-card[data-key="${key}"]`);
+  if (!card) return;
+  if (expandedKey && expandedKey !== key) {
+    const prev = document.querySelector(`.product-card[data-key="${expandedKey}"]`);
+    if (prev) {
+      prev.classList.remove("expanded");
+      const prevDetail = document.getElementById(`detail-${expandedKey}`);
+      if (prevDetail) prevDetail.innerHTML = "";
+    }
+  }
+  const isExpanded = card.classList.contains("expanded");
+  if (isExpanded) {
+    card.classList.remove("expanded");
+    const detail = document.getElementById(`detail-${key}`);
+    if (detail) detail.innerHTML = "";
+    expandedKey = null;
+    history.replaceState(null, "", window.location.pathname);
+  } else {
+    card.classList.add("expanded");
+    const allProducts = getAllProducts();
+    const product = allProducts.find(p => p.product_key === key);
+    if (product) {
+      const detail = document.getElementById(`detail-${key}`);
+      if (detail) {
+        detail.innerHTML = buildDetailPanel(product);
+        setTimeout(() => {
+          const canvas = document.getElementById(`chart-${key}`);
+          if (canvas && validatePriceHistoryKey(key)) {
+            drawBarChart(canvas, key, priceHistoryData);
+          } else if (canvas) {
+            canvas.parentElement.innerHTML = '<div class="no-history">No history available</div>';
+          }
+        }, 50);
+      }
+    }
+    expandedKey = key;
+    history.replaceState(null, "", "#" + key);
+  }
+}
+
+function renderCards() {
+  const grid = document.getElementById("product-grid");
+  const filtered = getFilteredSortedProducts();
+  if (filtered.length === 0 && getAllProducts().length === 0) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("empty-state").style.display = "block";
+    document.getElementById("product-grid").style.display = "none";
+    document.getElementById("no-results").style.display = "none";
+    document.getElementById("load-more").style.display = "none";
+    return;
+  }
+  if (filtered.length === 0 && currentSearch) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("no-results").style.display = "block";
+    document.getElementById("no-results-query").textContent = currentSearch;
+    document.getElementById("product-grid").style.display = "none";
+    document.getElementById("load-more").style.display = "none";
+    return;
+  }
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("empty-state").style.display = "none";
+  document.getElementById("no-results").style.display = "none";
+  document.getElementById("product-grid").style.display = "grid";
+  const end = currentPage * PAGE_SIZE;
+  const pageItems = filtered.slice(0, end);
+  grid.innerHTML = pageItems.map(p => {
+    const normalized = normalizeProduct(p);
+    return normalized.stores.length > 1 ? buildMatchedCard(p) : buildSingleCard(p);
+  }).join("");
+  grid.querySelectorAll(".product-card").forEach(card => {
+    card.addEventListener("click", () => expandCard(card.dataset.key));
+    card.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); expandCard(card.dataset.key); }
+    });
+  });
+  const loadMore = document.getElementById("load-more");
+  if (end < filtered.length) {
+    loadMore.style.display = "block";
+  } else {
+    loadMore.style.display = "none";
+  }
+  renderFooterStats(filtered);
+}
+
+function renderFooterStats(filtered) {
+  const stats = consolidatedData.stats || {};
+  const lotteCount = filtered.filter(p => isProductInStore(p, "lotte")).length;
+  const superindoCount = filtered.filter(p => isProductInStore(p, "superindo")).length;
+  const matchedCount = filtered.filter(p => { const n = normalizeProduct(p); return n.stores.length > 1; }).length;
+  document.getElementById("footer-stats").textContent = `Lotte: ${lotteCount} products · Superindo: ${superindoCount} · Matched: ${matchedCount}`;
+  const reviewEl = document.getElementById("footer-review");
+  if (stats.flagged_for_review > 0) {
+    reviewEl.innerHTML = `<a href="admin.html" style="color:var(--amber);text-decoration:none">⚠ ${stats.flagged_for_review} items need review →</a>`;
+    reviewEl.className = "review-warning";
+  } else {
+    reviewEl.textContent = "";
+  }
+}
+
+function updateFreshnessBar(timestamp) {
+  if (!timestamp) {
+    document.getElementById("freshness-text").textContent = "Loading...";
+    return;
+  }
+  const now = new Date();
+  const updated = new Date(timestamp);
+  const diffMs = now - updated;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMin / 60);
+  let text = "";
+  if (diffMin < 1) text = "Just now";
+  else if (diffMin < 60) text = `${diffMin}m ago`;
+  else text = `${diffHr}h ${diffMin % 60}m ago`;
+  document.getElementById("freshness-text").textContent = `Prices updated ${text}`;
+}
+
+function setupHashRouting() {
+  window.addEventListener("hashchange", () => {
+    const key = window.location.hash.slice(1);
+    if (key) expandCard(key);
+  });
+}
+
+function applyHashAfterLoad() {
+  const key = window.location.hash.slice(1);
+  if (key) {
+    setTimeout(() => expandCard(key), 100);
+  }
+}
+
+function startAutoRefresh(intervalMs = 300000) {
+  setInterval(() => {
+    if (document.visibilityState === "visible") {
+      loadData(true);
+    }
+  }, intervalMs);
+}
+
+async function loadData(isRefresh = false) {
+  if (!isRefresh) renderLoading();
+  document.getElementById("warning-banner").style.display = "none";
+  try {
+    const [consResult, histResult] = await Promise.allSettled([
+      retryFetch("output/html/active_promo.json"),
+      retryFetch("output/html/price_history.json")
+    ]);
+    let consOk = false, histOk = false;
+    if (consResult.status === "fulfilled" && consResult.value.ok) {
+      const data = await consResult.value.json();
+      const v = validateData(data, "consolidated");
+      if (v.valid) { consolidatedData = data; consOk = true; }
+      else { renderError(v.error); return; }
+    }
+    if (histResult.status === "fulfilled" && histResult.value.ok) {
+      priceHistoryData = await histResult.value.json();
+      histOk = true;
+    }
+    if (!consOk && !histOk) {
+      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files.");
+      return;
+    }
+    if (!consOk) {
+      renderWarning("Consolidated data unavailable. Showing price history only.");
+    }
+    if (!histOk) {
+      if (!isRefresh) renderWarning("Price history unavailable. Charts will not display.");
+    }
+    displayHints = consolidatedData?.display_hints || getDefaultDisplayHints();
+    if (consolidatedData?.metadata?.last_updated) {
+      updateFreshnessBar(consolidatedData.metadata.last_updated);
+    }
+    renderCards();
+    if (!isRefresh) {
+      setupHashRouting();
+      applyHashAfterLoad();
+    }
+  } catch (err) {
+    renderError("Network error: " + err.message);
+  }
+}
+
+document.getElementById("search-input").addEventListener("input", (e) => {
+  clearTimeout(window._searchTimeout);
+  window._searchTimeout = setTimeout(() => {
+    currentSearch = e.target.value.trim();
+    currentPage = 1;
+    renderCards();
+  }, 200);
+});
+
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    currentFilter = chip.dataset.filter;
+    currentPage = 1;
+    renderCards();
+  });
+});
+
+document.getElementById("sort-select").addEventListener("change", (e) => {
+  currentSort = e.target.value;
+  currentPage = 1;
+  renderCards();
+});
+
+document.getElementById("load-more-btn").addEventListener("click", () => {
+  currentPage++;
+  renderCards();
+});
+
+document.getElementById("warning-retry").addEventListener("click", () => {
+  loadData();
+});
+
+loadData();
+startAutoRefresh();
+</script>
+</body>
+</html>

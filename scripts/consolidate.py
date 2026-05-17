@@ -1,6 +1,6 @@
 """
 Consolidation script — merge OCR results from Lotte & Superindo,
-match same products across stores, output consolidated JSON.
+match same products across stores, write to database.
 
 Usage:
     python scripts/consolidate.py [options]
@@ -9,8 +9,8 @@ Options:
     --input-dir DIR          Auto-detect store from filename, pick latest per store
     --lotte-dir DIR          Explicit Lotte input directory
     --superindo-dir DIR      Explicit Superindo input directory
-    --output-dir DIR         Output directory (default: output/)
-    --no-docker              Run natively (not in Docker)
+    --dry-run                Preview without database update
+    --verbose                Write detailed match results to log file
 """
 
 import argparse
@@ -30,7 +30,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.matching.matcher import load_embedding_model, match_products
 from scripts.matching.normalizer import parse_unit_to_base, unit_type
-from scripts.matching.promo_parser import parse_promo, parse_valid_until
+from scripts.matching.promo_parser import parse_promo, parse_period
+from scripts.matching.consolidation import generate_consolidated_from_history
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -196,10 +197,11 @@ def append_to_price_history(history: dict, products: list[dict], today: str) -> 
         existing.add((snap['product_key'], snap['date'], snap['store']))
 
     for p in products:
-        key = (p['key'], today, p['store'])
+        pkey = p.get('product_key') or p.get('key', '')
+        key = (pkey, today, p['store'])
         if key not in existing:
             history['snapshots'].append({
-                'product_key': p['key'],
+                'product_key': pkey,
                 'name': p['name'],
                 'brand': p.get('brand'),
                 'unit': p.get('unit'),
@@ -208,6 +210,14 @@ def append_to_price_history(history: dict, products: list[dict], today: str) -> 
                 'price': p['price'],
                 'effective_unit_price': p.get('effective_unit_price', p['price']),
                 'promo': p.get('promo'),
+                'valid_from': p.get('valid_from'),
+                'valid_until': p.get('valid_until'),
+                'bundle_size': p.get('bundle_size', 1),
+                'promo_type': p.get('promo_type', 'single'),
+                'match_method': p.get('match_method'),
+                'match_confidence': p.get('match_confidence'),
+                'image_path': p.get('image_path'),
+                'scrape_time': p.get('scrape_time'),
             })
             existing.add(key)
 
@@ -220,7 +230,7 @@ def append_to_price_history(history: dict, products: list[dict], today: str) -> 
 # Main consolidation flow
 # ---------------------------------------------------------------------------
 
-def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, output_dir: Path, database_dir: Path, dry_run: bool = False, verbose: bool = False, log_file: Path | None = None) -> None:
+def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, database_dir: Path, dry_run: bool = False, verbose: bool = False, log_file: Path | None = None) -> None:
     t_start = time.time()
 
     if verbose and log_file:
@@ -281,7 +291,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
         p['_effective_unit_price'] = promo.effective_unit_price
         p['_bundle_size'] = promo.unit_count
         p['_promo_type'] = promo.promo_type
-        p['_valid_until'] = parse_valid_until(p.get('period'))
+        p['_valid_from'], p['_valid_until'] = parse_period(p.get('period'))
 
     for p in superindo_products:
         promo = parse_promo(p.get('promo'), p.get('price', 0))
@@ -289,7 +299,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
         p['_effective_unit_price'] = promo.effective_unit_price
         p['_bundle_size'] = promo.unit_count
         p['_promo_type'] = promo.promo_type
-        p['_valid_until'] = parse_valid_until(p.get('period'))
+        p['_valid_from'], p['_valid_until'] = parse_period(p.get('period'))
 
     # 4. Load embedding model if Gate 4 enabled
     embedding_model = None
@@ -354,7 +364,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
                 'bundle_size': la.get('_bundle_size', 1),
                 'promo': la.get('promo'),
                 'promo_type': la.get('_promo_type', 'single'),
-                'period': la.get('period'),
+                'valid_from': la.get('_valid_from'),
                 'valid_until': la.get('_valid_until'),
                 'image_path': la.get('image_path'),
             },
@@ -365,7 +375,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
                 'bundle_size': sb.get('_bundle_size', 1),
                 'promo': sb.get('promo'),
                 'promo_type': sb.get('_promo_type', 'single'),
-                'period': sb.get('period'),
+                'valid_from': sb.get('_valid_from'),
                 'valid_until': sb.get('_valid_until'),
                 'image_path': sb.get('image_path'),
             },
@@ -430,7 +440,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
             'price': p.get('price', 0),
             'effective_unit_price': p.get('_effective_unit_price', p.get('price', 0)),
             'promo': p.get('promo'),
-            'period': p.get('period'),
+            'valid_from': p.get('_valid_from'),
             'valid_until': p.get('_valid_until'),
             'image_path': p.get('image_path'),
         })
@@ -452,62 +462,19 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
             'price': p.get('price', 0),
             'effective_unit_price': p.get('_effective_unit_price', p.get('price', 0)),
             'promo': p.get('promo'),
-            'period': p.get('period'),
+            'valid_from': p.get('_valid_from'),
             'valid_until': p.get('_valid_until'),
             'image_path': p.get('image_path'),
         })
 
-    # Match methods summary
-    match_methods = {}
-    for mp in matched_pairs:
-        m = mp['match_method']
-        match_methods[m] = match_methods.get(m, 0) + 1
+    # 7. Update database, then generate consolidated output from it
+    today = datetime.now().strftime('%Y-%m-%d')
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    consolidated = {
-        'generated_at': datetime.now().isoformat(),
-        'scrape_dates': {
-            'Lotte': lotte_date or '',
-            'Superindo': superindo_date or '',
-        },
-        'source_files': [
-            lotte_file.name if lotte_file else '',
-            superindo_file.name if superindo_file else '',
-        ],
-        'display_hints': {
-            'stores': ['Lotte', 'Superindo'],
-            'store_colors': {'Lotte': '#0057A8', 'Superindo': '#E8211D'},
-            'currency': 'IDR',
-            'locale': 'id-ID',
-        },
-        'products': consolidated_products,
-        'singles': singles,
-        'stats': {
-            'total_products_lotte': len(lotte_products),
-            'total_products_superindo': len(superindo_products),
-            'matched_across_stores': len(matched_pairs),
-            'lotte_only': len(lotte_only),
-            'superindo_only': len(superindo_only),
-            'match_methods': match_methods,
-            'flagged_for_review': len(review_items),
-            'validation_rejected': 0,
-        },
-    }
-
-    # 7. Write outputs
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    dated_path = output_dir / f'consolidated_{timestamp}.json'
-    latest_path = output_dir / 'consolidated_latest.json'
-
-    print(f"[*] Writing {dated_path.name}")
-    atomic_write_json(consolidated, str(dated_path))
-
-    print("[*] Writing consolidated_latest.json (atomic)")
-    atomic_write_json(consolidated, str(latest_path))
-
-    # 8. Update product catalog
     if not dry_run:
         database_dir.mkdir(parents=True, exist_ok=True)
+
+        # 7a. Update product catalog
         catalog_path = database_dir / 'product_catalog.json'
         catalog_data = {}
         if catalog_path.exists():
@@ -540,7 +507,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
         print(f"[*] Updating product_catalog.json: {len(catalog)} entries")
         atomic_write_json(catalog_output, str(catalog_path))
 
-        # 9. Append to price history
+        # 7b. Append to price history
         history_path = database_dir / 'price_history.json'
         backup_path = database_dir / 'price_history.json.backup'
 
@@ -552,24 +519,55 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
         for p in consolidated_products:
             for s in p['stores']:
                 history_snapshots.append({
-                    'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
+                    'product_key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
                     'unit': p.get('unit'), 'store': s['store'],
                     'price': s['price'], 'effective_unit_price': s['effective_unit_price'],
                     'promo': s.get('promo'),
+                    'valid_from': s.get('valid_from'),
+                    'valid_until': s.get('valid_until'),
+                    'bundle_size': s.get('bundle_size', 1),
+                    'promo_type': s.get('promo_type', 'single'),
+                    'match_method': p.get('match_method'),
+                    'match_confidence': p.get('match_confidence'),
+                    'image_path': s.get('image_path'),
+                    'scrape_time': lotte_date if s['store'] == 'Lotte' else superindo_date,
                 })
         for p in singles:
             history_snapshots.append({
-                'key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
+                'product_key': p['key'], 'name': p['name'], 'brand': p.get('brand'),
                 'unit': p.get('unit'), 'store': p['store'],
                 'price': p['price'], 'effective_unit_price': p.get('effective_unit_price', p['price']),
                 'promo': p.get('promo'),
+                'valid_from': p.get('valid_from'),
+                'valid_until': p.get('valid_until'),
+                'bundle_size': 1,
+                'promo_type': 'single',
+                'match_method': None,
+                'match_confidence': None,
+                'image_path': p.get('image_path'),
+                'scrape_time': lotte_date if p['store'] == 'Lotte' else superindo_date,
             })
 
         history = append_to_price_history(history, history_snapshots, today)
         print(f"[*] Appending to price_history.json: {len(history_snapshots)} snapshots")
         atomic_write_json(history, str(history_path))
 
-        # 10. Review queue
+        # 7c. Generate consolidated output from database (includes carry-forward of still-valid promos)
+        print("[*] Generating consolidated output from database ...")
+        consolidated = generate_consolidated_from_history(history, catalog, today)
+        consolidated['scrape_dates'] = {
+            'Lotte': lotte_date or '',
+            'Superindo': superindo_date or '',
+        }
+        consolidated['source_files'] = [
+            lotte_file.name if lotte_file else '',
+            superindo_file.name if superindo_file else '',
+        ]
+        consolidated['stats']['total_products_lotte'] = len(lotte_products)
+        consolidated['stats']['total_products_superindo'] = len(superindo_products)
+        consolidated['stats']['flagged_for_review'] = len(review_items)
+
+        # 7d. Review queue
         review_path = database_dir / 'review_queue.json'
         review_data = []
         if review_path.exists():
@@ -591,13 +589,43 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
         print(f"[*] Review queue: {len(review_data)} items")
         atomic_write_json({'items': review_data}, str(review_path))
     else:
-        # Dry-run: write consolidated output to output/consolidation/ only
-        dry_path = output_dir / f'dry_run_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-        print(f"[*] Writing dry_run output to {dry_path.name}")
-        atomic_write_json(consolidated, str(dry_path))
-        print("[*] Database not updated (dry-run)")
+        # Dry-run: build consolidated directly from matching results (no database update)
+        match_methods = {}
+        for mp in matched_pairs:
+            m = mp['match_method']
+            match_methods[m] = match_methods.get(m, 0) + 1
 
-    # 11. Print summary
+        consolidated = {
+            'generated_at': datetime.now().isoformat(),
+            'scrape_dates': {
+                'Lotte': lotte_date or '',
+                'Superindo': superindo_date or '',
+            },
+            'source_files': [
+                lotte_file.name if lotte_file else '',
+                superindo_file.name if superindo_file else '',
+            ],
+            'display_hints': {
+                'stores': ['Lotte', 'Superindo'],
+                'store_colors': {'Lotte': '#0057A8', 'Superindo': '#E8211D'},
+                'currency': 'IDR',
+                'locale': 'id-ID',
+            },
+            'products': consolidated_products,
+            'singles': singles,
+            'stats': {
+                'total_products_lotte': len(lotte_products),
+                'total_products_superindo': len(superindo_products),
+                'matched_across_stores': len(matched_pairs),
+                'lotte_only': len(lotte_only),
+                'superindo_only': len(superindo_only),
+                'match_methods': match_methods,
+                'flagged_for_review': len(review_items),
+                'validation_rejected': 0,
+            },
+        }
+
+    # 8. Print summary
     elapsed = time.time() - t_start
     print()
     print("========================================")
@@ -622,14 +650,11 @@ def main():
     parser.add_argument('--input-dir', type=str, help='Auto-detect store from filename')
     parser.add_argument('--lotte-dir', type=str, help='Explicit Lotte input directory')
     parser.add_argument('--superindo-dir', type=str, help='Explicit Superindo input directory')
-    parser.add_argument('--output-dir', type=str, default='output/consolidation', help='Consolidation output directory')
-    parser.add_argument('--dry-run', action='store_true', help='Output to console, no database update')
-    parser.add_argument('--no-docker', action='store_true', help='Run natively')
+    parser.add_argument('--dry-run', action='store_true', help='Preview without database update')
     parser.add_argument('--verbose', action='store_true', help='Write detailed match results to log file')
     args = parser.parse_args()
 
     cfg = load_config()
-    output_dir = Path(args.output_dir)
     database_dir = Path('database')
 
     log_file = None
@@ -644,7 +669,7 @@ def main():
         lotte_dir = Path(args.lotte_dir) if args.lotte_dir else Path('database/ocr/lotte')
         superindo_dir = Path(args.superindo_dir) if args.superindo_dir else Path('database/ocr/superindo')
 
-    consolidate(cfg, lotte_dir, superindo_dir, output_dir, database_dir, args.dry_run, args.verbose, log_file)
+    consolidate(cfg, lotte_dir, superindo_dir, database_dir, args.dry_run, args.verbose, log_file)
 
 
 if __name__ == '__main__':

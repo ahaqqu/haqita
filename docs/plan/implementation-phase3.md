@@ -2,17 +2,23 @@
 
 ## Current State
 
-**Implemented (Phase 1 & 2):**
+**Implemented (Phase 1 & 2 + Step 0):**
 - Scrapers for Lotte Mart & Superindo (`scripts/scrapers/`)
 - OCR pipeline with Ollama/Gemini support (`scripts/ocr/`)
 - Product matching pipeline with 6 gates (`scripts/matching/`)
-- Consolidation script (`scripts/consolidate.py`) that outputs:
-  - `output/consolidation/consolidated_latest.json` (and dated versions)
+- Consolidation script (`scripts/consolidate.py`) with:
+  - `generate_consolidated_from_history()` — rebuilds consolidated output from database
+  - Extended `price_history.json` schema v1.2 (8 new fields)
+  - `parse_period()` replaces `parse_valid_until()` — returns `(valid_from, valid_until)`
+- Outputs:
+  - `output/consolidation/active_promo.json` (derived, safe to delete)
   - `database/product_catalog.json`
-  - `database/price_history.json`
+  - `database/price_history.json` (schema v1.2)
   - `database/review_queue.json`
 - Orchestrator (`scripts/orchestrator.py`) with 3 stages: scrape → ocr → consolidate
+  - Runtime logs/stage_results written to `output/logs/` and `output/stage_results/`
 - Interactive menu (`haqita.bat`) with all pipeline stages
+- Unit tests: 175 passing (13 new Step 0 tests)
 - No `index.html` exists yet
 
 ## Design Reference
@@ -27,12 +33,12 @@ Based on `docs/mockup/haqita-ux.html` — a mobile-first mockup with:
 
 The `index.html` adapts this visual language for a **desktop browser** (responsive grid, not phone frames).
 
-## Architecture: `consolidated_latest.json` is Derived from Database
+## Architecture: `active_promo.json` is Derived from Database
 
-`consolidated_latest.json` is a **temporary derived view** — it must be regeneratable from `database/`.
+`active_promo.json` is a **temporary derived view** — it must be regeneratable from `database/`.
 The `output/` directory is safe to delete; `database/` is the source of truth.
 
-### How `consolidated_latest.json` is Generated
+### How `active_promo.json` is Generated
 
 ```
 database/price_history.json  (append-only snapshots with valid_until, match info)
@@ -42,10 +48,10 @@ database/product_catalog.json (product metadata)
 consolidate.py → generate_consolidated_from_history()
        │
        ▼
-output/consolidation/consolidated_latest.json  (derived, safe to delete)
+output/consolidation/active_promo.json  (derived, safe to delete)
        │
        ▼
-publish_html.py → output/html/consolidated_latest.json  (for browser)
+publish_html.py → output/html/active_promo.json  (for browser)
 ```
 
 ### Extended `price_history.json` Schema (v1.2)
@@ -104,7 +110,7 @@ Each snapshot in `price_history.json` now carries all fields needed to rebuild t
 ```python
 def generate_consolidated_from_history(history: dict, catalog: dict, today: str) -> dict:
     """
-    Rebuild consolidated_latest.json from database/price_history.json + product_catalog.json.
+    Rebuild active_promo.json from database/price_history.json + product_catalog.json.
 
     1. Filter snapshots: valid_until >= today OR valid_until is null (treat as active)
     2. Get latest snapshot per (product_key, store) — dedup by date
@@ -124,7 +130,7 @@ carry forward even if dropped from the current scrape.
 ## JSON Output Path
 
 Per project convention, HTML-only outputs go to `output/html/`:
-- `output/html/consolidated_latest.json` — copy from `output/consolidation/` (derived from database)
+- `output/html/active_promo.json` — copy from `output/consolidation/` (derived from database)
 - `output/html/price_history.json` — copy from `database/`
 
 A new **Stage 4: Publish HTML** script (`scripts/publish_html.py`) handles these copies.
@@ -347,7 +353,7 @@ Then open `http://localhost:8080` in a browser. Alternatives: VS Code Live Serve
 
 3. **Update consolidation flow** — After matching and appending to price_history:
    - Call `generate_consolidated_from_history()` instead of building directly from matching results
-   - Write result to `output/consolidation/consolidated_latest.json`
+   - Write result to `output/consolidation/active_promo.json`
    - Write dated snapshot to `output/consolidation/consolidated_YYYYMMDD_HHMMSS.json`
 
 **Key behavior change:** Still-valid promos from previous runs carry forward automatically
@@ -361,7 +367,7 @@ Ensure the directory exists for HTML outputs.
 ### Step 2: Create `scripts/publish_html.py` — Stage 4
 
 New script that copies JSON files to `output/html/` for the HTML display:
-- `output/consolidation/consolidated_latest.json` → `output/html/consolidated_latest.json`
+- `output/consolidation/active_promo.json` → `output/html/active_promo.json`
 - `database/price_history.json` → `output/html/price_history.json`
 
 Simple script (~50 lines), uses `shutil.copy2` for copies. Each stage stays isolated:
@@ -429,7 +435,7 @@ Single self-contained file (~800-1000 lines): HTML + CSS + vanilla JS.
   - Invalid data triggers error state with descriptive message
 - Shows the loading skeleton immediately on page load
 - On complete failure: shows error state with retry button
-- On partial failure (e.g., `price_history.json` fails but `consolidated_latest.json`
+- On partial failure (e.g., `price_history.json` fails but `active_promo.json`
   loads): renders available data with a warning banner and individual retry button
 - **Display Hints Fallback**: If `display_hints` is missing or incomplete:
   ```javascript
@@ -475,7 +481,7 @@ Single self-contained file (~800-1000 lines): HTML + CSS + vanilla JS.
   single-column layout; page break after every 10 products; includes timestamp footer
 - **Brochure viewer**: Each store entry in the expanded detail panel has a
   `[View Brochure]` link that opens the source brochure image in a new tab.
-  Uses the `image_path` field from `consolidated_latest.json`. Hidden when
+  Uses the `image_path` field from `active_promo.json`. Hidden when
   `image_path` is null or empty.
 
 **Usage Notes:**
@@ -485,7 +491,7 @@ Single self-contained file (~800-1000 lines): HTML + CSS + vanilla JS.
 
 ### Step 5: Create sample test data
 
-Create `output/html/consolidated_latest.json` with realistic test data (2 matched products,
+Create `output/html/active_promo.json` with realistic test data (2 matched products,
 2 singles) that mirrors the exact output structure from `consolidate.py`, including
 `display_hints`, `products` (with `stores[]`), `singles` (with `store` string), and `stats`.
 
@@ -505,7 +511,7 @@ with `valid_until`, `bundle_size`, `promo_type`, `start_period`, `end_period`, `
 | `haqita.bat` | Modify | Add menu entries for Stage 4 |
 | `docker/docker-compose.yml` | Modify | Add `publish-html` service, update `pipeline` service |
 | `index.html` | **Create** | ~800-1000 lines: HTML + CSS + vanilla JS with search, keyboard nav, URL hashes |
-| `output/html/consolidated_latest.json` | **Create** | Sample test data (mirrors real `consolidate.py` output structure) |
+| `output/html/active_promo.json` | **Create** | Sample test data (mirrors real `consolidate.py` output structure) |
 | `output/html/price_history.json` | **Create** | Sample price history (schema v1.2, ≥1 product with ≥2 entries for chart testing) |
 
 ## Out of Scope (Future Phases)
