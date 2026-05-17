@@ -54,21 +54,19 @@ echo ========================================
 echo  Full Pipeline Options
 echo ========================================
 echo.
-echo  [1] Run normally
-echo  [2] Dry-run (preview, no changes)
-echo  [3] Verbose (detailed log file)
-echo  [4] Verbose + Dry-run
-echo  [5] Resume from last failed stage
+echo  [1] Verbose
+echo  [2] Non-verbose
+echo  [3] Dry-run + verbose
+echo  [4] Resume from last failed stage
 echo  [0] Back
 echo.
 
 set /p fp_choice="Your choice: "
 
-if "%fp_choice%"=="1" goto FULL_PIPELINE
-if "%fp_choice%"=="2" goto FULL_PIPELINE_DRYRUN
-if "%fp_choice%"=="3" goto FULL_PIPELINE_VERBOSE
-if "%fp_choice%"=="4" goto FULL_PIPELINE_VERBOSE_DRYRUN
-if "%fp_choice%"=="5" goto FULL_PIPELINE_RESUME
+if "%fp_choice%"=="1" goto FULL_PIPELINE_VERBOSE
+if "%fp_choice%"=="2" goto FULL_PIPELINE
+if "%fp_choice%"=="3" goto FULL_PIPELINE_VERBOSE_DRYRUN
+if "%fp_choice%"=="4" goto FULL_PIPELINE_RESUME
 if "%fp_choice%"=="0" goto MENU
 
 echo Invalid choice. Press any key to try again...
@@ -98,73 +96,6 @@ if "!RUN_MODE!"=="docker" (
 
 echo ========================================
 echo  Pipeline complete.
-echo ========================================
-echo.
-pause
-goto MENU
-
-:FULL_PIPELINE_DRYRUN
-cls
-echo ========================================
-echo  Running Full Pipeline — Dry-run
-echo ========================================
-echo.
-echo  Mode: !RUN_MODE!
-echo  No changes will be made to the database.
-echo.
-echo  Press any key to start, or Ctrl+C to cancel...
-pause >nul
-echo.
-
-python scripts/orchestrator.py --full --dry-run
-
-echo ========================================
-echo  Dry-run complete.
-echo ========================================
-echo.
-pause
-goto MENU
-
-:FULL_PIPELINE_VERBOSE
-cls
-echo ========================================
-echo  Running Full Pipeline — Verbose
-echo ========================================
-echo.
-echo  Mode: !RUN_MODE!
-echo  Detailed log will be written to output/logs/
-echo.
-echo  Press any key to start, or Ctrl+C to cancel...
-pause >nul
-echo.
-
-python scripts/orchestrator.py --full --verbose
-
-echo ========================================
-echo  Pipeline complete.
-echo ========================================
-echo.
-pause
-goto MENU
-
-:FULL_PIPELINE_VERBOSE_DRYRUN
-cls
-echo ========================================
-echo  Running Full Pipeline — Verbose + Dry-run
-echo ========================================
-echo.
-echo  Mode: !RUN_MODE!
-echo  Detailed log will be written to output/logs/
-echo  No changes will be made to the database.
-echo.
-echo  Press any key to start, or Ctrl+C to cancel...
-pause >nul
-echo.
-
-python scripts/orchestrator.py --full --verbose --dry-run
-
-echo ========================================
-echo  Dry-run complete.
 echo ========================================
 echo.
 pause

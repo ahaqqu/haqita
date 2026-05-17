@@ -20,7 +20,8 @@ def parse_retry_delay(error_msg: str) -> int | None:
     for pattern in patterns:
         match = re.search(pattern, error_msg.lower())
         if match:
-            return int(float(match.group(1))) + 1
+            base_delay = int(float(match.group(1)))
+            return base_delay + 15
     return None
 
 
@@ -57,8 +58,12 @@ def call_gemini_ocr(image_path: str, cfg: dict, max_retries: int = 3) -> list[di
             last_error = e
             err_str = str(e)
             if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "rate limit" in err_str.lower():
-                wait_time = parse_retry_delay(err_str) or 60
-                print(f"[!] Rate limit hit. Waiting {wait_time}s before retry ({attempt + 1}/{max_retries})...")
+                parsed_delay = parse_retry_delay(err_str)
+                wait_time = parsed_delay if parsed_delay else 60
+                if parsed_delay:
+                    print(f"[!] Rate limit hit. Parsed delay: {parsed_delay - 15}s + 15s buffer = {wait_time}s. Retrying ({attempt + 1}/{max_retries})...")
+                else:
+                    print(f"[!] Rate limit hit. Using fallback delay: {wait_time}s. Retrying ({attempt + 1}/{max_retries})...")
                 time.sleep(wait_time)
             elif attempt < max_retries - 1:
                 wait_time = 2 ** attempt
