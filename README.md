@@ -10,15 +10,16 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
 ## Architecture
 
 ```
-  ┌─────────────┐     ┌──────────────┐     ┌──────────────────┐
-  │  Stage 1    │     │  Stage 2     │     │  Stage 3         │
-  │  Scrape     │────▶│  OCR         │────▶│  Consolidation   │
-  └─────────────┘     └──────────────┘     └──────────────────┘
-        │                     │                       │
-        ▼                     ▼                       ▼
-  database/scrape/        database/ocr/           output/consolidation/
-                                                + database/
-                                                  (price_history, catalog, review)
+  ┌─────────────┐     ┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
+  │  Stage 1    │     │  Stage 2     │     │  Stage 3         │     │  Stage 4         │
+  │  Scrape     │────▶│  OCR         │────▶│  Consolidation   │────▶│  Publish HTML    │
+  └─────────────┘     └──────────────┘     └──────────────────┘     └──────────────────┘
+        │                     │                       │                       │
+        ▼                     ▼                       ▼                       ▼
+  database/scrape/        database/ocr/           output/consolidation/     output/html/
+                                                + database/                 index.html
+                                                  (price_history,
+                                                   catalog, review)
 ```
 
 Each stage runs independently. If a stage fails, select **[1] → [5] Resume** to continue from where it left off — completed stages are skipped automatically.
@@ -32,6 +33,24 @@ haqita.bat
 ```
 
 Launches an interactive menu. Select **[1]** for the full pipeline, or run individual stages ([2]–[4]). Each stage has a dry-run mode.
+
+## Viewing the HTML UI
+
+After running the pipeline, open the browser UI:
+
+```cmd
+python -m http.server 8080
+```
+
+Then open `http://localhost:8080` in a browser. Features:
+- **Search** products by name, brand, or unit
+- **Filter** by store (All / Lotte / Superindo)
+- **Sort** by cheapest, name, savings, or expiry
+- **Expand** cards for price comparison, trend charts, and brochure links
+- **Auto-refresh** every 5 minutes when tab is visible
+- **Print-friendly** layout (Ctrl+P)
+
+> Opening `index.html` directly via `file://` will fail due to CORS. An HTTP server is required.
 
 ## Run Mode
 
@@ -57,6 +76,7 @@ Run `haqita.bat` to access the interactive menu. Options [2]-[4] run a **single 
  [4] Stage 3: Consolidation   → consolidate only (submenu: Run, Dry-run, Custom dir)
  [5] Tests                    → submenu: Integration tests, Matching tests
  [6] Health check             → pre-flight verification
+ [7] Stage 4: Publish HTML    → copy JSON for browser UI (native, Docker)
  [0] Exit
 ```
 
@@ -88,7 +108,7 @@ Via `haqita.bat` → Option [5]:
 | Choice | Action |
 |---|---|
 | **1** | Integration tests (OCR on real images) |
-| **2** | Matching pipeline tests (100 unit tests) |
+| **2** | Matching pipeline tests (119 unit tests) |
 
 ## Documentation
 
@@ -98,13 +118,13 @@ Via `haqita.bat` → Option [5]:
 | [staging/ocr.md](docs/staging/ocr.md) | Stage 2: OCR — provider config, output schema, validation |
 | [staging/consolidation.md](docs/staging/consolidation.md) | Stage 3: Consolidation — matching pipeline, schemas, gate details |
 | [staging/orchestrator.md](docs/staging/orchestrator.md) | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
-| [audit.md](docs/audit.md) | Code audit results and recommendations |
 
 ## Project Structure
 
 ```
 haqita/
 ├── haqita.bat                        ← Interactive launch menu
+├── index.html                        ← Stage 4: Browser UI (search, filter, sort, charts)
 ├── config.yaml                       ← All tunable settings
 ├── .env                              ← Configuration (API keys, provider toggles)
 ├── docker/                           ← Docker configuration
@@ -112,11 +132,14 @@ haqita/
 │   ├── scrapers/                     ← Stage 1: Web scrapers
 │   ├── ocr/                          ← Stage 2: OCR processors
 │   ├── consolidate.py                ← Stage 3: Merge + match
+│   ├── publish_html.py               ← Stage 4: Copy JSON for browser
 │   ├── orchestrator.py               ← Pipeline orchestrator
 │   ├── health_check.py               ← Pre-flight verification
 │   └── matching/                     ← Matching pipeline (7 gates)
 ├── database/                         ← Generated, maintained
-├── output/                           ← Generated, can be deleted
+├── output/
+│   ├── consolidation/                ← Stage 3 output (derived)
+│   └── html/                         ← Stage 4 output (for browser)
 ├── tests/                            ← Unit and integration tests
 └── docs/                             ← Documentation
 ```
