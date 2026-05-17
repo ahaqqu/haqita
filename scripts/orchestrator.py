@@ -244,7 +244,7 @@ def run_consolidate(dry_run: bool, logger: logging.Logger) -> dict:
     return status
 
 
-def run_publish_html(logger: logging.Logger) -> dict:
+def run_publish_html(dry_run: bool, logger: logging.Logger) -> dict:
     """Run publish HTML stage. Returns status dict."""
     logger.info("=== Stage 4: Publish HTML ===")
     publish_script = SCRIPTS / "publish_html.py"
@@ -254,6 +254,8 @@ def run_publish_html(logger: logging.Logger) -> dict:
         return {"status": "error", "error": "publish_html_script_not_found"}
 
     cmd = [sys.executable, str(publish_script)]
+    if dry_run:
+        cmd.append("--dry-run")
 
     logger.debug("Running: %s", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
@@ -267,6 +269,9 @@ def run_publish_html(logger: logging.Logger) -> dict:
             print(f"  {line}")
 
     status = {"status": "complete"}
+    if dry_run:
+        status["status"] = "dry_run"
+
     write_stage_status("publish_html", status, logger)
     return status
 
@@ -356,7 +361,7 @@ def main():
             print("  [SKIP] Publish HTML — already complete")
         else:
             print("  [RUN] Publish HTML")
-            publish_result = run_publish_html(logger)
+            publish_result = run_publish_html(args.dry_run, logger)
 
         print()
 
@@ -374,7 +379,7 @@ def main():
         print()
 
         # Stage 4: Publish HTML (always runs)
-        publish_result = run_publish_html(logger)
+        publish_result = run_publish_html(args.dry_run, logger)
         print()
 
     elif args.stage == "scrape":
@@ -389,7 +394,7 @@ def main():
         cons_result = run_consolidate(args.dry_run, logger)
 
     elif args.stage == "publish-html":
-        publish_result = run_publish_html(logger)
+        publish_result = run_publish_html(args.dry_run, logger)
 
     elapsed = time.time() - t_start
 

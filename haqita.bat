@@ -19,13 +19,13 @@ echo        Haqita - Grocery Price Tool
 echo ========================================
 echo  Run mode: !RUN_MODE!
 echo.
-echo  [1] Run full pipeline
-echo  [2] Stage 1: Scrape
-echo  [3] Stage 2: OCR
-echo  [4] Stage 3: Consolidation
- echo  [5] Tests
- echo  [6] Health check
- echo  [7] Stage 4: Publish HTML
+ echo  [1] Run full pipeline
+ echo  [2] Stage 1: Scrape
+ echo  [3] Stage 2: OCR
+ echo  [4] Stage 3: Consolidation
+ echo  [5] Stage 4: Publish HTML
+ echo  [6] Tests
+ echo  [7] Health check
  echo  [0] Exit
 echo.
 
@@ -35,10 +35,10 @@ if "%choice%"=="1" goto FULL_PIPELINE_MENU
 if "%choice%"=="2" goto STAGE_SCRAPE
 if "%choice%"=="3" goto STAGE_OCR
 if "%choice%"=="4" goto STAGE_CONSOLIDATION
- if "%choice%"=="5" goto STAGE_TESTS
- if "%choice%"=="6" goto HEALTH_CHECK
- if "%choice%"=="7" goto STAGE_PUBLISH_HTML
- if "%choice%"=="0" goto END
+if "%choice%"=="5" goto STAGE_PUBLISH_HTML
+if "%choice%"=="6" goto STAGE_TESTS
+if "%choice%"=="7" goto HEALTH_CHECK
+if "%choice%"=="0" goto END
 
 echo Invalid choice. Press any key to try again...
 pause >nul
@@ -526,14 +526,20 @@ goto STAGE_CONSOLIDATION
  echo ========================================
  echo.
  echo  [1] Run normally
- echo  [2] Docker mode
+ echo  [2] Dry-run (preview copies)
+ echo  [3] Verbose (show file sizes)
+ echo  [4] Verbose + Dry-run
+ echo  [5] Docker mode
  echo  [0] Back
  echo.
 
  set /p pub_choice="Your choice: "
 
  if "%pub_choice%"=="1" goto PUBLISH_HTML_RUN
- if "%pub_choice%"=="2" goto PUBLISH_HTML_DOCKER
+ if "%pub_choice%"=="2" goto PUBLISH_HTML_DRYRUN
+ if "%pub_choice%"=="3" goto PUBLISH_HTML_VERBOSE
+ if "%pub_choice%"=="4" goto PUBLISH_HTML_VERBOSE_DRYRUN
+ if "%pub_choice%"=="5" goto PUBLISH_HTML_DOCKER
  if "%pub_choice%"=="0" goto MENU
 
  echo Invalid choice. Press any key to try again...
@@ -547,6 +553,39 @@ goto STAGE_CONSOLIDATION
  echo ========================================
  echo.
  python scripts/publish_html.py
+ echo.
+ pause
+ goto STAGE_PUBLISH_HTML
+
+ :PUBLISH_HTML_DRYRUN
+ cls
+ echo ========================================
+ echo  Publish HTML — Dry-run
+ echo ========================================
+ echo.
+ python scripts/publish_html.py --dry-run
+ echo.
+ pause
+ goto STAGE_PUBLISH_HTML
+
+ :PUBLISH_HTML_VERBOSE
+ cls
+ echo ========================================
+ echo  Publish HTML — Verbose
+ echo ========================================
+ echo.
+ python scripts/publish_html.py --verbose
+ echo.
+ pause
+ goto STAGE_PUBLISH_HTML
+
+ :PUBLISH_HTML_VERBOSE_DRYRUN
+ cls
+ echo ========================================
+ echo  Publish HTML — Verbose + Dry-run
+ echo ========================================
+ echo.
+ python scripts/publish_html.py --verbose --dry-run
  echo.
  pause
  goto STAGE_PUBLISH_HTML

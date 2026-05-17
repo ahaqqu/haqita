@@ -67,16 +67,16 @@ RUN_MODE=native   # or "docker"
 
 ## Menu
 
-Run `haqita.bat` to access the interactive menu. Options [2]-[4] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
+Run `haqita.bat` to access the interactive menu. Options [2]-[5] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
 
 ```
  [1] Run full pipeline        → submenu: Normal, Dry-run, Verbose, Verbose+Dry-run, Resume
  [2] Stage 1: Scrape          → scrape only (submenu: All, Lotte, Superindo, Dry-run)
  [3] Stage 2: OCR             → OCR only (submenu: All, Lotte, Superindo, Specific, Dry-run)
  [4] Stage 3: Consolidation   → consolidate only (submenu: Run, Dry-run, Custom dir)
- [5] Tests                    → submenu: Integration tests, Matching tests
- [6] Health check             → pre-flight verification
- [7] Stage 4: Publish HTML    → copy JSON for browser UI (native, Docker)
+ [5] Stage 4: Publish HTML    → copy JSON for browser UI (native, Docker)
+ [6] Tests                    → submenu: Integration tests, Matching tests
+ [7] Health check             → pre-flight verification
  [0] Exit
 ```
 
