@@ -118,6 +118,9 @@ Via `haqita.bat` → Option [5]:
 | [staging/ocr.md](docs/staging/ocr.md) | Stage 2: OCR — provider config, output schema, validation |
 | [staging/consolidation.md](docs/staging/consolidation.md) | Stage 3: Consolidation — matching pipeline, schemas, gate details |
 | [staging/publish-html.md](docs/staging/publish-html.md) | Stage 4: Publish HTML — active_promo.json generation, HTML UI |
+| [database/price_history.md](docs/database/price_history.md) | `price_history.json` — append-only price snapshots (schema v1.2) |
+| [database/product_catalog.md](docs/database/product_catalog.md) | `product_catalog.json` — auto-built product registry |
+| [database/review_queue.md](docs/database/review_queue.md) | `review_queue.json` — flagged matches for manual review |
 | [staging/orchestrator.md](docs/staging/orchestrator.md) | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
 
 ## Project Structure

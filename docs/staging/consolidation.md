@@ -150,28 +150,6 @@ Run with `--verbose` flag to get detailed match results in `database/logs/consol
 
 ## Database Files
 
-### price_history.json
-
-Accumulated price snapshots across runs. Each entry tracks:
-
-```json
-{
-  "2026-05-16": [
-    {
-      "key": "indomie-goreng--indomie--85g",
-      "name": "Indomie Goreng",
-      "store": "Lotte",
-      "price": 3500,
-      "effective_unit_price": 3100
-    }
-  ]
-}
-```
-
-### product_catalog.json
-
-Auto-built product registry with all known products and their attributes.
-
-### review_queue.json
-
-Low-confidence matches flagged for manual inspection.
+- [price_history.json](../database/price_history.md) — accumulated price snapshots
+- [product_catalog.json](../database/product_catalog.md) — auto-built product registry
+- [review_queue.json](../database/review_queue.md) — low-confidence matches for inspection
