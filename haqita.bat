@@ -23,9 +23,10 @@ echo  [1] Run full pipeline
 echo  [2] Stage 1: Scrape
 echo  [3] Stage 2: OCR
 echo  [4] Stage 3: Consolidation
-echo  [5] Tests
-echo  [6] Health check
-echo  [0] Exit
+ echo  [5] Tests
+ echo  [6] Health check
+ echo  [7] Stage 4: Publish HTML
+ echo  [0] Exit
 echo.
 
 set /p choice="Your choice: "
@@ -34,9 +35,10 @@ if "%choice%"=="1" goto FULL_PIPELINE_MENU
 if "%choice%"=="2" goto STAGE_SCRAPE
 if "%choice%"=="3" goto STAGE_OCR
 if "%choice%"=="4" goto STAGE_CONSOLIDATION
-if "%choice%"=="5" goto STAGE_TESTS
-if "%choice%"=="6" goto HEALTH_CHECK
-if "%choice%"=="0" goto END
+ if "%choice%"=="5" goto STAGE_TESTS
+ if "%choice%"=="6" goto HEALTH_CHECK
+ if "%choice%"=="7" goto STAGE_PUBLISH_HTML
+ if "%choice%"=="0" goto END
 
 echo Invalid choice. Press any key to try again...
 pause >nul
@@ -513,9 +515,56 @@ echo.
 pause
 goto STAGE_CONSOLIDATION
 
-:: ============================================================
-:: Tests
-:: ============================================================
+ :: ============================================================
+ :: Stage 4: Publish HTML
+ :: ============================================================
+
+ :STAGE_PUBLISH_HTML
+ cls
+ echo ========================================
+ echo  Stage 4: Publish HTML
+ echo ========================================
+ echo.
+ echo  [1] Run normally
+ echo  [2] Docker mode
+ echo  [0] Back
+ echo.
+
+ set /p pub_choice="Your choice: "
+
+ if "%pub_choice%"=="1" goto PUBLISH_HTML_RUN
+ if "%pub_choice%"=="2" goto PUBLISH_HTML_DOCKER
+ if "%pub_choice%"=="0" goto MENU
+
+ echo Invalid choice. Press any key to try again...
+ pause >nul
+ goto STAGE_PUBLISH_HTML
+
+ :PUBLISH_HTML_RUN
+ cls
+ echo ========================================
+ echo  Publish HTML
+ echo ========================================
+ echo.
+ python scripts/publish_html.py
+ echo.
+ pause
+ goto STAGE_PUBLISH_HTML
+
+ :PUBLISH_HTML_DOCKER
+ cls
+ echo ========================================
+ echo  Publish HTML (Docker)
+ echo ========================================
+ echo.
+ docker compose -f docker\docker-compose.yml run --build publish-html
+ echo.
+ pause
+ goto STAGE_PUBLISH_HTML
+
+ :: ============================================================
+ :: Tests
+ :: ============================================================
 
 :STAGE_TESTS
 cls

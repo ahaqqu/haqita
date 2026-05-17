@@ -2,17 +2,23 @@
 
 ## Current State
 
-**Implemented (Phase 1 & 2):**
+**Implemented (Phase 1 & 2 + Step 0):**
 - Scrapers for Lotte Mart & Superindo (`scripts/scrapers/`)
 - OCR pipeline with Ollama/Gemini support (`scripts/ocr/`)
 - Product matching pipeline with 6 gates (`scripts/matching/`)
-- Consolidation script (`scripts/consolidate.py`) that outputs:
-  - `output/consolidation/consolidated_latest.json` (and dated versions)
+- Consolidation script (`scripts/consolidate.py`) with:
+  - `generate_consolidated_from_history()` — rebuilds consolidated output from database
+  - Extended `price_history.json` schema v1.2 (8 new fields)
+  - `parse_period()` replaces `parse_valid_until()` — returns `(valid_from, valid_until)`
+- Outputs:
+  - `output/consolidation/consolidated_latest.json` (derived, safe to delete)
   - `database/product_catalog.json`
-  - `database/price_history.json`
+  - `database/price_history.json` (schema v1.2)
   - `database/review_queue.json`
 - Orchestrator (`scripts/orchestrator.py`) with 3 stages: scrape → ocr → consolidate
+  - Runtime logs/stage_results written to `output/logs/` and `output/stage_results/`
 - Interactive menu (`haqita.bat`) with all pipeline stages
+- Unit tests: 175 passing (13 new Step 0 tests)
 - No `index.html` exists yet
 
 ## Design Reference
