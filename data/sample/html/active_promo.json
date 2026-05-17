@@ -539,7 +539,7 @@
           "price": 18500,
           "effective_unit_price": 18500,
           "bundle_size": 1,
-          "promo": DISKON 10%,
+          "promo": "DISKON 10%",
           "promo_type": "discount",
           "valid_from": "2026-05-14",
           "valid_until": "2026-05-20",

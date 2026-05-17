@@ -1042,11 +1042,17 @@ async function loadData(isRefresh = false) {
       renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
       return;
     }
-    if (!consOk) {
+    if (!consOk && histOk) {
       renderWarning("Consolidated data unavailable. Showing price history only.");
+      consolidatedData = { products: [], singles: [], display_hints: getDefaultDisplayHints(), stats: {} };
     }
-    if (!histOk) {
+    if (!histOk && consOk) {
       if (!isRefresh) renderWarning("Price history unavailable. Charts will not display.");
+      priceHistoryData = null;
+    }
+    if (!histOk && !consOk) {
+      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
+      return;
     }
     const isSample = consolidatedData?.is_sample === true || priceHistoryData?.is_sample === true;
     if (isSample) {
