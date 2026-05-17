@@ -9,8 +9,10 @@ from pathlib import Path
 
 from scripts.consolidate import (
     atomic_write_json,
+    append_to_price_history,
     consolidate,
     extract_products,
+    generate_consolidated_from_history,
     load_config,
     load_price_history,
     make_product_key,
@@ -162,6 +164,229 @@ class TestPriceHistory:
             path.write_text(json.dumps({'snapshots': [{'a': 1}], 'metadata': {}}))
             history = load_price_history(path)
             assert len(history['snapshots']) == 1
+
+
+# ---------------------------------------------------------------------------
+# Step 0: Extended price_history schema + generate_consolidated_from_history
+# ---------------------------------------------------------------------------
+
+class TestAppendToPriceHistory:
+    def test_new_fields_included(self):
+        history = {'snapshots': [], 'metadata': {'last_updated': '', 'total_runs': 0, 'schema_version': '1.2'}}
+        products = [{
+            'product_key': 'test--brand--100g', 'name': 'Test', 'brand': 'Brand',
+            'unit': '100 g', 'store': 'Lotte',
+            'price': 10000, 'effective_unit_price': 10000,
+            'promo': 'DAPAT 3 pcs', 'valid_from': '2026-05-01',
+            'valid_until': '2026-05-20', 'bundle_size': 3,
+            'promo_type': 'bundle_buy', 'match_method': 'exact',
+            'match_confidence': 1.0, 'image_path': 'database/scrape/lotte/img.jpg',
+            'scrape_time': '2026-05-17T08:00:00',
+        }]
+        result = append_to_price_history(history, products, '2026-05-17')
+        snap = result['snapshots'][0]
+        assert snap['product_key'] == 'test--brand--100g'
+        assert snap['valid_from'] == '2026-05-01'
+        assert snap['valid_until'] == '2026-05-20'
+        assert snap['bundle_size'] == 3
+        assert snap['promo_type'] == 'bundle_buy'
+        assert snap['match_method'] == 'exact'
+        assert snap['match_confidence'] == 1.0
+        assert snap['image_path'] == 'database/scrape/lotte/img.jpg'
+        assert snap['scrape_time'] == '2026-05-17T08:00:00'
+
+    def test_defaults_for_missing_fields(self):
+        history = {'snapshots': [], 'metadata': {'last_updated': '', 'total_runs': 0, 'schema_version': '1.2'}}
+        products = [{
+            'product_key': 'test--brand--100g', 'name': 'Test', 'brand': 'Brand',
+            'unit': '100 g', 'store': 'Lotte',
+            'price': 10000, 'effective_unit_price': 10000, 'promo': None,
+        }]
+        result = append_to_price_history(history, products, '2026-05-17')
+        snap = result['snapshots'][0]
+        assert snap['bundle_size'] == 1
+        assert snap['promo_type'] == 'single'
+        assert snap['match_method'] is None
+        assert snap['match_confidence'] is None
+        assert snap['image_path'] is None
+        assert snap['scrape_time'] is None
+
+    def test_dedup_same_product_date_store(self):
+        history = {'snapshots': [], 'metadata': {'last_updated': '', 'total_runs': 0, 'schema_version': '1.2'}}
+        products = [
+            {'product_key': 'test--brand--100g', 'name': 'Test', 'brand': 'Brand',
+             'unit': '100 g', 'store': 'Lotte', 'price': 10000, 'effective_unit_price': 10000, 'promo': None},
+            {'product_key': 'test--brand--100g', 'name': 'Test', 'brand': 'Brand',
+             'unit': '100 g', 'store': 'Lotte', 'price': 11000, 'effective_unit_price': 11000, 'promo': None},
+        ]
+        result = append_to_price_history(history, products, '2026-05-17')
+        assert len(result['snapshots']) == 1
+
+    def test_metadata_updated(self):
+        history = {'snapshots': [], 'metadata': {'last_updated': '', 'total_runs': 0, 'schema_version': '1.2'}}
+        products = [{
+            'product_key': 'test--brand--100g', 'name': 'Test', 'brand': 'Brand',
+            'unit': '100 g', 'store': 'Lotte',
+            'price': 10000, 'effective_unit_price': 10000, 'promo': None,
+        }]
+        result = append_to_price_history(history, products, '2026-05-17')
+        assert result['metadata']['total_runs'] == 1
+        assert result['metadata']['last_updated'] != ''
+
+
+class TestGenerateConsolidatedFromHistory:
+    def test_single_store_product(self):
+        history = {
+            'snapshots': [{
+                'product_key': 'test--brand--100g', 'name': 'Test Product',
+                'brand': 'Brand', 'unit': '100 g', 'date': '2026-05-17',
+                'store': 'Lotte', 'price': 10000, 'effective_unit_price': 10000,
+                'promo': None, 'valid_from': None, 'valid_until': None,
+                'bundle_size': 1, 'promo_type': 'single',
+                'match_method': None, 'match_confidence': None,
+                'image_path': None,
+            }],
+            'metadata': {},
+        }
+        catalog = {}
+        result = generate_consolidated_from_history(history, catalog, '2026-05-17')
+        assert len(result['products']) == 0
+        assert len(result['singles']) == 1
+        assert result['singles'][0]['key'] == 'test--brand--100g'
+        assert result['singles'][0]['store'] == 'Lotte'
+        assert result['singles'][0]['price'] == 10000
+
+    def test_matched_product_two_stores(self):
+        history = {
+            'snapshots': [
+                {
+                    'product_key': 'test--brand--100g', 'name': 'Test Product',
+                    'brand': 'Brand', 'unit': '100 g', 'date': '2026-05-17',
+                    'store': 'Lotte', 'price': 10000, 'effective_unit_price': 10000,
+                    'promo': None, 'valid_from': None, 'valid_until': None,
+                    'bundle_size': 1, 'promo_type': 'single',
+                    'match_method': 'exact', 'match_confidence': 1.0,
+                    'image_path': None,
+                },
+                {
+                    'product_key': 'test--brand--100g', 'name': 'Test Product',
+                    'brand': 'Brand', 'unit': '100 g', 'date': '2026-05-17',
+                    'store': 'Superindo', 'price': 12000, 'effective_unit_price': 12000,
+                    'promo': None, 'valid_from': None, 'valid_until': None,
+                    'bundle_size': 1, 'promo_type': 'single',
+                    'match_method': 'exact', 'match_confidence': 1.0,
+                    'image_path': None,
+                },
+            ],
+            'metadata': {},
+        }
+        catalog = {}
+        result = generate_consolidated_from_history(history, catalog, '2026-05-17')
+        assert len(result['products']) == 1
+        assert len(result['singles']) == 0
+        p = result['products'][0]
+        assert p['key'] == 'test--brand--100g'
+        assert p['price_min'] == 10000
+        assert p['price_max'] == 12000
+        assert p['cheapest_store'] == 'Lotte'
+        assert p['price_gap'] == 2000
+        assert p['savings_pct'] == 16.7
+        assert len(p['stores']) == 2
+
+    def test_expired_product_filtered(self):
+        history = {
+            'snapshots': [{
+                'product_key': 'test--brand--100g', 'name': 'Test Product',
+                'brand': 'Brand', 'unit': '100 g', 'date': '2026-05-10',
+                'store': 'Lotte', 'price': 10000, 'effective_unit_price': 10000,
+                'promo': None, 'valid_from': '2026-05-01', 'valid_until': '2026-05-15',
+                'bundle_size': 1, 'promo_type': 'single',
+                'match_method': None, 'match_confidence': None,
+                'image_path': None,
+            }],
+            'metadata': {},
+        }
+        catalog = {}
+        result = generate_consolidated_from_history(history, catalog, '2026-05-17')
+        assert len(result['products']) == 0
+        assert len(result['singles']) == 0
+
+    def test_null_valid_until_treated_as_active(self):
+        history = {
+            'snapshots': [{
+                'product_key': 'test--brand--100g', 'name': 'Test Product',
+                'brand': 'Brand', 'unit': '100 g', 'date': '2026-05-10',
+                'store': 'Lotte', 'price': 10000, 'effective_unit_price': 10000,
+                'promo': None, 'valid_from': None, 'valid_until': None,
+                'bundle_size': 1, 'promo_type': 'single',
+                'match_method': None, 'match_confidence': None,
+                'image_path': None,
+            }],
+            'metadata': {},
+        }
+        catalog = {}
+        result = generate_consolidated_from_history(history, catalog, '2026-05-17')
+        assert len(result['singles']) == 1
+
+    def test_catalog_metadata_enriched(self):
+        history = {
+            'snapshots': [{
+                'product_key': 'test--brand--100g', 'name': 'Test',
+                'brand': None, 'unit': None, 'date': '2026-05-17',
+                'store': 'Lotte', 'price': 10000, 'effective_unit_price': 10000,
+                'promo': None, 'valid_from': None, 'valid_until': None,
+                'bundle_size': 1, 'promo_type': 'single',
+                'match_method': None, 'match_confidence': None,
+                'image_path': None,
+            }],
+            'metadata': {},
+        }
+        catalog = {
+            'test--brand--100g': {
+                'brand': 'EnrichedBrand', 'unit': '200 g',
+                'unit_type': 'weight', 'unit_value_g': 200.0,
+            }
+        }
+        result = generate_consolidated_from_history(history, catalog, '2026-05-17')
+        assert result['singles'][0]['brand'] == 'EnrichedBrand'
+        assert result['singles'][0]['unit'] == '200 g'
+        assert result['singles'][0]['unit_type'] == 'weight'
+
+    def test_display_hints_present(self):
+        history = {'snapshots': [], 'metadata': {}}
+        catalog = {}
+        result = generate_consolidated_from_history(history, catalog, '2026-05-17')
+        assert 'display_hints' in result
+        assert result['display_hints']['currency'] == 'IDR'
+        assert result['display_hints']['stores'] == ['Lotte', 'Superindo']
+
+    def test_stats_computed(self):
+        history = {
+            'snapshots': [
+                {
+                    'product_key': 'a--brand--100g', 'name': 'A',
+                    'brand': 'Brand', 'unit': '100 g', 'date': '2026-05-17',
+                    'store': 'Lotte', 'price': 10000, 'effective_unit_price': 10000,
+                    'promo': None, 'valid_from': None, 'valid_until': None,
+                    'bundle_size': 1, 'promo_type': 'single',
+                    'match_method': None, 'match_confidence': None, 'image_path': None,
+                },
+                {
+                    'product_key': 'b--brand--100g', 'name': 'B',
+                    'brand': 'Brand', 'unit': '100 g', 'date': '2026-05-17',
+                    'store': 'Lotte', 'price': 5000, 'effective_unit_price': 5000,
+                    'promo': None, 'valid_from': None, 'valid_until': None,
+                    'bundle_size': 1, 'promo_type': 'single',
+                    'match_method': None, 'match_confidence': None, 'image_path': None,
+                },
+            ],
+            'metadata': {},
+        }
+        catalog = {}
+        result = generate_consolidated_from_history(history, catalog, '2026-05-17')
+        assert result['stats']['total_products_lotte'] == 2
+        assert result['stats']['lotte_only'] == 2
+        assert result['stats']['matched_across_stores'] == 0
 
 
 # ---------------------------------------------------------------------------
