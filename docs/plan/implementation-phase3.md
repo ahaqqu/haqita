@@ -173,30 +173,51 @@ Then open `http://localhost:8080` in a browser. Alternatives: VS Code Live Serve
 --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
 --shadow: 0 4px 16px rgba(0,0,0,0.08);
 --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+
+/* Print styles */
+@media print {
+  #search-bar, #controls, #load-more, .freshness-bar { display: none; }
+  #product-grid { display: block; }
+  .product-card { break-inside: avoid; page-break-inside: avoid; }
+  .product-card:nth-child(10n) { page-break-after: always; }
+  body { background: white; color: black; }
+  .product-card { box-shadow: none; border: 1px solid #ccc; }
+  footer::after { content: "Printed: " attr(data-timestamp); }
+}
 ```
 
 ## JavaScript Logic
 
 | Function | Purpose |
 |---|---|
-| `loadData()` | Fetch `output/html/consolidated_latest.json` + `price_history.json` using `Promise.allSettled()` — one failure doesn't block the other |
+| `loadData()` | Fetch JSON files with `Promise.allSettled()`, validation, and retry logic |
+| `validateData(data, type)` | Validate JSON schema — returns `{valid: bool, error: string}` |
+| `getDefaultDisplayHints()` | Fallback defaults when `display_hints` is missing or incomplete |
+| `retryFetch(url, retries=3, delay=1000)` | Retry failed fetches individually with exponential backoff |
 | `renderError(msg)` | Show error state with retry button when fetch fails |
 | `renderWarning(msg)` | Show warning banner when only one of two fetches fails |
 | `renderLoading()` | Show skeleton while data loads |
-| `formatIDR(n)` | `3100` → `"Rp 3.100"` (uses `display_hints.currency` and `locale`) |
-| `formatDate(isoDate)` | `"2026-05-20"` → `"20 May 2026"` (uses `display_hints.locale`) |
+| `formatIDR(n)` | `3100` → `"Rp 3.100"` (uses fallback `display_hints.currency` = "Rp") |
+| `formatDate(isoDate)` | `"2026-05-20"` → `"20 May 2026"` (uses fallback `display_hints.locale` = "en-ID") |
 | `searchProducts(query)` | Filter products by name/brand/unit (debounced 200ms) |
-| `renderCards(data, filter, sortBy, searchQuery)` | Main render loop |
-| `isProductInStore(product, store)` | Handles dual schema: matched (`stores[]` array) vs single (`store` string) |
+| `renderCards(data, filter, sortBy, searchQuery, page, pageSize)` | Main render loop with pagination |
+| `renderPagination(total, page, pageSize)` | Render "Load More" button or pagination controls |
+| `loadMore()` | Append next page of products to grid |
+| `isProductInStore(product, store)` | Unified handler for `.stores[]` array and `.store` string |
+| `normalizeProduct(product)` | Normalize any product type to standard internal format with `.stores` array |
 | `buildMatchedCard(product)` | Matched product card HTML |
 | `buildSingleCard(product)` | Single-store card HTML |
 | `expandCard(key)` | Toggle detail panel with comparison + chart, updates URL hash |
 | `drawBarChart(canvas, productKey, history)` | Canvas 2D bar chart — noop if <2 snapshots or key not found |
+| `validatePriceHistoryKey(productKey)` | Check product key exists in price_history before rendering chart |
 | `setupKeyboardNav()` | Add `role="button"`, `tabindex="0"`, Enter/Space handlers to cards |
-| `setupHashRouting()` | Read `#product-key` on load to auto-expand; update hash on toggle |
+| `setupHashRouting()` | Set up hash routing AFTER data loads to prevent race condition |
+| `applyHashAfterLoad()` | Apply hash expansion once data is ready (called from `loadData()` completion) |
 | `renderEmptyState()` | Empty state (no data — prompt to run pipeline) |
 | `renderNoResults(query)` | No search matches found |
-| `renderFooterStats(stats, displayHints)` | Footer with product counts, store names from `display_hints.stores`, review queue warning |
+| `renderFooterStats(stats, displayHints)` | Footer with product counts, store names from fallback `display_hints.stores`, review queue warning |
+| `startAutoRefresh(intervalMs=300000)` | Auto-refresh data every 5 minutes, update freshness bar |
+| `updateFreshnessBar(timestamp)` | Update "Prices updated X ago" display |
 | Store filter | All / Lotte / Superindo (chip toggle) — uses `isProductInStore()` |
 | Sort controls | Name / Cheapest / Savings / Expiry (singles sort to bottom for Savings) |
 
@@ -269,32 +290,58 @@ Single self-contained file (~800-1000 lines): HTML + CSS + vanilla JS.
 **Data Loading:**
 - `loadData()` fetches both JSON files with `Promise.allSettled()` so one failure
   doesn't block the other
+- Each fetch goes through `retryFetch(url, retries=3, delay=1000)` which retries
+  failed requests individually with exponential backoff
+- After fetch, `validateData(data, type)` validates the JSON structure:
+  - Checks required fields: `display_hints`, `products`, `stats` for consolidated
+  - Checks required fields: object or array structure for price_history
+  - Invalid data triggers error state with descriptive message
 - Shows the loading skeleton immediately on page load
 - On complete failure: shows error state with retry button
 - On partial failure (e.g., `price_history.json` fails but `consolidated_latest.json`
-  loads): renders available data with a warning banner
-- Consumes `display_hints.store_colors`, `display_hints.currency`, and
-  `display_hints.locale` from the JSON instead of hardcoding values
+  loads): renders available data with a warning banner and individual retry button
+- **Display Hints Fallback**: If `display_hints` is missing or incomplete:
+  ```javascript
+  function getDefaultDisplayHints() {
+    return {
+      currency: "Rp",
+      locale: "en-ID",
+      stores: { lotte: "Lotte Mart", superindo: "Superindo" },
+      store_colors: { lotte: "#0057A8", superindo: "#E8211D" }
+    };
+  }
+  ```
+- `setupHashRouting()` is called AFTER `loadData()` completes via `applyHashAfterLoad()`
+  to prevent race condition where hash expansion tries to render before data exists
 
 **Features:**
 - **Search bar**: Real-time filtering by product name, brand, unit. Debounced 200ms.
   Shows "No results" state when nothing matches.
-- **Dual-schema store filter**: `isProductInStore(product, store)` handles both matched
-  products (`.stores[]` array) and singles (`.store` string field) transparently.
+- **Dual-schema store filter**: `isProductInStore(product, store)` + `normalizeProduct()`
+  converts any product type to internal format with `.stores` array, preventing schema
+  fragility when new product types are added.
 - Responsive grid: 3 columns at 1200px+, 2 at 768px+, 1 at < 768px
 - Store filter chips (All / Lotte / Superindo) — works in combination with search
 - Sort controls (Name / Cheapest / Savings / Expiry) — for Savings sort, single-store
   products (no `price_gap`) sort to the bottom
+- **Pagination**: "Load More" button loads 20 products at a time. Prevents performance
+  issues with large catalogs (100+ products). Maintains scroll position on filter/sort.
 - **Keyboard accessibility**: `role="button"`, `tabindex="0"`, Enter/Space handlers on
   all expandable cards (not just click)
 - **URL hash routing**: Expanding a card sets `#product-key` in the URL hash; loading
-  the page with a hash auto-expands that card, enabling shareable deep links
+  the page with a hash auto-expands that card after data loads, enabling shareable deep links
 - Canvas 2D price trend chart via `drawBarChart(canvas, productKey, history)`:
   - Noop and hidden when `< 2` snapshots exist
-  - Gracefully handled when product key is not found in `price_history.json`
+  - `validatePriceHistoryKey(productKey)` checks key exists before rendering chart —
+    shows "No history available" message if key not found
 - Low confidence badge (shown only when `match_confidence < 0.80`)
 - Empty state when no data (shows instructions to run the pipeline)
 - Footer stats with review queue warning when `stats.flagged_for_review > 0`
+- **Auto-refresh**: `startAutoRefresh(intervalMs=300000)` fetches fresh data every 5
+  minutes. Freshness bar updates to show "Prices updated X ago" — users see updates
+  without manual reload. Only refreshes when tab is visible (uses `visibilitychange`).
+- **Print stylesheet**: `@media print` rules hide search, filters, and "Load More" button;
+  single-column layout; page break after every 10 products; includes timestamp footer
 
 **Usage Notes:**
 - `index.html` uses `fetch()` which requires an HTTP server — cannot be opened as `file://`
