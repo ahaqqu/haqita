@@ -33,7 +33,17 @@ Per project convention, HTML-only outputs go to `output/html/`:
 - `output/html/consolidated_latest.json` — copy from `output/consolidation/`
 - `output/html/price_history.json` — copy from `database/`
 
-A new **Stage 4: Publish HTML** script handles these copies. `consolidate.py` is not modified.
+A new **Stage 4: Publish HTML** script (`scripts/publish_html.py`) handles these copies.
+`consolidate.py` is not modified — the publish stage is isolated so it can later read from
+a database server instead of JSON files.
+
+**Important:** `index.html` uses `fetch()` to load JSON files via HTTP. Opening the file
+directly from the filesystem (`file://`) will fail in most browsers due to CORS
+restrictions. Users must serve the project root via HTTP:
+```
+python -m http.server 8080
+```
+Then open `http://localhost:8080` in a browser. Alternatives: VS Code Live Server, `npx serve .`
 
 ## UI Layout
 
@@ -169,17 +179,26 @@ A new **Stage 4: Publish HTML** script handles these copies. `consolidate.py` is
 
 | Function | Purpose |
 |---|---|
-| `loadData()` | Fetch `output/html/consolidated_latest.json` + `price_history.json` |
-| `formatIDR(n)` | `3100` → `"Rp 3.100"` (Indonesian locale) |
-| `formatDate(isoDate)` | `"2026-05-20"` → `"20 May 2026"` |
+| `loadData()` | Fetch `output/html/consolidated_latest.json` + `price_history.json` using `Promise.allSettled()` — one failure doesn't block the other |
+| `renderError(msg)` | Show error state with retry button when fetch fails |
+| `renderWarning(msg)` | Show warning banner when only one of two fetches fails |
+| `renderLoading()` | Show skeleton while data loads |
+| `formatIDR(n)` | `3100` → `"Rp 3.100"` (uses `display_hints.currency` and `locale`) |
+| `formatDate(isoDate)` | `"2026-05-20"` → `"20 May 2026"` (uses `display_hints.locale`) |
 | `searchProducts(query)` | Filter products by name/brand/unit (debounced 200ms) |
 | `renderCards(data, filter, sortBy, searchQuery)` | Main render loop |
+| `isProductInStore(product, store)` | Handles dual schema: matched (`stores[]` array) vs single (`store` string) |
 | `buildMatchedCard(product)` | Matched product card HTML |
 | `buildSingleCard(product)` | Single-store card HTML |
-| `expandCard(key)` | Toggle detail panel with comparison + chart |
-| `drawBarChart(canvas, productKey, history)` | Canvas 2D bar chart for price trends |
-| Store filter | All / Lotte / Superindo (chip toggle) |
-| Sort controls | Name / Cheapest / Savings / Expiry |
+| `expandCard(key)` | Toggle detail panel with comparison + chart, updates URL hash |
+| `drawBarChart(canvas, productKey, history)` | Canvas 2D bar chart — noop if <2 snapshots or key not found |
+| `setupKeyboardNav()` | Add `role="button"`, `tabindex="0"`, Enter/Space handlers to cards |
+| `setupHashRouting()` | Read `#product-key` on load to auto-expand; update hash on toggle |
+| `renderEmptyState()` | Empty state (no data — prompt to run pipeline) |
+| `renderNoResults(query)` | No search matches found |
+| `renderFooterStats(stats, displayHints)` | Footer with product counts, store names from `display_hints.stores`, review queue warning |
+| Store filter | All / Lotte / Superindo (chip toggle) — uses `isProductInStore()` |
+| Sort controls | Name / Cheapest / Savings / Expiry (singles sort to bottom for Savings) |
 
 ## Implementation Steps
 
@@ -193,56 +212,117 @@ New script that copies JSON files to `output/html/` for the HTML display:
 - `output/consolidation/consolidated_latest.json` → `output/html/consolidated_latest.json`
 - `database/price_history.json` → `output/html/price_history.json`
 
-Simple script (~50 lines), uses `shutil.copy2` for copies.
+Simple script (~50 lines), uses `shutil.copy2` for copies. Each stage stays isolated:
+the publish stage has no knowledge of consolidation internals, and in the future it can
+read from a database server instead of intermediate JSON files.
 
-### Step 3: Update `orchestrator.py` — add Stage 4
+### Step 3: Wire Stage 4 into the pipeline
 
-Add `run_publish_html()` function and wire it into the full pipeline:
-- Stage 1: Scrape
-- Stage 2: OCR
-- Stage 3: Consolidate
-- **Stage 4: Publish HTML** (new)
+Update the following files so Stage 4 runs after consolidation:
 
-Add `--stage publish-html` option. Stage 4 always runs after consolidation in full pipeline.
+**`scripts/orchestrator.py`** — add `run_publish_html()` function and wire into `--full`:
+- Stage 1: Scrape → Stage 2: OCR → Stage 3: Consolidate → Stage 4: Publish HTML
+- Add `--stage publish-html` to the `choices` list in argparse (line 250)
+- Also wire Stage 4 into the `--resume` path (after line 321)
+
+**`scripts/pipeline.py`** — add Stage 4 call after consolidation (~line 43):
+```python
+# Stage 4: Publish HTML
+sys.argv = ["publish_html.py"]
+_run_stage("Publish HTML", publish_html_main)
+```
+
+**`haqita.bat`** — add menu entries for Stage 4:
+- Option [7] in the main menu for Stage 4
+- Sub-options: run normally, dry-run, verbose
+- Docker mode support via a `publish-html` compose service
+
+**`docker/docker-compose.yml`** — add `publish-html` service and update `pipeline` service:
+```yaml
+publish-html:
+  <<: *base
+  command: python scripts/publish_html.py
+
+pipeline:
+  <<: *base
+  command: python scripts/pipeline.py  # already includes stage 4 after pipeline.py update
+```
 
 ### Step 4: Create `index.html`
 
 **File:** `C:\Fun\Projects\haqita\index.html`
 
-Single self-contained file (~600 lines): HTML + CSS + vanilla JS.
+Single self-contained file (~800-1000 lines): HTML + CSS + vanilla JS.
 
 **Structure:**
 - `<header>`: Haqita wordmark, freshness bar
+- `<div id="loading">`: Loading skeleton, shown immediately during data fetch
 - `<div id="search-bar">`: Search input with placeholder "Search products..."
 - `<div id="controls">`: Filter chips (All / Lotte / Superindo) + sort dropdown
 - `<main id="product-grid">`: Responsive CSS Grid for product cards
+- `<div id="error-state">`: Error message with retry button when fetch fails
+- `<div id="empty-state">`: Empty data (no products at all — prompt to run pipeline)
+- `<div id="no-results">`: Search yielded no matches
 - `<footer>`: Scrape dates, product counts, review queue warning
 - **No external dependencies** — all CSS and JS embedded
 
+**Data Loading:**
+- `loadData()` fetches both JSON files with `Promise.allSettled()` so one failure
+  doesn't block the other
+- Shows the loading skeleton immediately on page load
+- On complete failure: shows error state with retry button
+- On partial failure (e.g., `price_history.json` fails but `consolidated_latest.json`
+  loads): renders available data with a warning banner
+- Consumes `display_hints.store_colors`, `display_hints.currency`, and
+  `display_hints.locale` from the JSON instead of hardcoding values
+
 **Features:**
-- **Search bar**: Real-time filtering by product name, brand, unit. Debounced 200ms. Shows "No results" state when nothing matches.
+- **Search bar**: Real-time filtering by product name, brand, unit. Debounced 200ms.
+  Shows "No results" state when nothing matches.
+- **Dual-schema store filter**: `isProductInStore(product, store)` handles both matched
+  products (`.stores[]` array) and singles (`.store` string field) transparently.
 - Responsive grid: 3 columns at 1200px+, 2 at 768px+, 1 at < 768px
 - Store filter chips (All / Lotte / Superindo) — works in combination with search
-- Sort controls (Name / Cheapest / Savings / Expiry)
-- Click card to expand/collapse detail panel
-- Canvas 2D price trend chart (visible when ≥2 history entries)
+- Sort controls (Name / Cheapest / Savings / Expiry) — for Savings sort, single-store
+  products (no `price_gap`) sort to the bottom
+- **Keyboard accessibility**: `role="button"`, `tabindex="0"`, Enter/Space handlers on
+  all expandable cards (not just click)
+- **URL hash routing**: Expanding a card sets `#product-key` in the URL hash; loading
+  the page with a hash auto-expands that card, enabling shareable deep links
+- Canvas 2D price trend chart via `drawBarChart(canvas, productKey, history)`:
+  - Noop and hidden when `< 2` snapshots exist
+  - Gracefully handled when product key is not found in `price_history.json`
 - Low confidence badge (shown only when `match_confidence < 0.80`)
-- Empty state when no data
-- Graceful error handling on fetch failure
+- Empty state when no data (shows instructions to run the pipeline)
+- Footer stats with review queue warning when `stats.flagged_for_review > 0`
+
+**Usage Notes:**
+- `index.html` uses `fetch()` which requires an HTTP server — cannot be opened as `file://`
+- Start with: `python -m http.server 8080` then open `http://localhost:8080`
+- Or use VS Code Live Server, or `npx serve .`
 
 ### Step 5: Create sample test data
 
-Create `output/html/consolidated_latest.json` with realistic test data (2 matched products, 2 singles) so the HTML can be tested immediately without running the full pipeline.
+Create `output/html/consolidated_latest.json` with realistic test data (2 matched products,
+2 singles) that mirrors the exact output structure from `consolidate.py`, including
+`display_hints`, `products` (with `stores[]`), `singles` (with `store` string), and `stats`.
+
+Create `output/html/price_history.json` with at least one product having ≥2 snapshots so
+the bar chart can be visually verified during development.
 
 ## Files to Create/Modify
 
 | File | Action | Description |
 |---|---|---|
 | `output/html/.gitkeep` | **Create** | Ensure directory exists |
-| `scripts/publish_html.py` | **Create** | Stage 4: copy JSON to output/html/ |
-| `scripts/orchestrator.py` | Modify | Add Stage 4 to pipeline |
-| `index.html` | **Create** | ~600 lines: HTML + CSS + vanilla JS with search |
-| `output/html/consolidated_latest.json` | **Create** | Sample test data |
+| `scripts/publish_html.py` | **Create** | Stage 4: copy JSON to `output/html/` |
+| `scripts/orchestrator.py` | Modify | Add Stage 4 (`--stage publish-html`, `--full`, `--resume` paths) |
+| `scripts/pipeline.py` | Modify | Add Stage 4 after consolidation |
+| `haqita.bat` | Modify | Add menu entries for Stage 4 |
+| `docker/docker-compose.yml` | Modify | Add `publish-html` service, update `pipeline` service |
+| `index.html` | **Create** | ~800-1000 lines: HTML + CSS + vanilla JS with search, keyboard nav, URL hashes |
+| `output/html/consolidated_latest.json` | **Create** | Sample test data (mirrors real `consolidate.py` output structure) |
+| `output/html/price_history.json` | **Create** | Sample price history (≥1 product with ≥2 entries for chart testing) |
 
 ## Out of Scope (Future Phases)
 
