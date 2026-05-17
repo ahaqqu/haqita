@@ -788,13 +788,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, o
             },
         }
 
-    # 8. Write dated snapshot to database for audit trail
-    database_dir.mkdir(parents=True, exist_ok=True)
-    dated_path = database_dir / f'consolidated_{timestamp}.json'
-    print(f"[*] Writing {dated_path.name} to database/")
-    atomic_write_json(consolidated, str(dated_path))
-
-    # 11. Print summary
+    # 8. Print summary
     elapsed = time.time() - t_start
     print()
     print("========================================")

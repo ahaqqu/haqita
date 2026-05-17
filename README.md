@@ -140,8 +140,7 @@ haqita/
 ├── database/                         ← Generated, maintained (source of truth)
 │   ├── price_history.json            ← Append-only price snapshots
 │   ├── product_catalog.json          ← Auto-built product registry
-│   ├── review_queue.json             ← Flagged matches for review
-│   └── consolidated_*.json           ← Timestamped consolidation archives
+│   └── review_queue.json             ← Flagged matches for review
 ├── output/
 │   └── html/                         ← Stage 4 output (safe to delete)
 │       ├── active_promo.json         ← Generated from database/

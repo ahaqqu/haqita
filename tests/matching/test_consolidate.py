@@ -427,12 +427,14 @@ class TestEmptyStore:
 
             consolidate(cfg, None, ocr_dir, output_dir, database_dir)
 
-            db_files = list(database_dir.glob('consolidated_*.json'))
-            assert len(db_files) == 1
-            with open(db_files[0], encoding='utf-8') as f:
+            # Stage 3 writes only to database core files
+            assert (database_dir / 'product_catalog.json').exists()
+            assert (database_dir / 'price_history.json').exists()
+            assert (database_dir / 'review_queue.json').exists()
+
+            with open(database_dir / 'price_history.json', encoding='utf-8') as f:
                 data = json.load(f)
-            assert data['stats']['total_products_lotte'] == 0
-            assert data['stats']['total_products_superindo'] == 1
+            assert len(data['snapshots']) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -469,37 +471,12 @@ class TestFullPipeline:
 
         consolidate(cfg, self.ocr_dir, self.ocr_dir, self.output_dir, self.database_dir)
 
-        db_files = list(self.database_dir.glob('consolidated_*.json'))
-        assert len(db_files) == 1
-
-        with open(db_files[0], encoding='utf-8') as f:
-            data = json.load(f)
-
-        assert 'products' in data
-        assert 'singles' in data
-        assert 'stats' in data
-        assert data['stats']['total_products_lotte'] > 0
-        assert data['stats']['total_products_superindo'] > 0
-
-        # Check that database files were created
+        # Stage 3 writes only to database core files
         assert (self.database_dir / 'product_catalog.json').exists()
         assert (self.database_dir / 'price_history.json').exists()
         assert (self.database_dir / 'review_queue.json').exists()
 
-        # Check consolidated products have required fields
-        for p in data['products']:
-            assert 'key' in p
-            assert 'stores' in p
-            assert 'match_method' in p
-            assert 'match_confidence' in p
-            for s in p['stores']:
-                assert 'store' in s
-                assert 'price' in s
-                assert 'effective_unit_price' in s
-
-        # Check singles have required fields
-        for s in data['singles']:
-            assert 'key' in s
-            assert 'name' in s
-            assert 'store' in s
-            assert 'price' in s
+        # Verify price_history has snapshots
+        with open(self.database_dir / 'price_history.json', encoding='utf-8') as f:
+            history = json.load(f)
+        assert len(history['snapshots']) > 0
