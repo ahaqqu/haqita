@@ -219,6 +219,7 @@ def main():
     copies = [
         (consolidated, HTML_DIR / "active_promo.json", "active_promo.json"),
         (PRICE_HISTORY_SRC, HTML_DIR / "price_history.json", "price_history.json"),
+        (review_path, HTML_DIR / "review_queue.json", "review_queue.json"),
     ]
 
     copied = 0

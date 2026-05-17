@@ -128,7 +128,8 @@ Via `haqita.bat` → Option [5]:
 ```
 haqita/
 ├── haqita.bat                        ← Interactive launch menu
-├── index.html                        ← Stage 4: Browser UI (search, filter, sort, charts)
+├── index.html                        ← Main UI: product browser (search, filter, sort, charts)
+├── admin.html                        ← Admin UI: review queue management
 ├── config.yaml                       ← All tunable settings
 ├── .env                              ← Configuration (API keys, provider toggles)
 ├── docker/                           ← Docker configuration

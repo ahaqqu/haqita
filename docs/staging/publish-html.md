@@ -11,6 +11,7 @@ Generates `active_promo.json` from the database and copies JSON files to `output
 | | `database/review_queue.json` — for flagged count |
 | **Output** | `output/html/active_promo.json` (generated from database, always overwritten) |
 | | `output/html/price_history.json` (copy from database) |
+| | `output/html/review_queue.json` (copy from database, for admin UI) |
 | **Dry-run** | Shows what would be generated/copied without writing files |
 | **Verbose** | Shows file sizes and destination status |
 
@@ -27,7 +28,8 @@ database/review_queue.json    (flagged items)
 publish_html.py → generate_consolidated_from_history()
         │
         ├──→ output/html/active_promo.json      (generated, safe to delete)
-        └──→ output/html/price_history.json      (copy, safe to delete)
+        ├──→ output/html/price_history.json      (copy, safe to delete)
+        └──→ output/html/review_queue.json       (copy, for admin UI)
 ```
 
 ## How `active_promo.json` is Generated

@@ -200,10 +200,13 @@ class TestPublishHtml:
             hist_src = db_dir / "price_history.json"
             hist_src.write_text(json.dumps({"snapshots": [], "metadata": {}}))
 
+            review_src = db_dir / "review_queue.json"
+            review_src.write_text(json.dumps({"items": []}))
+
             self._run_with_root(root)
 
             out = capsys.readouterr().out
-            assert "2 file(s) written" in out
+            assert "3 file(s) written" in out
             assert "0 warning(s)" in out
 
     def test_dry_run_summary(self, capsys):
@@ -215,10 +218,13 @@ class TestPublishHtml:
             hist_src = db_dir / "price_history.json"
             hist_src.write_text(json.dumps({"snapshots": [], "metadata": {}}))
 
+            review_src = db_dir / "review_queue.json"
+            review_src.write_text(json.dumps({"items": []}))
+
             self._run_with_root(root, extra_args=["--dry-run"])
 
             out = capsys.readouterr().out
-            assert "2 file(s) would be written" in out
+            assert "3 file(s) would be written" in out
 
     def test_expired_products_excluded(self):
         with tempfile.TemporaryDirectory() as td:
@@ -240,6 +246,9 @@ class TestPublishHtml:
                 "metadata": {},
             }))
 
+            review_src = db_dir / "review_queue.json"
+            review_src.write_text(json.dumps({"items": []}))
+
             self._run_with_root(root)
 
             html_dir = root / "output" / "html"
@@ -247,3 +256,23 @@ class TestPublishHtml:
                 data = json.load(f)
             assert len(data["products"]) == 0
             assert len(data["singles"]) == 0
+
+    def test_copies_review_queue(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            db_dir = root / "database"
+            db_dir.mkdir(parents=True)
+
+            hist_src = db_dir / "price_history.json"
+            hist_src.write_text(json.dumps({"snapshots": [], "metadata": {}}))
+
+            review_src = db_dir / "review_queue.json"
+            review_src.write_text(json.dumps({"items": [{"reason": "test"}]}))
+
+            self._run_with_root(root)
+
+            html_dir = root / "output" / "html"
+            assert (html_dir / "review_queue.json").exists()
+            with open(html_dir / "review_queue.json", encoding="utf-8") as f:
+                data = json.load(f)
+            assert len(data["items"]) == 1

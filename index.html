@@ -931,7 +931,7 @@ function renderFooterStats(filtered) {
   document.getElementById("footer-stats").textContent = `Lotte: ${lotteCount} products · Superindo: ${superindoCount} · Matched: ${matchedCount}`;
   const reviewEl = document.getElementById("footer-review");
   if (stats.flagged_for_review > 0) {
-    reviewEl.textContent = `⚠ ${stats.flagged_for_review} items need review`;
+    reviewEl.innerHTML = `<a href="admin.html" style="color:var(--amber);text-decoration:none">⚠ ${stats.flagged_for_review} items need review →</a>`;
     reviewEl.className = "review-warning";
   } else {
     reviewEl.textContent = "";
