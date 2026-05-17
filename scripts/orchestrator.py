@@ -25,8 +25,8 @@ from pathlib import Path
 # Project root
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-STAGE_RESULTS = ROOT / "database" / "stage_results"
-LOG_DIR = ROOT / "database" / "logs"
+STAGE_RESULTS = ROOT / "output" / "stage_results"
+LOG_DIR = ROOT / "output" / "logs"
 
 ALL_STORES = ["lotte", "superindo"]
 
