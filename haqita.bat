@@ -24,14 +24,16 @@ echo.
  echo  [3] Stage 2: OCR
  echo  [4] Stage 3: Consolidation
  echo  [5] Stage 4: Publish HTML
- echo  [6] Tests
- echo  [7] Health check
+ echo  [6] Start HTTP server
+ echo  [7] Tests
+ echo  [8] Health check
  echo  [0] Exit
 echo.
 
 set /p choice="Your choice: "
 
 if "%choice%"=="1" goto FULL_PIPELINE_MENU
+if "%choice%"=="6" goto HTTP_SERVER
 if "%choice%"=="2" goto STAGE_SCRAPE
 if "%choice%"=="3" goto STAGE_OCR
 if "%choice%"=="4" goto STAGE_CONSOLIDATION
@@ -636,6 +638,24 @@ echo ========================================
 echo.
 python scripts/health_check.py --verbose
 echo.
+pause
+goto MENU
+
+:: ============================================================
+:: HTTP Server
+:: ============================================================
+
+:HTTP_SERVER
+cls
+echo ========================================
+echo  HTTP Server
+echo ========================================
+echo  Open http://localhost:8080/index.html
+echo  Press Ctrl+C to stop
+echo ========================================
+echo.
+cd /d "%~dp0"
+python -m http.server 8080
 pause
 goto MENU
 
