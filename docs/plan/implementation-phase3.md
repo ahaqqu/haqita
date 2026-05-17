@@ -66,13 +66,13 @@ Each snapshot in `price_history.json` now carries all fields needed to rebuild t
       "effective_unit_price": 3100,
       "promo": "DAPAT 5 pcs",
       "promo_type": "bundle_buy",
-      "start_period": "2026-05-07",
-      "end_period": "2026-05-20",
+      "valid_from": "2026-05-07",
       "valid_until": "2026-05-20",
       "bundle_size": 5,
       "match_method": "exact",
       "match_confidence": 1.0,
-      "image_path": "database/scrape/lotte/promo_abc123.jpg"
+      "image_path": "database/scrape/lotte/promo_abc123.jpg",
+      "scrape_time": "2026-05-14T07:39:37"
     }
   ],
   "metadata": {
@@ -87,14 +87,14 @@ Each snapshot in `price_history.json` now carries all fields needed to rebuild t
 
 | Field | Type | Purpose |
 |---|---|---|
-| `valid_until` | string or null | Expiry date (= end_period) — used to filter active promos |
+| `valid_from` | string or null | ISO date of promo start |
+| `valid_until` | string or null | Expiry date — used to filter active promos |
 | `bundle_size` | int | Units per bundle (for effective price display) |
 | `promo_type` | string | "bundle_buy", "get_free", "single", etc. |
-| `start_period` | string or null | ISO date of promo start |
-| `end_period` | string or null | ISO date of promo end (= valid_until) |
 | `match_method` | string | "exact", "embedding", "ai" — for grouping matches |
 | `match_confidence` | float | Confidence score — for UI badge |
 | `image_path` | string or null | Path to brochure image — for "View Brochure" feature |
+| `scrape_time` | string or null | ISO timestamp of when the promo was scraped |
 
 **Backward compatibility:** Snapshots without new fields use defaults:
 `valid_until=null` (treated as active), `bundle_size=1`, `match_method="unknown"`, `match_confidence=0.5`.
@@ -327,14 +327,14 @@ Then open `http://localhost:8080` in a browser. Alternatives: VS Code Live Serve
 **Modify `scripts/consolidate.py`:**
 
 1. **Extend price_history append** — Add new fields to each snapshot:
-   - `valid_until` — from `parse_valid_until(period)` (same as end_period)
+   - `valid_from` — ISO date parsed from period string (first date)
+   - `valid_until` — from `parse_valid_until(period)` (already stored, ensure present)
    - `bundle_size` — from `promo_result.unit_count`
    - `promo_type` — from `promo_result.promo_type`
-   - `start_period` — ISO date parsed from period string (first date)
-   - `end_period` — ISO date parsed from period string (last date, same as valid_until)
    - `match_method` — from matching pipeline result
    - `match_confidence` — from matching pipeline result
    - `image_path` — from OCR output (path to brochure image)
+   - `scrape_time` — ISO timestamp from OCR output `scraped_at`
 
 2. **Add `generate_consolidated_from_history(history, catalog, today)`** function:
    - Filter snapshots: `valid_until >= today` OR `valid_until is null` (treat as active)
@@ -491,7 +491,7 @@ Create `output/html/consolidated_latest.json` with realistic test data (2 matche
 
 Create `output/html/price_history.json` with at least one product having ≥2 snapshots so
 the bar chart can be visually verified during development. Use the extended schema v1.2
-with `valid_until`, `bundle_size`, `promo_type`, `start_period`, `end_period`, `match_method`, `match_confidence`, `image_path` fields.
+with `valid_from`, `valid_until`, `bundle_size`, `promo_type`, `match_method`, `match_confidence`, `image_path`, `scrape_time` fields.
 
 ## Files to Create/Modify
 

@@ -118,6 +118,14 @@ _MONTHS = {
 }
 
 
+def _to_iso(day: int, month_str: str, year: str) -> str | None:
+    """Convert day/month/year to ISO date string."""
+    month = _MONTHS.get(month_str.lower()[:3])
+    if month:
+        return f"{year}-{month}-{day:02d}"
+    return None
+
+
 def parse_valid_until(period: str | None) -> str | None:
     """
     Extract the end date from a period string.
@@ -139,12 +147,7 @@ def parse_valid_until(period: str | None) -> str | None:
         period,
     )
     if m:
-        day = int(m.group(2))
-        month_str = m.group(3).lower()[:3]
-        year = m.group(4)
-        month = _MONTHS.get(month_str)
-        if month:
-            return f"{year}-{month}-{day:02d}"
+        return _to_iso(int(m.group(2)), m.group(3), m.group(4))
 
     # Single end date: "s/d 20 Mei 2026", "sd. 20 Mei 2026", "sampai 20 Mei 2026"
     m = re.search(
@@ -153,12 +156,7 @@ def parse_valid_until(period: str | None) -> str | None:
         re.IGNORECASE,
     )
     if m:
-        day = int(m.group(1))
-        month_str = m.group(2).lower()[:3]
-        year = m.group(3)
-        month = _MONTHS.get(month_str)
-        if month:
-            return f"{year}-{month}-{day:02d}"
+        return _to_iso(int(m.group(1)), m.group(2), m.group(3))
 
     # Bare single date: "20 Mei 2026"
     m = re.search(
@@ -166,11 +164,53 @@ def parse_valid_until(period: str | None) -> str | None:
         period,
     )
     if m:
-        day = int(m.group(1))
-        month_str = m.group(2).lower()[:3]
-        year = m.group(3)
-        month = _MONTHS.get(month_str)
-        if month:
-            return f"{year}-{month}-{day:02d}"
+        return _to_iso(int(m.group(1)), m.group(2), m.group(3))
 
     return None
+
+
+def parse_period(period: str | None) -> tuple[str | None, str | None]:
+    """
+    Parse a period string into (start_date, end_date) as ISO strings.
+
+    Supported formats:
+        "7 - 20 Mei 2026"       → ("2026-05-07", "2026-05-20")
+        "14-17 Mei 2026"        → ("2026-05-14", "2026-05-17")
+        "Berlaku 1-15 Mei 2026" → ("2026-05-01", "2026-05-15")
+        "s/d 20 Mei 2026"       → (None, "2026-05-20")
+        "Valid until 15 May 2026" → (None, "2026-05-15")
+        "20 Mei 2026"           → (None, "2026-05-20")
+
+    Returns (None, None) if no date can be parsed.
+    """
+    if not period:
+        return None, None
+
+    # Range: "7 - 20 Mei 2026", "14-17 Mei 2026", "Berlaku 1-15 Mei 2026"
+    m = re.search(
+        r'(\d{1,2})\s*[-–—]\s*(\d{1,2})\s+(\w+)\s+(\d{4})',
+        period,
+    )
+    if m:
+        start = _to_iso(int(m.group(1)), m.group(3), m.group(4))
+        end = _to_iso(int(m.group(2)), m.group(3), m.group(4))
+        return start, end
+
+    # Single end date: "s/d 20 Mei 2026", "sd. 20 Mei 2026", "sampai 20 Mei 2026"
+    m = re.search(
+        r'(?:s[/\.]?d|sampai|until)\s+(\d{1,2})\s+(\w+)\s+(\d{4})',
+        period,
+        re.IGNORECASE,
+    )
+    if m:
+        return None, _to_iso(int(m.group(1)), m.group(2), m.group(3))
+
+    # Bare single date: "20 Mei 2026"
+    m = re.search(
+        r'(\d{1,2})\s+(\w+)\s+(\d{4})',
+        period,
+    )
+    if m:
+        return None, _to_iso(int(m.group(1)), m.group(2), m.group(3))
+
+    return None, None
