@@ -2,13 +2,14 @@
 Base Scraper — Shared utilities for all supermarket scrapers.
 
 Provides: state management, image download, filename generation,
-MD5 hashing, and the core download/classify loop. Subclasses override only
-store-specific behavior (HTML parsing, image collection).
+MD5 hashing, and the core scrape loop. Subclasses override only
+store-specific behavior (HTML parsing, OCR, product normalization).
 """
 
 import hashlib
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from io import BytesIO
@@ -110,6 +111,8 @@ class BaseScraper:
     - store_name: str
     - headers: dict
     - collect_image_refs() -> list[tuple[str, str]]  # (url, original_ref)
+    - run_ocr(image_path: Path, entry: dict) -> tuple[list[dict], list[dict]]
+    - build_output(ocr_results, skipped_count, status) -> dict
 
     Paths (computed at runtime):
     - images_dir: database/scrape/<store>/<YYYYMMDD>/
@@ -157,6 +160,20 @@ class BaseScraper:
     def collect_image_refs(self) -> list[tuple[str, str]]:
         """
         Return list of (url, original_ref) tuples for promo images.
+        Must be implemented by subclass.
+        """
+        raise NotImplementedError
+
+    def run_ocr(self, image_path: Path, entry: dict) -> tuple[list[dict], list[dict]]:
+        """
+        Run OCR on an image. Returns (products, rejected).
+        Must be implemented by subclass.
+        """
+        raise NotImplementedError
+
+    def build_output(self, ocr_results: list, skipped_count: int, status: str) -> dict:
+        """
+        Build the final output dict.
         Must be implemented by subclass.
         """
         raise NotImplementedError
@@ -220,11 +237,68 @@ class BaseScraper:
                     print(f"   [SKIP] {fname} — already processed (MD5 match)")
                 else:
                     new_images.append(entry)
-                    print(f"   [NEW]  {fname} — downloaded")
+                    print(f"   [NEW]  {fname} — will OCR")
 
             except Exception as e:
                 print(f"   [ERR]  Failed to process {orig_ref}: {e}")
 
         return new_images, existing_images
 
+    def run_ocr_loop(
+        self, new_images: list[dict], existing_images: list[dict], output_file: Path
+    ) -> list[dict]:
+        """
+        Run OCR on each new image, writing incremental output.
+        Returns the list of OCR results.
+        """
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        ocr_results: list[dict] = []
 
+        for idx, img in enumerate(new_images, 1):
+            img_path = self.images_dir / img["filename"]
+            print(f"\n[{idx}/{len(new_images)}] [OCR] {img['filename']} ...")
+
+            t0 = time.time()
+            try:
+                products, rejected = self.run_ocr(img_path, img)
+            except Exception as e:
+                print(f"   [ERR] OCR failed for {img['filename']}: {e}")
+                products = []
+                rejected = []
+            t1 = time.time()
+
+            # Attach image_path to each product for UI brochure reference
+            rel_path = str(img_path).replace('\\', '/')
+            for p in products:
+                p['image_path'] = rel_path
+            for r in rejected:
+                if 'raw' in r:
+                    r['raw']['image_path'] = rel_path
+
+            result = {
+                "filename": img["filename"],
+                "md5": img["md5"],
+                "image_url": img["image_url"],
+                "products": products,
+                "rejected": rejected,
+                "product_count": len(products),
+                "ocr_time_s": round(t1 - t0, 1),
+            }
+            ocr_results.append(result)
+            print(f"   -> {len(products)} products in {t1 - t0:.0f}s")
+
+            # Print extracted products
+            for p in products:
+                brand = p.get("brand") or ""
+                tag = f"[{brand}] " if brand else ""
+                unit = p.get("unit", "") or ""
+                unit_str = f" {unit}" if unit else ""
+                print(f"   - {tag}{p['name']}: {p['price']}{unit_str}")
+
+            # Write incremental output
+            output = self.build_output(ocr_results, len(existing_images), "in_progress")
+            output_file.write_text(
+                json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+
+        return ocr_results
