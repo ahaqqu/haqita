@@ -4,12 +4,13 @@ Multi-tier matching pipeline for cross-store product matching.
 Each gate is an isolated function. The orchestrator checks config before calling.
 """
 
-import json
 import logging
 import os
 import re
 from enum import Enum
-from typing import Any
+
+import requests
+from sklearn.metrics.pairwise import cosine_similarity
 
 from scripts.matching.normalizer import (
     canonical_tokens,
@@ -109,7 +110,6 @@ def gate4_embedding(a: dict, b: dict, cfg: dict, model=None, embeddings_a=None, 
     ambiguous_low = cfg.get('consolidation', {}).get('embedding_ambiguous_low', 0.55)
 
     if model is not None and embeddings_a is not None and embeddings_b is not None:
-        from sklearn.metrics.pairwise import cosine_similarity
         score = float(cosine_similarity([embeddings_a[idx_a]], [embeddings_b[idx_b]])[0, 0])
     else:
         return GateResult.PASS
@@ -173,33 +173,25 @@ def _detect_docker() -> bool:
 
 
 def _ollama_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
-    """Send pairs to Ollama for binary yes/no verification."""
-    import requests
-
+    """Send pairs to Ollama for binary yes/no verification (one API call per pair)."""
     base_url = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
     if _detect_docker():
         base_url = base_url.replace('localhost', 'host.docker.internal')
 
     model = cfg.get('consolidation', {}).get('ai_verifier', {}).get('ai_model', 'qwen3:4b')
-    batch_size = cfg.get('consolidation', {}).get('ai_verifier', {}).get('ai_batch_size', 20)
-    timeout = cfg.get('ocr', {}).get('ollama', {}).get('timeout_seconds', 300)
+    timeout = cfg.get('consolidation', {}).get('ai_verifier', {}).get('timeout_seconds', 120)
 
     results: list[str | None] = []
 
-    for i in range(0, len(pairs), batch_size):
-        batch = pairs[i:i + batch_size]
-        messages = []
-        for p in batch:
-            prompt = AI_PROMPT_TEMPLATE.format(
-                store_a=p['store_a'], name_a=p['name_a'], unit_a=p.get('unit_a', ''), price_a=p.get('price_a', 0),
-                store_b=p['store_b'], name_b=p['name_b'], unit_b=p.get('unit_b', ''), price_b=p.get('price_b', 0),
-            )
-            messages.append({"role": "user", "content": prompt})
-
+    for p in pairs:
+        prompt = AI_PROMPT_TEMPLATE.format(
+            store_a=p['store_a'], name_a=p['name_a'], unit_a=p.get('unit_a', ''), price_a=p.get('price_a', 0),
+            store_b=p['store_b'], name_b=p['name_b'], unit_b=p.get('unit_b', ''), price_b=p.get('price_b', 0),
+        )
         try:
             resp = requests.post(
                 f"{base_url}/api/chat",
-                json={"model": model, "messages": messages, "stream": False, "temperature": 0},
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False, "temperature": 0},
                 timeout=timeout,
             )
             resp.raise_for_status()
@@ -211,8 +203,8 @@ def _ollama_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
             else:
                 results.append(None)
         except Exception as e:
-            logger.error("AI verification failed: %s", e)
-            results.extend([None] * len(batch))
+            logger.error("AI verification failed for pair: %s", e)
+            results.append(None)
 
     return results
 
@@ -356,7 +348,6 @@ def match_products(
             # Gate 2
             r = gate2_token_jaccard(prod_a, prod_b, cfg)
             if r == GateResult.SKIP:
-                from scripts.matching.normalizer import token_overlap
                 score = token_overlap(prod_a.get('name', ''), prod_b.get('name', ''))
                 threshold = cfg.get('consolidation', {}).get('token_jaccard_min', 0.30)
                 last_rejection = {
@@ -380,7 +371,6 @@ def match_products(
             # Gate 4
             r = gate4_embedding(prod_a, prod_b, cfg, embedding_model, emb_a, emb_b, idx_a, idx_b)
             if r == GateResult.MATCH:
-                from sklearn.metrics.pairwise import cosine_similarity
                 score = float(cosine_similarity([emb_a[idx_a]], [emb_b[idx_b]])[0, 0]) if emb_a is not None else 0.85
                 if score > best_score:
                     best_match = prod_b
@@ -390,7 +380,6 @@ def match_products(
                 last_rejection = None
                 continue
             elif r == GateResult.AMBIGUOUS:
-                from sklearn.metrics.pairwise import cosine_similarity
                 score = float(cosine_similarity([emb_a[idx_a]], [emb_b[idx_b]])[0, 0]) if emb_a is not None else 0.7
                 if score > best_score:
                     best_match = prod_b

@@ -28,6 +28,7 @@ from pathlib import Path
 # Allow running from project root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts.config import load_config
 from scripts.matching.matcher import load_embedding_model, match_products
 from scripts.matching.normalizer import parse_unit_to_base, unit_type
 from scripts.matching.promo_parser import parse_promo, parse_period
@@ -38,35 +39,6 @@ from scripts.matching.consolidation import (
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Config loading
-# ---------------------------------------------------------------------------
-
-def load_config() -> dict:
-    """Load config.yaml with .env overrides."""
-    import yaml
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    config_path = Path(__file__).resolve().parent.parent / 'config.yaml'
-    with open(config_path) as f:
-        cfg = yaml.safe_load(f)
-
-    env_provider = os.getenv('OCR_PROVIDER')
-    if env_provider:
-        cfg['ocr']['provider'] = env_provider
-
-    env_key = os.getenv('GEMINI_API_KEY')
-    if env_key:
-        cfg['ocr']['gemini']['api_key'] = env_key
-
-    env_ai = os.getenv('AI_VERIFIER_PROVIDER')
-    if env_ai:
-        cfg['consolidation']['ai_verifier']['provider'] = env_ai
-
-    return cfg
 
 
 # ---------------------------------------------------------------------------
@@ -101,11 +73,6 @@ def make_product_key(name: str, brand: str | None, unit: str | None) -> str:
     brand_slug = re.sub(r'[^a-z0-9]+', '-', (brand or '').lower().strip()).strip('-')
     unit_slug = re.sub(r'[^a-z0-9]+', '-', (unit or '').lower().strip()).strip('-')
     return f"{name_slug}--{brand_slug}--{unit_slug}"
-
-
-def make_product_key_compat(name: str, brand: str | None = None, unit: str | None = None) -> str:
-    """Alias for make_product_key (used by normalizer imports)."""
-    return make_product_key(name, brand, unit)
 
 
 # ---------------------------------------------------------------------------
@@ -288,21 +255,14 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
 
     # 3. Parse promo text and compute effective unit prices
     print("[*] Parsing promo text and computing effective unit prices ...")
-    for p in lotte_products:
-        promo = parse_promo(p.get('promo'), p.get('price', 0))
-        p['_promo_result'] = promo
-        p['_effective_unit_price'] = promo.effective_unit_price
-        p['_bundle_size'] = promo.unit_count
-        p['_promo_type'] = promo.promo_type
-        p['_valid_from'], p['_valid_until'] = parse_period(p.get('period'))
-
-    for p in superindo_products:
-        promo = parse_promo(p.get('promo'), p.get('price', 0))
-        p['_promo_result'] = promo
-        p['_effective_unit_price'] = promo.effective_unit_price
-        p['_bundle_size'] = promo.unit_count
-        p['_promo_type'] = promo.promo_type
-        p['_valid_from'], p['_valid_until'] = parse_period(p.get('period'))
+    for products in (lotte_products, superindo_products):
+        for p in products:
+            promo = parse_promo(p.get('promo'), p.get('price', 0))
+            p['_promo_result'] = promo
+            p['_effective_unit_price'] = promo.effective_unit_price
+            p['_bundle_size'] = promo.unit_count
+            p['_promo_type'] = promo.promo_type
+            p['_valid_from'], p['_valid_until'] = parse_period(p.get('period'))
 
     # 4. Load embedding model if Gate 4 enabled
     embedding_model = None
@@ -317,7 +277,6 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         from scripts.setup_ollama import setup_ollama
         ollama_success = setup_ollama(model=ollama_model)
         if not ollama_success:
-            import os
             run_mode = os.getenv("RUN_MODE", "").lower()
             if run_mode == "docker":
                 raise RuntimeError("Ollama failed to connect. In Docker mode, ensure Ollama is running on host with OLLAMA_BASE_URL=http://host.docker.internal:11434. Also ensure model is pulled: ollama pull qwen3:4b")
@@ -458,9 +417,6 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         ))
 
     # 7. Update database, then generate consolidated output from it
-    today = datetime.now().strftime('%Y-%m-%d')
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-
     if not dry_run:
         database_dir.mkdir(parents=True, exist_ok=True)
 
