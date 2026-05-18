@@ -5,6 +5,13 @@ Used by both Stage 3 (consolidate.py) and Stage 4 (publish_html.py).
 
 from datetime import datetime
 
+DISPLAY_HINTS = {
+    "stores": {"Lotte": "Lotte", "Superindo": "Superindo"},
+    "store_colors": {"Lotte": "#0057A8", "Superindo": "#E8211D"},
+    "currency": "IDR",
+    "locale": "id-ID",
+}
+
 
 def generate_consolidated_from_history(history: dict, catalog: dict, today: str) -> dict:
     """
@@ -146,12 +153,7 @@ def generate_consolidated_from_history(history: dict, catalog: dict, today: str)
         "generated_at": datetime.now().isoformat(),
         "scrape_dates": {},
         "source_files": [],
-        "display_hints": {
-            "stores": {"Lotte": "Lotte Mart", "Superindo": "Superindo"},
-            "store_colors": {"Lotte": "#0057A8", "Superindo": "#E8211D"},
-            "currency": "IDR",
-            "locale": "id-ID",
-        },
+        "display_hints": DISPLAY_HINTS,
         "products": consolidated_products,
         "singles": singles,
         "stats": {

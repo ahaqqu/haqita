@@ -350,31 +350,6 @@ main#product-grid {
   padding: 1.5rem;
 }
 
-#load-more {
-  display: none;
-  text-align: center;
-  padding: 1rem;
-  max-width: 1200px;
-  margin: 0 auto 2rem;
-}
-
-#load-more button {
-  padding: 0.6rem 1.5rem;
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  background: white;
-  font-family: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-  color: var(--gray-700);
-  transition: all 0.15s;
-}
-
-#load-more button:hover {
-  border-color: var(--green-mid);
-  color: var(--green);
-}
-
 footer {
   background: white;
   border-top: 1px solid var(--gray-100);
@@ -509,7 +484,7 @@ footer {
 }
 
 @media print {
-  #search-bar, #controls, #load-more, .freshness-bar { display: none !important; }
+  #search-bar, #controls, #load-more-sentinel, .freshness-bar { display: none !important; }
   #product-grid { display: block !important; }
   .product-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
   .product-card:nth-child(10n) { page-break-after: always; }
@@ -541,8 +516,8 @@ footer {
     <button class="chip" data-filter="superindo"><span class="filter-dot" style="background:#E8211D"></span> Superindo</button>
   </div>
   <select class="sort-select" id="sort-select">
+    <option value="name" selected>Sort: Name</option>
     <option value="cheapest">Sort: Cheapest</option>
-    <option value="name">Sort: Name</option>
     <option value="savings">Sort: Savings</option>
     <option value="expiry">Sort: Expiry</option>
   </select>
@@ -587,9 +562,7 @@ footer {
   </div>
 </div>
 
-<div id="load-more">
-  <button id="load-more-btn">Load More</button>
-</div>
+<div id="load-more-sentinel" style="height: 1px;"></div>
 
 <footer id="footer">
   <div class="footer-inner">
@@ -603,7 +576,7 @@ let consolidatedData = null;
 let priceHistoryData = null;
 let displayHints = null;
 let currentFilter = 'all';
-let currentSort = 'cheapest';
+let currentSort = 'name';
 let currentSearch = '';
 let currentPage = 1;
 const PAGE_SIZE = 20;
@@ -613,7 +586,7 @@ function getDefaultDisplayHints() {
   return {
     currency: "Rp",
     locale: "en-ID",
-    stores: { lotte: "Lotte Mart", superindo: "Superindo" },
+    stores: { lotte: "Lotte", superindo: "Superindo" },
     store_colors: { lotte: "#0057A8", superindo: "#E8211D" }
   };
 }
@@ -999,11 +972,11 @@ function renderCards() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); expandCard(card.dataset.key); }
     });
   });
-  const loadMore = document.getElementById("load-more");
+  const sentinel = document.getElementById("load-more-sentinel");
   if (end < filtered.length) {
-    loadMore.style.display = "block";
+    sentinel.style.display = "block";
   } else {
-    loadMore.style.display = "none";
+    sentinel.style.display = "none";
   }
   renderFooterStats(filtered);
 }
@@ -1110,6 +1083,20 @@ async function loadData(isRefresh = false) {
       }
     }
     displayHints = consolidatedData?.display_hints || getDefaultDisplayHints();
+    if (displayHints.store_colors) {
+      const normalizedColors = {};
+      for (const [key, value] of Object.entries(displayHints.store_colors)) {
+        normalizedColors[key.toLowerCase().replace(/\s+/g, "")] = value;
+      }
+      displayHints.store_colors = normalizedColors;
+    }
+    if (displayHints.stores) {
+      const normalizedStores = {};
+      for (const [key, value] of Object.entries(displayHints.stores)) {
+        normalizedStores[key.toLowerCase().replace(/\s+/g, "")] = value;
+      }
+      displayHints.stores = normalizedStores;
+    }
     if (consolidatedData?.generated_at) {
       updateFreshnessBar(consolidatedData.generated_at);
     } else if (consolidatedData?.metadata?.last_updated) {
@@ -1150,10 +1137,20 @@ document.getElementById("sort-select").addEventListener("change", (e) => {
   renderCards();
 });
 
-document.getElementById("load-more-btn").addEventListener("click", () => {
-  currentPage++;
-  renderCards();
-});
+const loadMoreObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const filtered = getFilteredSortedProducts();
+      const end = currentPage * PAGE_SIZE;
+      if (end < filtered.length) {
+        currentPage++;
+        renderCards();
+      }
+    }
+  });
+}, { rootMargin: "200px" });
+
+loadMoreObserver.observe(document.getElementById("load-more-sentinel"));
 
 document.getElementById("warning-retry").addEventListener("click", () => {
   loadData();

@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.matching.matcher import load_embedding_model, match_products
 from scripts.matching.normalizer import parse_unit_to_base, unit_type
 from scripts.matching.promo_parser import parse_promo, parse_period
-from scripts.matching.consolidation import generate_consolidated_from_history
+from scripts.matching.consolidation import generate_consolidated_from_history, DISPLAY_HINTS
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -620,12 +620,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
                 lotte_file.name if lotte_file else '',
                 superindo_file.name if superindo_file else '',
             ],
-            'display_hints': {
-                'stores': {'Lotte': 'Lotte Mart', 'Superindo': 'Superindo'},
-                'store_colors': {'Lotte': '#0057A8', 'Superindo': '#E8211D'},
-                'currency': 'IDR',
-                'locale': 'id-ID',
-            },
+            'display_hints': DISPLAY_HINTS,
             'products': consolidated_products,
             'singles': singles,
             'stats': {
