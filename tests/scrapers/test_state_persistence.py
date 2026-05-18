@@ -6,7 +6,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 # Use base_scraper for shared utilities
-from scripts.scrapers.base_scraper import load_state, save_state, md5_hash
+from scripts.scrapers.base_scraper import (
+    deduplicate_refs, filename_from_url, get_proxy_config,
+    load_state, save_state, md5_hash,
+)
 
 
 class TestStatePersistence:
@@ -90,3 +93,74 @@ class TestImageValidation:
         min_size = 50 * 1024
         assert len(b"x" * (50 * 1024 - 1)) < min_size
         assert len(b"x" * (50 * 1024)) >= min_size
+
+
+class TestDeduplicateRefs:
+    def test_no_duplicates(self):
+        refs = [("http://a.com/1.jpg", "1.jpg"), ("http://a.com/2.jpg", "2.jpg")]
+        result = deduplicate_refs(refs)
+        assert len(result) == 2
+        assert result == refs
+
+    def test_duplicates_removed(self):
+        refs = [
+            ("http://a.com/1.jpg", "1.jpg"),
+            ("http://a.com/1.jpg", "1.jpg"),  # duplicate
+            ("http://a.com/2.jpg", "2.jpg"),
+        ]
+        result = deduplicate_refs(refs)
+        assert len(result) == 2
+
+    def test_order_preserved(self):
+        refs = [
+            ("http://a.com/2.jpg", "2.jpg"),
+            ("http://a.com/1.jpg", "1.jpg"),
+            ("http://a.com/1.jpg", "1.jpg"),  # duplicate
+        ]
+        result = deduplicate_refs(refs)
+        assert result[0][0] == "http://a.com/2.jpg"
+        assert result[1][0] == "http://a.com/1.jpg"
+
+    def test_empty_list(self):
+        assert deduplicate_refs([]) == []
+
+
+class TestFilenameFromUrl:
+    def test_basic_url(self):
+        name = filename_from_url("http://example.com/promo.jpg")
+        assert name.startswith("promo")
+        assert name.endswith(".jpg")
+
+    def test_md5_prefix(self):
+        name = filename_from_url("http://example.com/promo.jpg", "abcdef12")
+        assert "abcdef12" in name
+
+    def test_no_extension_fallback(self):
+        name = filename_from_url("http://example.com/promo")
+        assert name.endswith(".jpg")
+
+    def test_tricky_path(self):
+        name = filename_from_url("http://example.com/images/2026/05/promo-flyer-001.JPG?w=800")
+        assert name.lower().startswith("promo-flyer-001")
+        # Should strip query params (basename only)
+        assert "?" not in name
+
+
+class TestGetProxyConfig:
+    def test_no_proxy_vars(self, monkeypatch):
+        monkeypatch.delenv("HTTP_PROXY", raising=False)
+        monkeypatch.delenv("HTTPS_PROXY", raising=False)
+        assert get_proxy_config() == {}
+
+    def test_http_proxy(self, monkeypatch):
+        monkeypatch.setenv("HTTP_PROXY", "http://proxy:8080")
+        monkeypatch.delenv("HTTPS_PROXY", raising=False)
+        proxy = get_proxy_config()
+        assert proxy.get("http") == "http://proxy:8080"
+
+    def test_both_proxies(self, monkeypatch):
+        monkeypatch.setenv("HTTP_PROXY", "http://proxy:8080")
+        monkeypatch.setenv("HTTPS_PROXY", "https://proxy:8443")
+        proxy = get_proxy_config()
+        assert proxy["http"] == "http://proxy:8080"
+        assert proxy["https"] == "https://proxy:8443"

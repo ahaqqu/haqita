@@ -13,6 +13,7 @@ import base64
 import json
 import logging
 import os
+import re
 from pathlib import Path
 
 import requests
@@ -135,7 +136,7 @@ def _parse_ollama_json(raw_text: str) -> list[dict]:
     clean = clean.strip()
 
     # Find JSON array
-    match = __import__("re").search(r"\[.*\]", clean, __import__("re").DOTALL)
+    match = re.search(r"\[.*\]", clean, re.DOTALL)
     if not match:
         logger.debug(f"No JSON array found in Ollama response: {clean[:200]}")
         return []
@@ -169,7 +170,7 @@ def call_ollama_ocr(image_path: str, cfg: dict) -> list[dict]:
         return []
 
     ollama_cfg = cfg["ocr"].get("ollama", {})
-    model = ollama_cfg.get("model", "qwen3-vl:7b")
+    model = ollama_cfg.get("model", "qwen2.5vl:7b")
     max_retries = ollama_cfg.get("max_retries", 3)
     timeout = ollama_cfg.get("timeout_seconds", 300)
 
@@ -235,7 +236,7 @@ def extract_promo_date(image_path: str, cfg: dict) -> str:
         return ""
 
     ollama_cfg = cfg["ocr"].get("ollama", {})
-    model = ollama_cfg.get("model", "qwen3-vl:7b")
+    model = ollama_cfg.get("model", "qwen2.5vl:7b")
     max_retries = ollama_cfg.get("max_retries", 3)
     timeout = ollama_cfg.get("timeout_seconds", 300)
 
@@ -271,7 +272,7 @@ def extract_promo_date(image_path: str, cfg: dict) -> str:
                 clean = clean[:-3]
             clean = clean.strip()
 
-            match = __import__("re").search(r"\{.*\}", clean, __import__("re").DOTALL)
+            match = re.search(r"\{.*\}", clean, re.DOTALL)
             if match:
                 data = json.loads(match.group(0))
                 period = data.get("promo_period", "") or ""

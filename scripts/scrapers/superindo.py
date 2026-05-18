@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from scripts.scrapers.base_scraper import BaseScraper, DEFAULT_HEADERS, fetch_html
+from scripts.scrapers.base_scraper import BaseScraper, DEFAULT_HEADERS, deduplicate_refs, fetch_html
 
 # --- Store-specific configuration ---
 STORE_NAME = "Superindo"
@@ -45,14 +45,7 @@ class SuperindoScraper(BaseScraper):
             print(f"    Found {len(refs)} image(s) from {label} page\n")
             all_refs.extend(refs)
 
-        # Deduplicate across pages
-        seen = set()
-        deduped = []
-        for url, orig in all_refs:
-            if url not in seen:
-                seen.add(url)
-                deduped.append((url, orig))
-
+        deduped = deduplicate_refs(all_refs)
         if len(deduped) < len(all_refs):
             print(f"[*] Deduplicated: {len(all_refs)} → {len(deduped)} unique images\n")
 

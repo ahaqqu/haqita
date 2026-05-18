@@ -1,8 +1,9 @@
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from scripts.ocr.ocr_processor import validate_product
+from scripts.ocr.ocr_processor import validate_product, _parse_ocr_json
 
 
 class TestValidateProduct:
@@ -86,3 +87,40 @@ class TestValidateProduct:
         result, reason = validate_product(raw, "test.jpg")
         assert result is not None
         assert result["ocr_raw_price"] == "Rp 5.000"
+
+
+class TestParseOcrJson:
+    def test_plain_json_array(self):
+        result = _parse_ocr_json('[{"name": "A", "price": 5000}]')
+        assert len(result) == 1
+        assert result[0]["name"] == "A"
+
+    def test_markdown_fenced(self):
+        result = _parse_ocr_json('```json\n[{"name": "B", "price": 10000}]\n```')
+        assert len(result) == 1
+        assert result[0]["name"] == "B"
+
+    def test_markdown_fenced_no_lang(self):
+        result = _parse_ocr_json('```\n[{"name": "C", "price": 15000}]\n```')
+        assert len(result) == 1
+        assert result[0]["name"] == "C"
+
+    def test_with_extra_text(self):
+        result = _parse_ocr_json('Here are the products:\n[{"name": "D", "price": 20000}]\nDone.')
+        assert len(result) == 1
+        assert result[0]["name"] == "D"
+
+    def test_invalid_json_raises(self):
+        import pytest
+        with pytest.raises(json.JSONDecodeError):
+            _parse_ocr_json('[invalid json]')
+
+    def test_no_json_array_raises(self):
+        import pytest
+        with pytest.raises(ValueError, match="No JSON array found"):
+            _parse_ocr_json("Just text without any array")
+
+    def test_empty_string_raises(self):
+        import pytest
+        with pytest.raises(ValueError, match="No JSON array found"):
+            _parse_ocr_json("")

@@ -23,6 +23,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 
+from scripts.config import load_config
+
 
 def check_python_version() -> tuple[bool, str]:
     """Check Python version >= 3.12."""
@@ -196,22 +198,10 @@ def main():
 
     # Load config for provider checks
     cfg = {}
-    cfg_path = ROOT / "config.yaml"
-    if cfg_path.exists():
-        try:
-            import yaml
-            from dotenv import load_dotenv
-            load_dotenv()
-            with open(cfg_path) as f:
-                cfg = yaml.safe_load(f) or {}
-            env_provider = os.getenv("OCR_PROVIDER")
-            if env_provider:
-                cfg["ocr"]["provider"] = env_provider
-            env_key = os.getenv("GEMINI_API_KEY")
-            if env_key:
-                cfg.setdefault("ocr", {}).setdefault("gemini", {})["api_key"] = env_key
-        except Exception:
-            pass
+    try:
+        cfg = load_config()
+    except Exception:
+        pass
 
     # 4. Directories
     ok, missing = check_directories()

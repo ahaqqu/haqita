@@ -89,17 +89,15 @@ def fetch_html(url: str, headers: dict, proxies: dict, timeout: int = 60) -> str
     return resp.text
 
 
-@dataclass
-class ImageEntry:
-    """Metadata for a downloaded promo image."""
-    filename: str
-    md5: str
-    image_url: str
-    downloaded_at: str = ""
-
-    def __post_init__(self):
-        if not self.downloaded_at:
-            self.downloaded_at = datetime.now().isoformat()
+def deduplicate_refs(refs: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Deduplicate URL refs while preserving order."""
+    seen = set()
+    result = []
+    for url, orig in refs:
+        if url not in seen:
+            seen.add(url)
+            result.append((url, orig))
+    return result
 
 
 class BaseScraper:

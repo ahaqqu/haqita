@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
+from scripts.config import load_config
 from scripts.ocr.ocr_processor import extract_products, validate_product
 from scripts.ocr.image_preprocess import preprocess_for_ocr
 
@@ -34,23 +35,6 @@ logger = logging.getLogger(__name__)
 
 # OCR state directory
 OCR_STATE_DIR = Path("database/ocr")
-
-
-def load_config(store: str) -> dict:
-    """Load config.yaml with .env overrides."""
-    import yaml
-    from dotenv import load_dotenv
-    load_dotenv()
-    with open(Path(__file__).resolve().parent.parent.parent / 'config.yaml') as f:
-        cfg = yaml.safe_load(f)
-    env_provider = os.getenv('OCR_PROVIDER')
-    if env_provider:
-        cfg['ocr']['provider'] = env_provider
-    env_key = os.getenv('GEMINI_API_KEY')
-    if env_key:
-        cfg['ocr']['gemini']['api_key'] = env_key
-    cfg['store'] = store
-    return cfg
 
 
 def load_ocr_state(store: str) -> dict:
@@ -245,7 +229,7 @@ def main():
     parser.add_argument('--no-docker', action='store_true', help='Run natively')
     args = parser.parse_args()
 
-    cfg = load_config(args.store)
+    cfg = load_config(store=args.store)
     scrape_dir = Path(f'database/scrape/{args.store}')
     output_dir = Path(f'database/ocr/{args.store}')
 

@@ -13,7 +13,7 @@ from pathlib import Path
 
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from scripts.scrapers.base_scraper import BaseScraper, DEFAULT_HEADERS, fetch_html
+from scripts.scrapers.base_scraper import BaseScraper, DEFAULT_HEADERS, deduplicate_refs, fetch_html
 
 # --- Store-specific configuration ---
 STORE_NAME = "Lotte"
@@ -56,15 +56,7 @@ class LotteScraper(BaseScraper):
                     src = "https://www.lottemart.co.id" + src
                 urls.append((src, src))
 
-        # Deduplicate while preserving order
-        seen = set()
-        unique = []
-        for url, orig in urls:
-            if url not in seen:
-                seen.add(url)
-                unique.append((url, orig))
-
-        return unique
+        return deduplicate_refs(urls)
 
 
 def main():

@@ -17,7 +17,11 @@ from scripts.consolidate import (
     make_product_key,
     update_catalog,
 )
-from scripts.matching.consolidation import generate_consolidated_from_history
+from scripts.matching.consolidation import (
+    build_store_entry, calc_price_stats, build_promo_summary,
+    calc_valid_until, build_match_methods, build_stats,
+    generate_consolidated_from_history,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TEST_DATA_DIR = PROJECT_ROOT / 'data' / 'test'
@@ -387,6 +391,152 @@ class TestGenerateConsolidatedFromHistory:
         assert result['stats']['total_products_lotte'] == 2
         assert result['stats']['lotte_only'] == 2
         assert result['stats']['matched_across_stores'] == 0
+
+
+# ---------------------------------------------------------------------------
+# Consolidation helpers (scripts/matching/consolidation.py)
+# ---------------------------------------------------------------------------
+
+class TestBuildStoreEntry:
+    def test_minimal(self):
+        entry = build_store_entry('Lotte', 10000, 10000)
+        assert entry['store'] == 'Lotte'
+        assert entry['price'] == 10000
+        assert entry['bundle_size'] == 1
+        assert entry['promo'] is None
+
+    def test_full(self):
+        entry = build_store_entry('Superindo', 20000, 5000, bundle_size=4,
+                                  promo='DAPAT 4 pcs', promo_type='bundle_buy',
+                                  valid_from='2026-05-01', valid_until='2026-05-20',
+                                  image_path='img.jpg')
+        assert entry['promo'] == 'DAPAT 4 pcs'
+        assert entry['valid_from'] == '2026-05-01'
+
+
+class TestCalcPriceStats:
+    def test_single_entry(self):
+        entries = [build_store_entry('Lotte', 10000, 10000)]
+        stats = calc_price_stats(entries)
+        assert stats['price_min'] == 10000
+        assert stats['price_max'] == 10000
+        assert stats['cheapest_store'] == 'Lotte'
+
+    def test_two_stores(self):
+        entries = [
+            build_store_entry('Lotte', 10000, 10000),
+            build_store_entry('Superindo', 12000, 12000),
+        ]
+        stats = calc_price_stats(entries)
+        assert stats['price_min'] == 10000
+        assert stats['price_max'] == 12000
+        assert stats['cheapest_store'] == 'Lotte'
+        assert stats['price_gap'] == 2000
+        assert stats['savings_pct'] == 16.7
+
+    def test_three_stores(self):
+        entries = [
+            build_store_entry('Lotte', 15000, 15000),
+            build_store_entry('Superindo', 10000, 10000),
+        ]
+        stats = calc_price_stats(entries)
+        assert stats['cheapest_store'] == 'Superindo'
+
+    def test_zero_prices(self):
+        entries = [
+            build_store_entry('Lotte', 0, 0),
+            build_store_entry('Superindo', 12000, 12000),
+        ]
+        stats = calc_price_stats(entries)
+        assert stats['price_min'] == 12000
+
+
+class TestBuildPromoSummary:
+    def test_no_promo(self):
+        entries = [
+            build_store_entry('Lotte', 10000, 10000),
+            build_store_entry('Superindo', 12000, 12000),
+        ]
+        result = build_promo_summary(entries)
+        assert result['has_promo'] is False
+        assert result['promo_summary'] == ''
+
+    def test_one_store_promo(self):
+        entries = [
+            build_store_entry('Lotte', 10000, 10000, promo='Diskon 20%'),
+            build_store_entry('Superindo', 12000, 12000),
+        ]
+        result = build_promo_summary(entries)
+        assert result['has_promo'] is True
+        assert 'Diskon 20%' in result['promo_summary']
+
+    def test_both_stores_promo(self):
+        entries = [
+            build_store_entry('Lotte', 10000, 5000, promo='Beli 2 Gratis 1'),
+            build_store_entry('Superindo', 12000, 4000, promo='DAPAT 3 pcs'),
+        ]
+        result = build_promo_summary(entries)
+        assert ';' in result['promo_summary']
+
+
+class TestCalcValidUntil:
+    def test_no_dates(self):
+        entries = [build_store_entry('Lotte', 10000, 10000)]
+        assert calc_valid_until(entries) is None
+
+    def test_earliest_date(self):
+        entries = [
+            build_store_entry('Lotte', 10000, 10000, valid_until='2026-05-20'),
+            build_store_entry('Superindo', 12000, 12000, valid_until='2026-05-15'),
+        ]
+        assert calc_valid_until(entries) == '2026-05-15'
+
+    def test_some_none(self):
+        entries = [
+            build_store_entry('Lotte', 10000, 10000, valid_until=None),
+            build_store_entry('Superindo', 12000, 12000, valid_until='2026-05-15'),
+        ]
+        assert calc_valid_until(entries) == '2026-05-15'
+
+
+class TestBuildMatchMethods:
+    def test_empty(self):
+        assert build_match_methods([]) == {}
+
+    def test_counts(self):
+        products = [
+            {'match_method': 'exact', 'match_confidence': 1.0},
+            {'match_method': 'exact', 'match_confidence': 1.0},
+            {'match_method': 'embedding', 'match_confidence': 0.9},
+        ]
+        methods = build_match_methods(products)
+        assert methods['exact'] == 2
+        assert methods['embedding'] == 1
+
+
+class TestBuildStats:
+    def test_all_counts(self):
+        singles = [
+            {'store': 'Lotte', 'key': 'a'},
+            {'store': 'Superindo', 'key': 'b'},
+            {'store': 'Superindo', 'key': 'c'},
+        ]
+        products = [
+            {'key': 'd', 'match_method': 'exact'},
+        ]
+        stats = build_stats(products, singles, total_lotte=10, total_superindo=20)
+        assert stats['matched_across_stores'] == 1
+        assert stats['lotte_only'] == 1
+        assert stats['superindo_only'] == 2
+        assert stats['total_products_lotte'] == 10
+        assert stats['total_products_superindo'] == 20
+
+    def test_flag_review(self):
+        singles = [{'store': 'Lotte', 'key': 'a'}]
+        stats = build_stats([], singles, total_lotte=5, total_superindo=3,
+                            flagged_for_review=2, validation_rejected=1)
+        assert stats['flagged_for_review'] == 2
+        assert stats['validation_rejected'] == 1
 
 
 # ---------------------------------------------------------------------------
