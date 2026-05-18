@@ -358,7 +358,7 @@ class TestGenerateConsolidatedFromHistory:
         result = generate_consolidated_from_history(history, catalog, '2026-05-17')
         assert 'display_hints' in result
         assert result['display_hints']['currency'] == 'IDR'
-        assert result['display_hints']['stores'] == ['Lotte', 'Superindo']
+        assert result['display_hints']['stores'] == {'Lotte': 'Lotte', 'Superindo': 'Superindo'}
 
     def test_stats_computed(self):
         history = {

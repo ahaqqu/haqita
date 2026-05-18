@@ -1,0 +1,1228 @@
+{
+  "catalog": {
+    "golden-farm-french-fries-shoestring-straight-crinkle-cut--golden-farm--1-kg": {
+      "canonical_key": "golden-farm-french-fries-shoestring-straight-crinkle-cut--golden-farm--1-kg",
+      "display_name": "GOLDEN FARM French Fries Shoestring/ Straight/ Crinkle Cut",
+      "brand": "GOLDEN FARM",
+      "unit": "1 kg",
+      "unit_type": "weight",
+      "unit_value_g": 1000.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "GOLDEN FARM French Fries Shoestring/ Straight/ Crinkle Cut",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "ultra-milk-chocolate--ultra-milk--1000-ml": {
+      "canonical_key": "ultra-milk-chocolate--ultra-milk--1000-ml",
+      "display_name": "ULTRA MILK Chocolate",
+      "brand": "ULTRA MILK",
+      "unit": "1000 ml",
+      "unit_type": "volume",
+      "unit_value_g": 1000.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "ULTRA MILK Chocolate",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "montiss-facial-tissue-2ply-1100-s--montiss--1100-s": {
+      "canonical_key": "montiss-facial-tissue-2ply-1100-s--montiss--1100-s",
+      "display_name": "MONTISS Facial Tissue 2Ply 1100's",
+      "brand": "MONTISS",
+      "unit": "1100's",
+      "unit_type": "count",
+      "unit_value_g": null,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "MONTISS Facial Tissue 2Ply 1100's",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "dua-belibis-saus-cabe--dua-belibis--335-ml": {
+      "canonical_key": "dua-belibis-saus-cabe--dua-belibis--335-ml",
+      "display_name": "DUA BELIBIS Saus Cabe",
+      "brand": "DUA BELIBIS",
+      "unit": "335 ml",
+      "unit_type": "volume",
+      "unit_value_g": 335.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "DUA BELIBIS Saus Cabe",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "dettol-body-wash-fresh-cool--dettol--2x800-ml": {
+      "canonical_key": "dettol-body-wash-fresh-cool--dettol--2x800-ml",
+      "display_name": "DETTOL Body Wash Fresh/ Cool",
+      "brand": "DETTOL",
+      "unit": "2x800 ml",
+      "unit_type": "volume",
+      "unit_value_g": 1600.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "DETTOL Body Wash Fresh/ Cool",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "bolster-jen01-20x76-cm-500-g-pillow-jen01-43x58-cm-500-g--only-lotte--set": {
+      "canonical_key": "bolster-jen01-20x76-cm-500-g-pillow-jen01-43x58-cm-500-g--only-lotte--set",
+      "display_name": "Bolster Jen01 20x76 cm 500 g+ Pillow Jen01 43x58 cm 500 g",
+      "brand": "ONLY@LOTTE",
+      "unit": "set",
+      "unit_type": "count",
+      "unit_value_g": null,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "Bolster Jen01 20x76 cm 500 g+ Pillow Jen01 43x58 cm 500 g",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "aice-sandwich-cookies-panda--aice--6x45-ml": {
+      "canonical_key": "aice-sandwich-cookies-panda--aice--6x45-ml",
+      "display_name": "AICE Sandwich Cookies Panda",
+      "brand": "AICE",
+      "unit": "6x45 ml",
+      "unit_type": "volume",
+      "unit_value_g": 270.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "AICE Sandwich Cookies Panda",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "ilgusto-bratwurst-original-keju-blackpepper--ilgusto--360-g": {
+      "canonical_key": "ilgusto-bratwurst-original-keju-blackpepper--ilgusto--360-g",
+      "display_name": "ILGUSTO Bratwurst Original / Keju / Blackpepper",
+      "brand": "ILGUSTO",
+      "unit": "360 g",
+      "unit_type": "weight",
+      "unit_value_g": 360.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "ILGUSTO Bratwurst Original / Keju / Blackpepper",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "green-rebel-padang-rendang-curry-blackpepper-steak-bites--green-rebel--200-g": {
+      "canonical_key": "green-rebel-padang-rendang-curry-blackpepper-steak-bites--green-rebel--200-g",
+      "display_name": "GREEN REBEL Padang Rendang Curry / Blackpepper Steak Bites",
+      "brand": "GREEN REBEL",
+      "unit": "200 g",
+      "unit_type": "weight",
+      "unit_value_g": 200.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "GREEN REBEL Padang Rendang Curry / Blackpepper Steak Bites",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "kanzler-singles-sausage-bakso-all-variants--kanzler--48-g-55-g": {
+      "canonical_key": "kanzler-singles-sausage-bakso-all-variants--kanzler--48-g-55-g",
+      "display_name": "KANZLER Singles Sausage / Bakso All Variants",
+      "brand": "KANZLER",
+      "unit": "48 g - 55 g",
+      "unit_type": "weight",
+      "unit_value_g": 48.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "KANZLER Singles Sausage / Bakso All Variants",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "my-fruit-mix-vegetable-cap-cay--my-fruit--500-g": {
+      "canonical_key": "my-fruit-mix-vegetable-cap-cay--my-fruit--500-g",
+      "display_name": "MY FRUIT Mix Vegetable / Cap Cay",
+      "brand": "MY FRUIT",
+      "unit": "500 g",
+      "unit_type": "weight",
+      "unit_value_g": 500.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "MY FRUIT Mix Vegetable / Cap Cay",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "bango-kecap-manis-refill--bango--950-g": {
+      "canonical_key": "bango-kecap-manis-refill--bango--950-g",
+      "display_name": "BANGO Kecap Manis Refill",
+      "brand": "BANGO",
+      "unit": "950 g",
+      "unit_type": "weight",
+      "unit_value_g": 950.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "BANGO Kecap Manis Refill",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "indomie-goreng-aceh-rendang-ayam-geprek--indomie--85-91-g": {
+      "canonical_key": "indomie-goreng-aceh-rendang-ayam-geprek--indomie--85-91-g",
+      "display_name": "INDOMIE Goreng Aceh/ Rendang/ Ayam Geprek",
+      "brand": "INDOMIE",
+      "unit": "85 - 91 g",
+      "unit_type": "weight",
+      "unit_value_g": 91.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 4,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "INDOMIE Goreng Aceh/ Rendang/ Ayam Geprek",
+          "count": 4,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.8,
+      "manually_verified": false
+    },
+    "sasa-santan-kelapa--sasa--200-ml": {
+      "canonical_key": "sasa-santan-kelapa--sasa--200-ml",
+      "display_name": "SASA Santan Kelapa",
+      "brand": "SASA",
+      "unit": "200 ml",
+      "unit_type": "volume",
+      "unit_value_g": 200.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "SASA Santan Kelapa",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "forvita-margarine-sachet--forvita--200-g": {
+      "canonical_key": "forvita-margarine-sachet--forvita--200-g",
+      "display_name": "FORVITA Margarine Sachet",
+      "brand": "FORVITA",
+      "unit": "200 g",
+      "unit_type": "weight",
+      "unit_value_g": 200.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "FORVITA Margarine Sachet",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "tropical-minyak-goreng-botol--tropical--2-1": {
+      "canonical_key": "tropical-minyak-goreng-botol--tropical--2-1",
+      "display_name": "TROPICAL Minyak Goreng Botol",
+      "brand": "TROPICAL",
+      "unit": "2 1",
+      "unit_type": "unknown",
+      "unit_value_g": null,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "TROPICAL Minyak Goreng Botol",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "garuda-crunchy-potato-sky-mix-seaweed--garuda--50-10-g": {
+      "canonical_key": "garuda-crunchy-potato-sky-mix-seaweed--garuda--50-10-g",
+      "display_name": "GARUDA Crunchy Potato Sky Mix Seaweed",
+      "brand": "GARUDA",
+      "unit": "50+10 g",
+      "unit_type": "weight",
+      "unit_value_g": 10.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "GARUDA Crunchy Potato Sky Mix Seaweed",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "madu-nusantara--madu-nusantara--10x20-g": {
+      "canonical_key": "madu-nusantara--madu-nusantara--10x20-g",
+      "display_name": "MADU NUSANTARA",
+      "brand": "MADU NUSANTARA",
+      "unit": "10x20 g",
+      "unit_type": "weight",
+      "unit_value_g": 200.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "MADU NUSANTARA",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "tong-tji-tematik-all-variants--tong-tji--3x23-6-g": {
+      "canonical_key": "tong-tji-tematik-all-variants--tong-tji--3x23-6-g",
+      "display_name": "TONG TJI Tematik All Variants",
+      "brand": "TONG TJI",
+      "unit": "3x23.6 g",
+      "unit_type": "weight",
+      "unit_value_g": 70.80000000000001,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "TONG TJI Tematik All Variants",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "teh-saga-chrysanthemum-sari-temulawak-all-variants----200-g": {
+      "canonical_key": "teh-saga-chrysanthemum-sari-temulawak-all-variants----200-g",
+      "display_name": "TEH SAGA/CHRYSANTHEMUM/SARI TEMULAWAK All Variants",
+      "brand": null,
+      "unit": "200 g",
+      "unit_type": "weight",
+      "unit_value_g": 200.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "TEH SAGA/CHRYSANTHEMUM/SARI TEMULAWAK All Variants",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.55,
+      "manually_verified": false
+    },
+    "cleo-air-minum--cleo--550-ml": {
+      "canonical_key": "cleo-air-minum--cleo--550-ml",
+      "display_name": "CLEO Air Minum",
+      "brand": "CLEO",
+      "unit": "550 ml",
+      "unit_type": "volume",
+      "unit_value_g": 550.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "CLEO Air Minum",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "cleo-air-minum--cleo--1500-ml": {
+      "canonical_key": "cleo-air-minum--cleo--1500-ml",
+      "display_name": "CLEO Air Minum",
+      "brand": "CLEO",
+      "unit": "1500 ml",
+      "unit_type": "volume",
+      "unit_value_g": 1500.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "CLEO Air Minum",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "alpukat-mentega----100-g": {
+      "canonical_key": "alpukat-mentega----100-g",
+      "display_name": "Alpukat Mentega",
+      "brand": null,
+      "unit": "100 g",
+      "unit_type": "weight",
+      "unit_value_g": 100.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "Alpukat Mentega",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.55,
+      "manually_verified": false
+    },
+    "daging-semur-rendang-rawon-reguler----100-g": {
+      "canonical_key": "daging-semur-rendang-rawon-reguler----100-g",
+      "display_name": "Daging Semur / Rendang / Rawon Reguler",
+      "brand": null,
+      "unit": "100 g",
+      "unit_type": "weight",
+      "unit_value_g": 100.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "Daging Semur / Rendang / Rawon Reguler",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.55,
+      "manually_verified": false
+    },
+    "boneless-dada-paha-tanpa-kulit----100-g": {
+      "canonical_key": "boneless-dada-paha-tanpa-kulit----100-g",
+      "display_name": "Boneless Dada / Paha Tanpa Kulit",
+      "brand": null,
+      "unit": "100 g",
+      "unit_type": "weight",
+      "unit_value_g": 100.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "Boneless Dada / Paha Tanpa Kulit",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.55,
+      "manually_verified": false
+    },
+    "mini-creamy-nanban-wafu-yuzu-sakura-sal-with-chicken-dressing-caesar-japanese-with-chicken-dressing-sweet-onion-baby-cos-with-cleslaw-chicken--highland--100-g-120-g": {
+      "canonical_key": "mini-creamy-nanban-wafu-yuzu-sakura-sal-with-chicken-dressing-caesar-japanese-with-chicken-dressing-sweet-onion-baby-cos-with-cleslaw-chicken--highland--100-g-120-g",
+      "display_name": "Mini Creamy Nanban / Wafu / Yuzu / Sakura Sal With Chicken & Dressing / Caesar / Japanese With Chicken & Dressing Sweet Onion / Baby Cos With Cleslaw & Chicken",
+      "brand": "HIGHLAND",
+      "unit": "100 g / 120 g",
+      "unit_type": "weight",
+      "unit_value_g": 100.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "Mini Creamy Nanban / Wafu / Yuzu / Sakura Sal With Chicken & Dressing / Caesar / Japanese With Chicken & Dressing Sweet Onion / Baby Cos With Cleslaw & Chicken",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "cumi-ring-frozen--22-seafood--500-g": {
+      "canonical_key": "cumi-ring-frozen--22-seafood--500-g",
+      "display_name": "Cumi Ring Frozen",
+      "brand": "22 Seafood",
+      "unit": "500 g",
+      "unit_type": "weight",
+      "unit_value_g": 500.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "Cumi Ring Frozen",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "indofood-bumbu-racik-all-variants--indofood--45-55-g": {
+      "canonical_key": "indofood-bumbu-racik-all-variants--indofood--45-55-g",
+      "display_name": "INDOFOOD Bumbu Racik All Variants",
+      "brand": "Indofood",
+      "unit": "45-55 g",
+      "unit_type": "weight",
+      "unit_value_g": 55.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "INDOFOOD Bumbu Racik All Variants",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "fukumi-beras-porang--fukumi--280-g": {
+      "canonical_key": "fukumi-beras-porang--fukumi--280-g",
+      "display_name": "FUKUMI Beras Porang",
+      "brand": "FUKUMI",
+      "unit": "280 g",
+      "unit_type": "weight",
+      "unit_value_g": 280.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "FUKUMI Beras Porang",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "pronas-corned-beef--pronas--340-g": {
+      "canonical_key": "pronas-corned-beef--pronas--340-g",
+      "display_name": "PRONAS Corned Beef",
+      "brand": "PRONAS",
+      "unit": "340 g",
+      "unit_type": "weight",
+      "unit_value_g": 340.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "PRONAS Corned Beef",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "abc-sardines-all-variants--abc--425-g": {
+      "canonical_key": "abc-sardines-all-variants--abc--425-g",
+      "display_name": "ABC Sardines All Variants",
+      "brand": "ABC",
+      "unit": "425 g",
+      "unit_type": "weight",
+      "unit_value_g": 425.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "ABC Sardines All Variants",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "borges-olive-oil-all-variants--borges--250-ml": {
+      "canonical_key": "borges-olive-oil-all-variants--borges--250-ml",
+      "display_name": "BORGES Olive Oil All Variants",
+      "brand": "BORGES",
+      "unit": "250 ml",
+      "unit_type": "volume",
+      "unit_value_g": 250.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Lotte"
+      ],
+      "name_variants": [
+        {
+          "name": "BORGES Olive Oil All Variants",
+          "count": 2,
+          "store": "Lotte"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "ultra-low-fat-susu-uht-plain-chocolate-tpk-250ml--ultra-milk--250ml": {
+      "canonical_key": "ultra-low-fat-susu-uht-plain-chocolate-tpk-250ml--ultra-milk--250ml",
+      "display_name": "Ultra Low Fat Susu UHT Plain, Chocolate TPK 250ml",
+      "brand": "Ultra Milk",
+      "unit": "250ml",
+      "unit_type": "volume",
+      "unit_value_g": 250.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Ultra Low Fat Susu UHT Plain, Chocolate TPK 250ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "indomilk-susu-uht-kids-tpk-115ml-karton-isi-40-tpk--indomilk--115ml": {
+      "canonical_key": "indomilk-susu-uht-kids-tpk-115ml-karton-isi-40-tpk--indomilk--115ml",
+      "display_name": "Indomilk Susu UHT Kids TPK 115ml, Karton isi : 40 TPK",
+      "brand": "Indomilk",
+      "unit": "115ml",
+      "unit_type": "volume",
+      "unit_value_g": 115.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Indomilk Susu UHT Kids TPK 115ml, Karton isi : 40 TPK",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "cimory-susu-uht-tpk-250ml--cimory--250ml": {
+      "canonical_key": "cimory-susu-uht-tpk-250ml--cimory--250ml",
+      "display_name": "Cimory Susu UHT TPK 250ml",
+      "brand": "Cimory",
+      "unit": "250ml",
+      "unit_type": "volume",
+      "unit_value_g": 250.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Cimory Susu UHT TPK 250ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "ultra-susu-uht-stroberi-chocolate-mocca-tpk-250ml--ultra-milk--250ml": {
+      "canonical_key": "ultra-susu-uht-stroberi-chocolate-mocca-tpk-250ml--ultra-milk--250ml",
+      "display_name": "Ultra Susu UHT Stroberi, Chocolate & Mocca TPK 250ml",
+      "brand": "Ultra Milk",
+      "unit": "250ml",
+      "unit_type": "volume",
+      "unit_value_g": 250.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Ultra Susu UHT Stroberi, Chocolate & Mocca TPK 250ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "bear-brand-susu-steril-klg-189ml--nestle--189ml": {
+      "canonical_key": "bear-brand-susu-steril-klg-189ml--nestle--189ml",
+      "display_name": "Bear Brand Susu Steril KLG 189ml",
+      "brand": "Nestle",
+      "unit": "189ml",
+      "unit_type": "volume",
+      "unit_value_g": 189.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Bear Brand Susu Steril KLG 189ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "vidoran-xmart1-3-5-susu-pertumbuhan-nutriplex-vanila-madu-box-700gr--vidoran--700gr": {
+      "canonical_key": "vidoran-xmart1-3-5-susu-pertumbuhan-nutriplex-vanila-madu-box-700gr--vidoran--700gr",
+      "display_name": "Vidoran Xmart1+, 3+, 5+ Susu Pertumbuhan Nutriplex Vanila, Madu Box 700gr",
+      "brand": "vidoran",
+      "unit": "700gr",
+      "unit_type": "weight",
+      "unit_value_g": 700.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Vidoran Xmart1+, 3+, 5+ Susu Pertumbuhan Nutriplex Vanila, Madu Box 700gr",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "milo-minuman-serbuk-coklat-3-in-1-bag-990gr--milo--990gr": {
+      "canonical_key": "milo-minuman-serbuk-coklat-3-in-1-bag-990gr--milo--990gr",
+      "display_name": "Milo Minuman Serbuk Coklat 3 in 1 Bag 990gr",
+      "brand": "Milo",
+      "unit": "990gr",
+      "unit_type": "weight",
+      "unit_value_g": 990.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Milo Minuman Serbuk Coklat 3 in 1 Bag 990gr",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "sania-royale-soya-oil-btl-1000ml--sania--1000ml": {
+      "canonical_key": "sania-royale-soya-oil-btl-1000ml--sania--1000ml",
+      "display_name": "Sania Royale Soya Oil BTL 1000ml",
+      "brand": "Sania",
+      "unit": "1000ml",
+      "unit_type": "volume",
+      "unit_value_g": 1000.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Sania Royale Soya Oil BTL 1000ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "nescafe-coffee-ice-roast-pck-10x2gr--nescafe--10x2gr": {
+      "canonical_key": "nescafe-coffee-ice-roast-pck-10x2gr--nescafe--10x2gr",
+      "display_name": "Nescafe Coffee Ice Roast PCK 10x2gr",
+      "brand": "Nescafe",
+      "unit": "10x2gr",
+      "unit_type": "weight",
+      "unit_value_g": 20.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Nescafe Coffee Ice Roast PCK 10x2gr",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "cussons-baby-hair-lotion-btl-100ml--cussons--100ml": {
+      "canonical_key": "cussons-baby-hair-lotion-btl-100ml--cussons--100ml",
+      "display_name": "Cussons Baby Hair Lotion BTL 100ml",
+      "brand": "Cussons",
+      "unit": "100ml",
+      "unit_type": "volume",
+      "unit_value_g": 100.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Cussons Baby Hair Lotion BTL 100ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "nivea-deodorant-spray-for-men-deodorant-spray-klg-150ml-jenis-tertentu--nivea--150ml": {
+      "canonical_key": "nivea-deodorant-spray-for-men-deodorant-spray-klg-150ml-jenis-tertentu--nivea--150ml",
+      "display_name": "Nivea Deodorant Spray For Men, Deodorant Spray KLG 150ml (Jenis Tertentu)",
+      "brand": "Nivea",
+      "unit": "150ml",
+      "unit_type": "volume",
+      "unit_value_g": 150.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Nivea Deodorant Spray For Men, Deodorant Spray KLG 150ml (Jenis Tertentu)",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "enzim-pasta-gigi-anak-anak-putih-pasta-gigi-anak-anak-merah-tub-63gr--enzim--63gr": {
+      "canonical_key": "enzim-pasta-gigi-anak-anak-putih-pasta-gigi-anak-anak-merah-tub-63gr--enzim--63gr",
+      "display_name": "Enzim Pasta Gigi Anak-Anak Putih, Pasta Gigi Anak-Anak Merah TUB 63gr",
+      "brand": "enzim",
+      "unit": "63gr",
+      "unit_type": "weight",
+      "unit_value_g": 63.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Enzim Pasta Gigi Anak-Anak Putih, Pasta Gigi Anak-Anak Merah TUB 63gr",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "sensodyne-pasta-gigi-deep-clean-tub-100gr--sensodyne--100gr": {
+      "canonical_key": "sensodyne-pasta-gigi-deep-clean-tub-100gr--sensodyne--100gr",
+      "display_name": "Sensodyne Pasta Gigi Deep Clean TUB 100gr",
+      "brand": "Sensodyne",
+      "unit": "100gr",
+      "unit_type": "weight",
+      "unit_value_g": 100.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Sensodyne Pasta Gigi Deep Clean TUB 100gr",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "selection-facial-cotton-pck-75gr--selection--75gr": {
+      "canonical_key": "selection-facial-cotton-pck-75gr--selection--75gr",
+      "display_name": "Selection Facial Cotton PCK 75gr",
+      "brand": "Selection",
+      "unit": "75gr",
+      "unit_type": "weight",
+      "unit_value_g": 75.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Selection Facial Cotton PCK 75gr",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "jf-bar-soap-dermamed-box-90gr--jf--90gr": {
+      "canonical_key": "jf-bar-soap-dermamed-box-90gr--jf--90gr",
+      "display_name": "JF Bar Soap Dermamed Box 90gr",
+      "brand": "JF",
+      "unit": "90gr",
+      "unit_type": "weight",
+      "unit_value_g": 90.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "JF Bar Soap Dermamed Box 90gr",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "purbasari-lulur-mandi-pot-235gr--purbasari--235gr": {
+      "canonical_key": "purbasari-lulur-mandi-pot-235gr--purbasari--235gr",
+      "display_name": "Purbasari Lulur Mandi POT 235gr",
+      "brand": "Purbasari",
+      "unit": "235gr",
+      "unit_type": "weight",
+      "unit_value_g": 235.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Purbasari Lulur Mandi POT 235gr",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "enchanteur-anti-perspirant-roll-on-romantic-charming-btl-40ml--enchanteur--40ml": {
+      "canonical_key": "enchanteur-anti-perspirant-roll-on-romantic-charming-btl-40ml--enchanteur--40ml",
+      "display_name": "Enchanteur Anti Perspirant Roll On Romantic & Charming BTL 40ml",
+      "brand": "Enchanteur",
+      "unit": "40ml",
+      "unit_type": "volume",
+      "unit_value_g": 40.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Enchanteur Anti Perspirant Roll On Romantic & Charming BTL 40ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "oral-b-sikat-gigi-cross-action-sikat-gigi-cross-action-3-s-deep-clean-pck--oral-b--3-s": {
+      "canonical_key": "oral-b-sikat-gigi-cross-action-sikat-gigi-cross-action-3-s-deep-clean-pck--oral-b--3-s",
+      "display_name": "Oral B Sikat Gigi Cross Action, Sikat Gigi Cross Action 3'S Deep Clean PCK",
+      "brand": "Oral B",
+      "unit": "3's",
+      "unit_type": "count",
+      "unit_value_g": null,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Oral B Sikat Gigi Cross Action, Sikat Gigi Cross Action 3'S Deep Clean PCK",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "rexona-whole-body-deo-lotion-frozen-english-pear-tub-50ml-klg-150ml--rexona--50ml-150ml": {
+      "canonical_key": "rexona-whole-body-deo-lotion-frozen-english-pear-tub-50ml-klg-150ml--rexona--50ml-150ml",
+      "display_name": "Rexona Whole Body Deo Lotion Frozen English Pear TUB 50ml, KLG 150ml",
+      "brand": "Rexona",
+      "unit": "50ml, 150ml",
+      "unit_type": "volume",
+      "unit_value_g": 50.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Rexona Whole Body Deo Lotion Frozen English Pear TUB 50ml, KLG 150ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "rexona-whole-body-deo-men-lotion-arctic-sea-tub-50ml-klg-150ml--rexona--50ml-150ml": {
+      "canonical_key": "rexona-whole-body-deo-men-lotion-arctic-sea-tub-50ml-klg-150ml--rexona--50ml-150ml",
+      "display_name": "Rexona Whole Body Deo Men Lotion Arctic Sea TUB 50ml, KLG 150ml",
+      "brand": "Rexona",
+      "unit": "50ml, 150ml",
+      "unit_type": "volume",
+      "unit_value_g": 50.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "Rexona Whole Body Deo Men Lotion Arctic Sea TUB 50ml, KLG 150ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    },
+    "l-oreal-elseve-shampoo-glycolic-gloss-btl-200ml-conditioner-glycolic-gloss-tub-175ml--l-oreal--200ml-175ml": {
+      "canonical_key": "l-oreal-elseve-shampoo-glycolic-gloss-btl-200ml-conditioner-glycolic-gloss-tub-175ml--l-oreal--200ml-175ml",
+      "display_name": "L'Oreal Elseve Shampoo Glycolic Gloss BTL 200ml, Conditioner Glycolic Gloss TUB 175ml",
+      "brand": "L'Oreal",
+      "unit": "200ml, 175ml",
+      "unit_type": "volume",
+      "unit_value_g": 200.0,
+      "first_seen": "2026-05-17",
+      "last_seen": "2026-05-18",
+      "appearance_count": 2,
+      "stores_found": [
+        "Superindo"
+      ],
+      "name_variants": [
+        {
+          "name": "L'Oreal Elseve Shampoo Glycolic Gloss BTL 200ml, Conditioner Glycolic Gloss TUB 175ml",
+          "count": 2,
+          "store": "Superindo"
+        }
+      ],
+      "confidence": 0.65,
+      "manually_verified": false
+    }
+  },
+  "metadata": {
+    "total_entries": 53,
+    "last_updated": "2026-05-18T06:25:31.811003",
+    "schema_version": "1.1"
+  }
+}

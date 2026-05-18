@@ -18,8 +18,8 @@ class PromoResult:
 
 # Ordered patterns — first match wins.
 _PATTERNS = [
-    # "Beli 2 Gratis 1" / "Beli 3 Gratis 1"
-    (r'beli\s+(\d+)\s*(?:gratis|free)\s+(\d+)', 'get_free'),
+    # "Beli 2 Gratis 1" / "Beli 3 Gratis 1" / "Buy 1 Get 1"
+    (r'(?:beli|buy)\s+(\d+)\s*(?:gratis|free|get)\s+(\d+)', 'get_free'),
     # "DAPAT 5 pcs" / "dapat 3 buah" / "2 Pack"
     (r'(?:dapat|get)\s+(\d+)\s*(?:pcs|buah|pack)?', 'bundle_buy'),
     # "2/Rp 10.000" or "3 pcs / Rp15.000"

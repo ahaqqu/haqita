@@ -71,11 +71,11 @@ def save_ocr_state(store: str, state: dict) -> None:
     )
 
 
-def discover_images(scrape_dir: Path, state: dict, specific: str | None = None) -> tuple[list[Path], list[str]]:
+def discover_images(scrape_dir: Path, state: dict, specific: str | None = None) -> tuple[list[Path], list[str], int]:
     """
     Find images to process. Skips already-OCR'd images.
 
-    Returns: (new_images_to_process, already_processed_filenames)
+    Returns: (new_images_to_process, already_processed_filenames, total_count)
     """
     processed = set(state.get('processed', []))
 
@@ -83,18 +83,18 @@ def discover_images(scrape_dir: Path, state: dict, specific: str | None = None) 
         p = scrape_dir / specific
         if not p.exists():
             print(f"[!!] Image not found: {p}")
-            return [], []
+            return [], [], 0
         if p.name in processed:
             print(f"[!] Image '{p.name}' was already OCR'd. Processing anyway (specific request).")
-            return [p], []
-        return [p], []
+            return [p], [], 1
+        return [p], [], 1
 
     exts = {'.jpg', '.jpeg', '.png', '.webp'}
-    all_images = sorted(p for p in scrape_dir.iterdir() if p.suffix.lower() in exts)
+    all_images = sorted(p for p in scrape_dir.rglob('*') if p.is_file() and p.suffix.lower() in exts)
 
     new = [p for p in all_images if p.name not in processed]
     old = [p.name for p in all_images if p.name in processed]
-    return new, old
+    return new, old, len(all_images)
 
 
 def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None = None, dry_run: bool = False) -> None:
@@ -116,9 +116,9 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
         print("    Run Stage 1 (Scrape) first.")
         return
 
-    # Load state to skip already-processed images
+# Load state to skip already-processed images
     state = load_ocr_state(store)
-    new_images, processed_images = discover_images(scrape_dir, state, specific)
+    new_images, processed_images, total_images = discover_images(scrape_dir, state, specific)
 
     if specific:
         # Specific image: process it regardless of state
@@ -134,8 +134,13 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
         if specific:
             print(f"[!!] Image not found: {specific}")
         else:
-            print("[*] No new images to OCR. All images already processed.")
-            print("    Run Stage 1 (Scrape) to download new brochures first.")
+            if processed_count > 0:
+                print(f"[*] No new images to OCR. All {processed_count} image(s) already processed.")
+            elif total_images > 0:
+                print(f"[*] No new images to OCR. All {total_images} image(s) already processed.")
+            else:
+                print("[*] No brochure images found in scrape directory.")
+                print("    Run Scrape to download new brochures.")
         return
 
     print(f"[*] Found {len(images_to_process)} new image(s) to process\n")

@@ -24,14 +24,16 @@ echo.
  echo  [3] Stage 2: OCR
  echo  [4] Stage 3: Consolidation
  echo  [5] Stage 4: Publish HTML
- echo  [6] Tests
- echo  [7] Health check
+ echo  [6] Start HTTP server
+ echo  [7] Tests
+ echo  [8] Health check
  echo  [0] Exit
 echo.
 
 set /p choice="Your choice: "
 
 if "%choice%"=="1" goto FULL_PIPELINE_MENU
+if "%choice%"=="6" goto HTTP_SERVER
 if "%choice%"=="2" goto STAGE_SCRAPE
 if "%choice%"=="3" goto STAGE_OCR
 if "%choice%"=="4" goto STAGE_CONSOLIDATION
@@ -54,21 +56,19 @@ echo ========================================
 echo  Full Pipeline Options
 echo ========================================
 echo.
-echo  [1] Run normally
-echo  [2] Dry-run (preview, no changes)
-echo  [3] Verbose (detailed log file)
-echo  [4] Verbose + Dry-run
-echo  [5] Resume from last failed stage
+echo  [1] Verbose
+echo  [2] Non-verbose
+echo  [3] Dry-run + verbose
+echo  [4] Resume from last failed stage
 echo  [0] Back
 echo.
 
 set /p fp_choice="Your choice: "
 
-if "%fp_choice%"=="1" goto FULL_PIPELINE
-if "%fp_choice%"=="2" goto FULL_PIPELINE_DRYRUN
-if "%fp_choice%"=="3" goto FULL_PIPELINE_VERBOSE
-if "%fp_choice%"=="4" goto FULL_PIPELINE_VERBOSE_DRYRUN
-if "%fp_choice%"=="5" goto FULL_PIPELINE_RESUME
+if "%fp_choice%"=="1" goto FULL_PIPELINE_VERBOSE
+if "%fp_choice%"=="2" goto FULL_PIPELINE
+if "%fp_choice%"=="3" goto FULL_PIPELINE_VERBOSE_DRYRUN
+if "%fp_choice%"=="4" goto FULL_PIPELINE_RESUME
 if "%fp_choice%"=="0" goto MENU
 
 echo Invalid choice. Press any key to try again...
@@ -93,33 +93,11 @@ echo.
 if "!RUN_MODE!"=="docker" (
     docker compose -f docker\docker-compose.yml run --build pipeline
 ) else (
-    python scripts/orchestrator.py --full
+    python scripts/orchestrator.py --full --serve
 )
 
 echo ========================================
 echo  Pipeline complete.
-echo ========================================
-echo.
-pause
-goto MENU
-
-:FULL_PIPELINE_DRYRUN
-cls
-echo ========================================
-echo  Running Full Pipeline — Dry-run
-echo ========================================
-echo.
-echo  Mode: !RUN_MODE!
-echo  No changes will be made to the database.
-echo.
-echo  Press any key to start, or Ctrl+C to cancel...
-pause >nul
-echo.
-
-python scripts/orchestrator.py --full --dry-run
-
-echo ========================================
-echo  Dry-run complete.
 echo ========================================
 echo.
 pause
@@ -132,7 +110,7 @@ echo  Running Full Pipeline — Verbose
 echo ========================================
 echo.
 echo  Mode: !RUN_MODE!
-echo  Detailed log will be written to database/logs/
+echo  Detailed log will be written to output/logs/
 echo.
 echo  Press any key to start, or Ctrl+C to cancel...
 pause >nul
@@ -150,11 +128,11 @@ goto MENU
 :FULL_PIPELINE_VERBOSE_DRYRUN
 cls
 echo ========================================
-echo  Running Full Pipeline — Verbose + Dry-run
+echo  Running Full Pipeline — Dry-run + verbose
 echo ========================================
 echo.
 echo  Mode: !RUN_MODE!
-echo  Detailed log will be written to database/logs/
+echo  Detailed log will be written to output/logs/
 echo  No changes will be made to the database.
 echo.
 echo  Press any key to start, or Ctrl+C to cancel...
@@ -660,6 +638,24 @@ echo ========================================
 echo.
 python scripts/health_check.py --verbose
 echo.
+pause
+goto MENU
+
+:: ============================================================
+:: HTTP Server
+:: ============================================================
+
+:HTTP_SERVER
+cls
+echo ========================================
+echo  HTTP Server
+echo ========================================
+echo  Open http://localhost:8080/index.html
+echo  Press Ctrl+C to stop
+echo ========================================
+echo.
+cd /d "%~dp0"
+python -m http.server 8080
 pause
 goto MENU
 

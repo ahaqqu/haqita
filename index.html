@@ -131,6 +131,8 @@ header {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
   padding: 0.4rem 0.9rem;
   border-radius: 20px;
   border: 1px solid var(--gray-100);
@@ -239,6 +241,9 @@ main#product-grid {
 
 .store-name { flex: 1; color: var(--gray-700); }
 .store-price { font-family: 'DM Mono', monospace; font-size: 0.9rem; }
+.original-price { text-decoration: line-through; color: var(--gray-400); font-size: 0.8rem; margin-right: 4px; }
+.promo-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: #e8f5e9; color: #2e7d32; font-size: 0.65rem; font-weight: 600; border-radius: 3px; vertical-align: middle; }
+.promo-detail { margin-top: 4px; font-size: 0.75rem; color: #2e7d32; font-weight: 500; }
 
 .savings-pill {
   display: inline-block;
@@ -258,10 +263,19 @@ main#product-grid {
 }
 
 .single-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.78rem;
   color: var(--gray-500);
-  font-style: italic;
   margin-top: 0.3rem;
+}
+.filter-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
 }
 
 .low-conf-badge {
@@ -334,31 +348,6 @@ main#product-grid {
   color: var(--gray-500);
   text-align: center;
   padding: 1.5rem;
-}
-
-#load-more {
-  display: none;
-  text-align: center;
-  padding: 1rem;
-  max-width: 1200px;
-  margin: 0 auto 2rem;
-}
-
-#load-more button {
-  padding: 0.6rem 1.5rem;
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  background: white;
-  font-family: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-  color: var(--gray-700);
-  transition: all 0.15s;
-}
-
-#load-more button:hover {
-  border-color: var(--green-mid);
-  color: var(--green);
 }
 
 footer {
@@ -474,8 +463,28 @@ footer {
   font-size: 0.8rem;
 }
 
+.sample-banner {
+  background: var(--amber-light);
+  color: var(--amber);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  margin: 0.5rem 1.5rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  display: none;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.sample-banner::before {
+  content: "⚠";
+  margin-right: 0.5rem;
+}
+
 @media print {
-  #search-bar, #controls, #load-more, .freshness-bar { display: none !important; }
+  #search-bar, #controls, #load-more-sentinel, .freshness-bar { display: none !important; }
   #product-grid { display: block !important; }
   .product-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
   .product-card:nth-child(10n) { page-break-after: always; }
@@ -503,12 +512,12 @@ footer {
 <div id="controls">
   <div class="filter-chips">
     <button class="chip active" data-filter="all">All</button>
-    <button class="chip" data-filter="lotte">Lotte</button>
-    <button class="chip" data-filter="superindo">Superindo</button>
+    <button class="chip" data-filter="lotte"><span class="filter-dot" style="background:#0057A8"></span> Lotte</button>
+    <button class="chip" data-filter="superindo"><span class="filter-dot" style="background:#E8211D"></span> Superindo</button>
   </div>
   <select class="sort-select" id="sort-select">
+    <option value="name" selected>Sort: Name</option>
     <option value="cheapest">Sort: Cheapest</option>
-    <option value="name">Sort: Name</option>
     <option value="savings">Sort: Savings</option>
     <option value="expiry">Sort: Expiry</option>
   </select>
@@ -517,6 +526,10 @@ footer {
 <div class="warning-banner" id="warning-banner">
   <span id="warning-text"></span>
   <button id="warning-retry">Retry</button>
+</div>
+
+<div class="sample-banner" id="sample-banner">
+  Displaying sample data for development/testing. <a href="#" onclick="location.reload()" style="color:var(--amber);margin-left:0.5rem">Refresh to load real data</a>
 </div>
 
 <main id="product-grid"></main>
@@ -549,9 +562,7 @@ footer {
   </div>
 </div>
 
-<div id="load-more">
-  <button id="load-more-btn">Load More</button>
-</div>
+<div id="load-more-sentinel" style="height: 1px;"></div>
 
 <footer id="footer">
   <div class="footer-inner">
@@ -565,7 +576,7 @@ let consolidatedData = null;
 let priceHistoryData = null;
 let displayHints = null;
 let currentFilter = 'all';
-let currentSort = 'cheapest';
+let currentSort = 'name';
 let currentSearch = '';
 let currentPage = 1;
 const PAGE_SIZE = 20;
@@ -575,7 +586,7 @@ function getDefaultDisplayHints() {
   return {
     currency: "Rp",
     locale: "en-ID",
-    stores: { lotte: "Lotte Mart", superindo: "Superindo" },
+    stores: { lotte: "Lotte", superindo: "Superindo" },
     store_colors: { lotte: "#0057A8", superindo: "#E8211D" }
   };
 }
@@ -592,11 +603,39 @@ function formatDate(isoDate) {
   return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
 }
 
+function getRelativeDateText(isoDate) {
+  if (!isoDate) return "";
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(isoDate);
+  target.setHours(0, 0, 0, 0);
+  const diffTime = target - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) return "Expired";
+  if (diffDays === 0) return "Valid today";
+  if (diffDays === 1) return "Valid for 1 day";
+  return `Valid for ${diffDays} days`;
+}
+
 function retryFetch(url, retries = 3, delay = 1000) {
   return fetch(url).catch(err => {
     if (retries <= 0) throw err;
     return new Promise(resolve => setTimeout(resolve, delay)).then(() => retryFetch(url, retries - 1, delay * 2));
   });
+}
+
+async function tryLoadWithFallback(basePath, fallbackPath, filename) {
+  const tryPath = (path) => retryFetch(`${path}/${filename}`);
+  try {
+    const resp = await tryPath(basePath);
+    if (resp.ok) return { data: await resp.json(), from: basePath, isSample: false };
+  } catch (e) {}
+  try {
+    const resp = await tryPath(fallbackPath);
+    if (resp.ok) return { data: await resp.json(), from: fallbackPath, isSample: true };
+  } catch (e) {}
+  return { data: null, from: null, isSample: false };
 }
 
 function validateData(data, type) {
@@ -629,13 +668,14 @@ function renderWarning(msg) {
 }
 
 function normalizeProduct(product) {
+  const key = product.key || product.product_key || "";
   if (product.stores && Array.isArray(product.stores)) {
-    return { ...product, stores: product.stores };
+    return { ...product, product_key: key, stores: product.stores };
   }
   if (product.store) {
-    return { ...product, stores: [{ store: product.store, price: product.price, effective_unit_price: product.effective_unit_price, promo: product.promo, valid_until: product.valid_until, image_path: product.image_path }] };
+    return { ...product, product_key: key, stores: [{ store: product.store, price: product.price, effective_unit_price: product.effective_unit_price, promo: product.promo, valid_until: product.valid_until, image_path: product.image_path }] };
   }
-  return { ...product, stores: [] };
+  return { ...product, product_key: key, stores: [] };
 }
 
 function isProductInStore(product, store) {
@@ -697,22 +737,27 @@ function buildStoreRows(product) {
     const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "#c0bfb8";
     const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
     const promoText = s.promo ? ` (${s.promo})` : "";
+    const displayPrice = s.effective_unit_price && s.effective_unit_price < s.price
+      ? s.effective_unit_price
+      : s.price;
     return `<div class="store-row">
       <span class="store-dot" style="background:${color}"></span>
       <span class="store-name">${storeName}</span>
-      <span class="store-price">${formatIDR(s.price)}${promoText}</span>
+      <span class="store-price">${formatIDR(displayPrice)}${promoText}</span>
     </div>`;
   }).join("");
 }
 
 function buildMatchedCard(product) {
+  const normalized = normalizeProduct(product);
+  const key = normalized.product_key || "";
   const cheapestStore = product.cheapest_store || "";
   const storeKey = cheapestStore.toLowerCase().replace(/\s+/g, "");
   const savingsText = product.savings_pct ? `Save ${product.savings_pct}% vs ${product.most_expensive_store || "other"}` : "";
-  const validText = product.valid_until ? `Valid until ${formatDate(product.valid_until)}` : "";
+  const validText = product.valid_until ? getRelativeDateText(product.valid_until) : "";
   const confBadge = product.match_confidence != null && product.match_confidence < 0.8
     ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
-  return `<div class="product-card" data-key="${product.product_key}" role="button" tabindex="0">
+  return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
     <div class="card-header">
       <div>
         <div class="product-name">${product.name || "Unknown"}</div>
@@ -724,57 +769,62 @@ function buildMatchedCard(product) {
     ${savingsText ? `<div class="savings-pill">${savingsText}</div>` : ""}
     ${validText ? `<div class="valid-until">${validText}</div>` : ""}
     ${confBadge}
-    <div class="detail-panel" id="detail-${product.product_key}"></div>
+    <div class="detail-panel" id="detail-${key}"></div>
   </div>`;
 }
 
 function buildSingleCard(product) {
   const normalized = normalizeProduct(product);
+  const key = normalized.product_key || "";
   const s = normalized.stores[0] || {};
   const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
   const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
   const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
-  const validText = product.valid_until ? `Valid until ${formatDate(product.valid_until)}` : "";
+  const validText = product.valid_until ? getRelativeDateText(product.valid_until) : "";
   const confBadge = product.match_confidence != null && product.match_confidence < 0.8
     ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
-  return `<div class="product-card" data-key="${product.product_key}" role="button" tabindex="0">
+  const displayPrice = s.effective_unit_price && s.effective_unit_price < s.price
+    ? s.effective_unit_price
+    : s.price;
+  const hasPromo = s.effective_unit_price && s.effective_unit_price < s.price;
+  const promoDetail = hasPromo && s.promo ? `<div class="promo-detail">${s.promo}</div>` : "";
+  return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
     <div class="card-header">
       <div>
         <div class="product-name">${product.name || "Unknown"}</div>
         <div class="product-unit">${product.unit || ""}</div>
       </div>
-      <div class="price-tag">${formatIDR(s.price || product.price_min)}</div>
+      <div class="price-tag">${formatIDR(displayPrice)}</div>
     </div>
-    <div class="store-rows">
-      <div class="store-row">
-        <span class="store-dot" style="background:${color}"></span>
-        <span class="store-name">${storeName}</span>
-        <span class="store-price">${formatIDR(s.price || product.price_min)}</span>
-      </div>
-    </div>
-    <div class="single-badge">(Only available at ${storeName})</div>
+    ${promoDetail}
+    <div class="single-badge"><span class="store-dot" style="background:${color}"></span> ${storeName}</div>
     ${validText ? `<div class="valid-until">${validText}</div>` : ""}
     ${confBadge}
-    <div class="detail-panel" id="detail-${product.product_key}"></div>
+    <div class="detail-panel" id="detail-${key}"></div>
   </div>`;
 }
 
 function buildDetailPanel(product) {
   const normalized = normalizeProduct(product);
+  const key = normalized.product_key || "";
   const cheapestStore = (product.cheapest_store || "").toLowerCase().replace(/\s+/g, "");
   let storeRows = normalized.stores.map(s => {
     const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
     const isCheapest = storeKey === cheapestStore;
     const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
     const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
-    const unitPrice = s.effective_unit_price ? ` · ${formatIDR(s.effective_unit_price)}/pc` : "";
-    const brochureLink = s.image_path ? `<a class="brochure-link" href="${s.image_path}" target="_blank">View Brochure</a>` : "";
+    const hasPromo = s.effective_unit_price && s.effective_unit_price < s.price;
+    const displayPrice = hasPromo ? s.effective_unit_price : s.price;
+    const originalPrice = hasPromo ? `<span class="original-price">${formatIDR(s.price)}</span> ` : "";
+    const unitPrice = s.effective_unit_price && s.effective_unit_price !== displayPrice
+      ? ` · ${formatIDR(s.effective_unit_price)}/pc` : "";
+    const brochureLink = s.image_path ? `<a class="brochure-link" href="${s.image_path}" target="_blank" onclick="event.stopPropagation(); fetch(this.href).then(r=>{if(!r.ok)this.style.display='none'}).catch(()=>this.style.display='none')">View Brochure</a>` : "";
     const diff = product.price_gap && !isCheapest ? ` +${formatIDR(product.price_gap)}` : "";
     const cheapestBadge = isCheapest ? ` ✓ Cheapest` : "";
     return `<div class="detail-store-row ${isCheapest ? 'cheapest' : ''}">
       <span class="store-dot" style="background:${color}"></span>
       <span class="store-name">${storeName}${cheapestBadge}</span>
-      <span class="store-price">${formatIDR(s.price)}${unitPrice}${diff}</span>
+      <span class="store-price">${originalPrice}${formatIDR(displayPrice)}${unitPrice}${diff}</span>
       ${brochureLink}
     </div>`;
   }).join("");
@@ -790,7 +840,7 @@ function buildDetailPanel(product) {
   <div class="detail-section">
     <h4>Price Trend</h4>
     <div class="chart-container">
-      <canvas id="chart-${product.product_key}"></canvas>
+      <canvas id="chart-${key}"></canvas>
     </div>
   </div>
   ${confText ? `<div class="detail-section"><p style="font-size:0.82rem;color:var(--gray-500)">${confText}</p></div>` : ""}`;
@@ -814,13 +864,21 @@ function drawBarChart(canvas, productKey, history) {
   const padding = { top: 10, right: 10, bottom: 25, left: 10 };
   const chartW = w - padding.left - padding.right;
   const chartH = h - padding.top - padding.bottom;
-  const prices = snapshots.map(s => s.price || 0);
+  const prices = snapshots.map(s => {
+    const effective = s.effective_unit_price && s.effective_unit_price < s.price
+      ? s.effective_unit_price
+      : s.price;
+    return effective || 0;
+  });
   const maxPrice = Math.max(...prices);
   const barWidth = Math.min(30, (chartW / snapshots.length) * 0.6);
   const gap = (chartW - barWidth * snapshots.length) / (snapshots.length + 1);
   ctx.fillStyle = "var(--green-mid)";
   snapshots.forEach((s, i) => {
-    const barH = (s.price / maxPrice) * chartH;
+    const effective = s.effective_unit_price && s.effective_unit_price < s.price
+      ? s.effective_unit_price
+      : s.price;
+    const barH = (effective / maxPrice) * chartH;
     const x = padding.left + gap + i * (barWidth + gap);
     const y = padding.top + chartH - barH;
     ctx.fillStyle = "#4a9e6a";
@@ -859,7 +917,7 @@ function expandCard(key) {
   } else {
     card.classList.add("expanded");
     const allProducts = getAllProducts();
-    const product = allProducts.find(p => p.product_key === key);
+    const product = allProducts.find(p => (p.key || p.product_key) === key);
     if (product) {
       const detail = document.getElementById(`detail-${key}`);
       if (detail) {
@@ -914,11 +972,11 @@ function renderCards() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); expandCard(card.dataset.key); }
     });
   });
-  const loadMore = document.getElementById("load-more");
+  const sentinel = document.getElementById("load-more-sentinel");
   if (end < filtered.length) {
-    loadMore.style.display = "block";
+    sentinel.style.display = "block";
   } else {
-    loadMore.style.display = "none";
+    sentinel.style.display = "none";
   }
   renderFooterStats(filtered);
 }
@@ -980,34 +1038,68 @@ function startAutoRefresh(intervalMs = 300000) {
 async function loadData(isRefresh = false) {
   if (!isRefresh) renderLoading();
   document.getElementById("warning-banner").style.display = "none";
+  document.getElementById("sample-banner").style.display = "none";
   try {
-    const [consResult, histResult] = await Promise.allSettled([
-      retryFetch("output/html/active_promo.json"),
-      retryFetch("output/html/price_history.json")
-    ]);
+    const OUTPUT_PATH = "output/html";
+    const SAMPLE_PATH = "data/sample/html";
+    const consLoad = await tryLoadWithFallback(OUTPUT_PATH, SAMPLE_PATH, "active_promo.json");
+    const histLoad = await tryLoadWithFallback(OUTPUT_PATH, SAMPLE_PATH, "price_history.json");
     let consOk = false, histOk = false;
-    if (consResult.status === "fulfilled" && consResult.value.ok) {
-      const data = await consResult.value.json();
-      const v = validateData(data, "consolidated");
-      if (v.valid) { consolidatedData = data; consOk = true; }
+    if (consLoad.data) {
+      const v = validateData(consLoad.data, "consolidated");
+      if (v.valid) { consolidatedData = consLoad.data; consOk = true; }
       else { renderError(v.error); return; }
     }
-    if (histResult.status === "fulfilled" && histResult.value.ok) {
-      priceHistoryData = await histResult.value.json();
+    if (histLoad.data) {
+      priceHistoryData = histLoad.data;
       histOk = true;
     }
     if (!consOk && !histOk) {
-      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files.");
+      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
       return;
     }
-    if (!consOk) {
+    if (!consOk && histOk) {
       renderWarning("Consolidated data unavailable. Showing price history only.");
+      consolidatedData = { products: [], singles: [], display_hints: getDefaultDisplayHints(), stats: {} };
     }
-    if (!histOk) {
+    if (!histOk && consOk) {
       if (!isRefresh) renderWarning("Price history unavailable. Charts will not display.");
+      priceHistoryData = null;
+    }
+    if (!histOk && !consOk) {
+      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
+      return;
+    }
+    const isSample = consolidatedData?.is_sample === true || priceHistoryData?.is_sample === true;
+    if (isSample) {
+      const banner = document.getElementById("sample-banner");
+      banner.style.display = "flex";
+      if (consLoad.from === SAMPLE_PATH && histLoad.from === SAMPLE_PATH) {
+        banner.innerHTML = "Displaying sample data. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
+      } else if (consLoad.from === SAMPLE_PATH) {
+        banner.innerHTML = "Displaying sample active_promo.json. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
+      } else {
+        banner.innerHTML = "Displaying sample price_history.json. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
+      }
     }
     displayHints = consolidatedData?.display_hints || getDefaultDisplayHints();
-    if (consolidatedData?.metadata?.last_updated) {
+    if (displayHints.store_colors) {
+      const normalizedColors = {};
+      for (const [key, value] of Object.entries(displayHints.store_colors)) {
+        normalizedColors[key.toLowerCase().replace(/\s+/g, "")] = value;
+      }
+      displayHints.store_colors = normalizedColors;
+    }
+    if (displayHints.stores) {
+      const normalizedStores = {};
+      for (const [key, value] of Object.entries(displayHints.stores)) {
+        normalizedStores[key.toLowerCase().replace(/\s+/g, "")] = value;
+      }
+      displayHints.stores = normalizedStores;
+    }
+    if (consolidatedData?.generated_at) {
+      updateFreshnessBar(consolidatedData.generated_at);
+    } else if (consolidatedData?.metadata?.last_updated) {
       updateFreshnessBar(consolidatedData.metadata.last_updated);
     }
     renderCards();
@@ -1045,10 +1137,20 @@ document.getElementById("sort-select").addEventListener("change", (e) => {
   renderCards();
 });
 
-document.getElementById("load-more-btn").addEventListener("click", () => {
-  currentPage++;
-  renderCards();
-});
+const loadMoreObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const filtered = getFilteredSortedProducts();
+      const end = currentPage * PAGE_SIZE;
+      if (end < filtered.length) {
+        currentPage++;
+        renderCards();
+      }
+    }
+  });
+}, { rootMargin: "200px" });
+
+loadMoreObserver.observe(document.getElementById("load-more-sentinel"));
 
 document.getElementById("warning-retry").addEventListener("click", () => {
   loadData();

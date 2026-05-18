@@ -31,7 +31,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.matching.matcher import load_embedding_model, match_products
 from scripts.matching.normalizer import parse_unit_to_base, unit_type
 from scripts.matching.promo_parser import parse_promo, parse_period
-from scripts.matching.consolidation import generate_consolidated_from_history
+from scripts.matching.consolidation import (
+    generate_consolidated_from_history, DISPLAY_HINTS,
+    build_store_entry, build_consolidated_product, build_single_product, build_stats,
+)
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -188,7 +191,7 @@ def load_price_history(path: Path) -> dict:
     if path.exists():
         with open(path, encoding='utf-8') as f:
             return json.load(f)
-    return {'snapshots': [], 'metadata': {'last_updated': '', 'total_runs': 0, 'schema_version': '1.1'}}
+    return {'snapshots': [], 'metadata': {'last_updated': '', 'total_runs': 0, 'schema_version': '1.2'}}
 
 
 def append_to_price_history(history: dict, products: list[dict], today: str) -> dict:
@@ -307,6 +310,21 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         model_name = cfg.get('consolidation', {}).get('embedding_model', 'paraphrase-multilingual-MiniLM-L12-v2')
         embedding_model = load_embedding_model(model_name)
 
+    # 4b. Setup Ollama if AI verifier uses it
+    ai_provider = cfg.get('consolidation', {}).get('ai_verifier', {}).get('provider', 'ollama')
+    if ai_provider == 'ollama' and cfg.get('consolidation', {}).get('gates', {}).get('gate6_ai_verifier', True):
+        ollama_model = cfg.get('consolidation', {}).get('ai_verifier', {}).get('ai_model', 'qwen3:4b')
+        from scripts.setup_ollama import setup_ollama
+        ollama_success = setup_ollama(model=ollama_model)
+        if not ollama_success:
+            import os
+            run_mode = os.getenv("RUN_MODE", "").lower()
+            if run_mode == "docker":
+                raise RuntimeError("Ollama failed to connect. In Docker mode, ensure Ollama is running on host with OLLAMA_BASE_URL=http://host.docker.internal:11434. Also ensure model is pulled: ollama pull qwen3:4b")
+            else:
+                raise RuntimeError("Ollama failed to start. Ensure 'ollama serve' is running and 'ollama pull qwen3:4b' has been executed.")
+        print("[*] Ollama ready for AI verification")
+
     # 5. Run matching pipeline
     print("[*] Running matching pipeline ...")
     matched_pairs, lotte_only, superindo_only, review_items, gate_rejections = match_products(
@@ -357,69 +375,41 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         unit_value = unit_parsed[0] if unit_parsed else None
 
         stores = [
-            {
-                'store': 'Lotte',
-                'price': la.get('price', 0),
-                'effective_unit_price': la.get('_effective_unit_price', la.get('price', 0)),
-                'bundle_size': la.get('_bundle_size', 1),
-                'promo': la.get('promo'),
-                'promo_type': la.get('_promo_type', 'single'),
-                'valid_from': la.get('_valid_from'),
-                'valid_until': la.get('_valid_until'),
-                'image_path': la.get('image_path'),
-            },
-            {
-                'store': 'Superindo',
-                'price': sb.get('price', 0),
-                'effective_unit_price': sb.get('_effective_unit_price', sb.get('price', 0)),
-                'bundle_size': sb.get('_bundle_size', 1),
-                'promo': sb.get('promo'),
-                'promo_type': sb.get('_promo_type', 'single'),
-                'valid_from': sb.get('_valid_from'),
-                'valid_until': sb.get('_valid_until'),
-                'image_path': sb.get('image_path'),
-            },
+            build_store_entry(
+                store_name='Lotte',
+                price=la.get('price', 0),
+                effective_unit_price=la.get('_effective_unit_price', la.get('price', 0)),
+                bundle_size=la.get('_bundle_size', 1),
+                promo=la.get('promo'),
+                promo_type=la.get('_promo_type', 'single'),
+                valid_from=la.get('_valid_from'),
+                valid_until=la.get('_valid_until'),
+                image_path=la.get('image_path'),
+            ),
+            build_store_entry(
+                store_name='Superindo',
+                price=sb.get('price', 0),
+                effective_unit_price=sb.get('_effective_unit_price', sb.get('price', 0)),
+                bundle_size=sb.get('_bundle_size', 1),
+                promo=sb.get('promo'),
+                promo_type=sb.get('_promo_type', 'single'),
+                valid_from=sb.get('_valid_from'),
+                valid_until=sb.get('_valid_until'),
+                image_path=sb.get('image_path'),
+            ),
         ]
 
-        eff_prices = [s['effective_unit_price'] for s in stores if s['effective_unit_price'] > 0]
-        price_min = min(eff_prices) if eff_prices else 0
-        price_max = max(eff_prices) if eff_prices else 0
-        cheapest = None
-        if eff_prices:
-            cheapest_store = min(stores, key=lambda s: s['effective_unit_price'] if s['effective_unit_price'] > 0 else float('inf'))
-            cheapest = cheapest_store['store']
-        price_gap = price_max - price_min if price_min > 0 else 0
-        savings_pct = round((price_gap / price_max * 100), 1) if price_max > 0 else 0.0
-
-        has_promo = any(s['promo'] for s in stores)
-        promo_parts = []
-        for s in stores:
-            if s['promo']:
-                promo_parts.append(f"{s['promo']} di {s['store']}")
-        promo_summary = '; '.join(promo_parts) if promo_parts else ''
-
-        valid_dates = [s['valid_until'] for s in stores if s['valid_until']]
-        valid_until = min(valid_dates) if valid_dates else None
-
-        consolidated_products.append({
-            'key': key,
-            'name': la.get('name', ''),
-            'brand': la.get('brand'),
-            'unit': la.get('unit'),
-            'unit_type': unit_type_str,
-            'unit_value_g': unit_value,
-            'stores': stores,
-            'price_min': price_min,
-            'price_max': price_max,
-            'cheapest_store': cheapest,
-            'price_gap': price_gap,
-            'savings_pct': savings_pct,
-            'has_promo': has_promo,
-            'promo_summary': promo_summary,
-            'valid_until': valid_until,
-            'match_method': mp['match_method'],
-            'match_confidence': mp['match_confidence'],
-        })
+        consolidated_products.append(build_consolidated_product(
+            pkey=key,
+            name=la.get('name', ''),
+            brand=la.get('brand'),
+            unit=la.get('unit'),
+            unit_type=unit_type_str,
+            unit_value_g=unit_value,
+            store_entries=stores,
+            match_method=mp['match_method'],
+            match_confidence=mp['match_confidence'],
+        ))
 
     # Build singles
     singles = []
@@ -429,21 +419,21 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         unit_type_str = unit_parsed[1] if unit_parsed else (unit_type(p.get('unit')) or 'unknown')
         unit_value = unit_parsed[0] if unit_parsed else None
 
-        singles.append({
-            'key': key,
-            'name': p.get('name', ''),
-            'brand': p.get('brand'),
-            'unit': p.get('unit'),
-            'unit_type': unit_type_str,
-            'unit_value_g': unit_value,
-            'store': 'Lotte',
-            'price': p.get('price', 0),
-            'effective_unit_price': p.get('_effective_unit_price', p.get('price', 0)),
-            'promo': p.get('promo'),
-            'valid_from': p.get('_valid_from'),
-            'valid_until': p.get('_valid_until'),
-            'image_path': p.get('image_path'),
-        })
+        singles.append(build_single_product(
+            pkey=key,
+            name=p.get('name', ''),
+            brand=p.get('brand'),
+            unit=p.get('unit'),
+            unit_type=unit_type_str,
+            unit_value_g=unit_value,
+            store_name='Lotte',
+            price=p.get('price', 0),
+            effective_unit_price=p.get('_effective_unit_price', p.get('price', 0)),
+            promo=p.get('promo'),
+            valid_from=p.get('_valid_from'),
+            valid_until=p.get('_valid_until'),
+            image_path=p.get('image_path'),
+        ))
 
     for p in superindo_only:
         key = make_product_key(p.get('name', ''), p.get('brand'), p.get('unit'))
@@ -451,21 +441,21 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         unit_type_str = unit_parsed[1] if unit_parsed else (unit_type(p.get('unit')) or 'unknown')
         unit_value = unit_parsed[0] if unit_parsed else None
 
-        singles.append({
-            'key': key,
-            'name': p.get('name', ''),
-            'brand': p.get('brand'),
-            'unit': p.get('unit'),
-            'unit_type': unit_type_str,
-            'unit_value_g': unit_value,
-            'store': 'Superindo',
-            'price': p.get('price', 0),
-            'effective_unit_price': p.get('_effective_unit_price', p.get('price', 0)),
-            'promo': p.get('promo'),
-            'valid_from': p.get('_valid_from'),
-            'valid_until': p.get('_valid_until'),
-            'image_path': p.get('image_path'),
-        })
+        singles.append(build_single_product(
+            pkey=key,
+            name=p.get('name', ''),
+            brand=p.get('brand'),
+            unit=p.get('unit'),
+            unit_type=unit_type_str,
+            unit_value_g=unit_value,
+            store_name='Superindo',
+            price=p.get('price', 0),
+            effective_unit_price=p.get('_effective_unit_price', p.get('price', 0)),
+            promo=p.get('promo'),
+            valid_from=p.get('_valid_from'),
+            valid_until=p.get('_valid_until'),
+            image_path=p.get('image_path'),
+        ))
 
     # 7. Update database, then generate consolidated output from it
     today = datetime.now().strftime('%Y-%m-%d')
@@ -590,11 +580,6 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         atomic_write_json({'items': review_data}, str(review_path))
     else:
         # Dry-run: build consolidated directly from matching results (no database update)
-        match_methods = {}
-        for mp in matched_pairs:
-            m = mp['match_method']
-            match_methods[m] = match_methods.get(m, 0) + 1
-
         consolidated = {
             'generated_at': datetime.now().isoformat(),
             'scrape_dates': {
@@ -605,24 +590,16 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
                 lotte_file.name if lotte_file else '',
                 superindo_file.name if superindo_file else '',
             ],
-            'display_hints': {
-                'stores': ['Lotte', 'Superindo'],
-                'store_colors': {'Lotte': '#0057A8', 'Superindo': '#E8211D'},
-                'currency': 'IDR',
-                'locale': 'id-ID',
-            },
+            'display_hints': DISPLAY_HINTS,
             'products': consolidated_products,
             'singles': singles,
-            'stats': {
-                'total_products_lotte': len(lotte_products),
-                'total_products_superindo': len(superindo_products),
-                'matched_across_stores': len(matched_pairs),
-                'lotte_only': len(lotte_only),
-                'superindo_only': len(superindo_only),
-                'match_methods': match_methods,
-                'flagged_for_review': len(review_items),
-                'validation_rejected': 0,
-            },
+            'stats': build_stats(
+                consolidated_products=consolidated_products,
+                singles=singles,
+                total_lotte=len(lotte_products),
+                total_superindo=len(superindo_products),
+                flagged_for_review=len(review_items),
+            ),
         }
 
     # 8. Print summary
@@ -660,7 +637,7 @@ def main():
     log_file = None
     if args.verbose:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        log_file = database_dir / 'logs' / f'consolidate_{timestamp}.log'
+        log_file = Path('output/logs') / f'consolidate_{timestamp}.log'
 
     if args.input_dir:
         lotte_dir = Path(args.input_dir)
