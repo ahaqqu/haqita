@@ -145,6 +145,8 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
             print(f"FAIL: {e}")
             continue
 
+        print(f"    Processing image [{idx}/{len(images_to_process)}] {img_path.name} ({img_path.stat().st_size / 1024:.0f} KB) for OCR to {provider}")
+
         t0 = time.time()
         validated, rejected = [], []
         try:
