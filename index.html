@@ -170,6 +170,8 @@ main#product-grid {
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   flex: 1;
+  align-content: start;
+  align-items: start;
 }
 
 @media (max-width: 1200px) { #product-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -186,6 +188,8 @@ main#product-grid {
   display: flex;
   flex-direction: column;
   min-height: 180px;
+  max-height: 200px;
+  min-width: 320px;
 }
 
 .product-card:hover {
@@ -608,6 +612,7 @@ let currentSearch = '';
 let currentPage = 1;
 const PAGE_SIZE = 20;
 let expandedKey = null;
+let isLoadingMore = false;
 
 function getDefaultDisplayHints() {
   return {
@@ -992,47 +997,77 @@ function expandCard(key) {
 function renderCards() {
   const grid = document.getElementById("product-grid");
   const filtered = getFilteredSortedProducts();
+
   if (filtered.length === 0 && getAllProducts().length === 0) {
     document.getElementById("loading").style.display = "none";
     document.getElementById("empty-state").style.display = "block";
     document.getElementById("product-grid").style.display = "none";
     document.getElementById("no-results").style.display = "none";
-    document.getElementById("load-more").style.display = "none";
+    document.getElementById("load-more-sentinel").style.display = "none";
     return;
   }
+
   if (filtered.length === 0 && currentSearch) {
     document.getElementById("loading").style.display = "none";
     document.getElementById("no-results").style.display = "block";
     document.getElementById("no-results-query").textContent = currentSearch;
     document.getElementById("product-grid").style.display = "none";
-    document.getElementById("load-more").style.display = "none";
+    document.getElementById("load-more-sentinel").style.display = "none";
     return;
   }
+
   document.getElementById("loading").style.display = "none";
   document.getElementById("empty-state").style.display = "none";
   document.getElementById("no-results").style.display = "none";
   document.getElementById("product-grid").style.display = "grid";
+
   const end = currentPage * PAGE_SIZE;
   const pageItems = filtered.slice(0, end);
-  grid.innerHTML = pageItems.map(p => {
+
+  // Only rebuild grid if filter/search changed (page === 1), otherwise append
+  const shouldRebuild = currentPage === 1;
+
+  if (shouldRebuild) {
+    grid.innerHTML = "";
+  }
+
+  // Render only the new slice for this page
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const newItems = pageItems.slice(startIdx);
+
+  const html = newItems.map(p => {
     const normalized = normalizeProduct(p);
     return normalized.stores.length > 1 ? buildMatchedCard(p) : buildSingleCard(p);
   }).join("");
-  grid.querySelectorAll(".product-card").forEach(card => {
-    card.addEventListener("click", () => expandCard(card.dataset.key));
-    card.addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); expandCard(card.dataset.key); }
-    });
-  });
+
+  // Append new items
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = html;
+  while (tempDiv.firstChild) {
+    const card = tempDiv.firstChild;
+    grid.appendChild(card);
+    // Attach event listeners to new cards
+    if (card.classList && card.classList.contains("product-card")) {
+      card.addEventListener("click", () => expandCard(card.dataset.key));
+      card.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { 
+          e.preventDefault(); 
+          expandCard(card.dataset.key); 
+        }
+      });
+    }
+  }
+
+  // Manage sentinel visibility
   const sentinel = document.getElementById("load-more-sentinel");
   if (end < filtered.length) {
     sentinel.style.display = "block";
   } else {
     sentinel.style.display = "none";
   }
+
   renderFooterStats(filtered);
 }
-
 function renderFooterStats(filtered) {
   const stats = consolidatedData.stats || {};
   const lotteCount = filtered.filter(p => isProductInStore(p, "lotte")).length;
@@ -1157,7 +1192,7 @@ async function loadData(isRefresh = false) {
     renderCards();
     if (!isRefresh) {
       setupHashRouting();
-      applyHashAfterLoad();
+      setTimeout(() => applyHashAfterLoad(), 150);
     }
   } catch (err) {
     renderError("Network error: " + err.message);
@@ -1191,12 +1226,15 @@ document.getElementById("sort-select").addEventListener("change", (e) => {
 
 const loadMoreObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
-    if (entry.isIntersecting) {
+    if (entry.isIntersecting && !isLoadingMore) {
       const filtered = getFilteredSortedProducts();
       const end = currentPage * PAGE_SIZE;
       if (end < filtered.length) {
+        isLoadingMore = true;
         currentPage++;
         renderCards();
+        // Re-enable observer after a short delay to let layout settle
+        setTimeout(() => { isLoadingMore = false; }, 100);
       }
     }
   });
