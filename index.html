@@ -183,6 +183,9 @@ main#product-grid {
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.15s;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 180px;
 }
 
 .product-card:hover {
@@ -195,81 +198,99 @@ main#product-grid {
   box-shadow: var(--shadow-lg);
 }
 
-.card-header {
+.card-body {
+  flex: 1;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
+  flex-direction: column;
 }
 
 .product-name {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--gray-900);
+  line-height: 1.35;
 }
 
 .product-unit {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--gray-500);
-  margin-top: 0.15rem;
+  margin-top: 0.2rem;
+}
+
+.card-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gray-100);
 }
 
 .price-tag {
   font-family: 'DM Mono', monospace;
   font-weight: 500;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: var(--green);
   white-space: nowrap;
 }
 
-.store-rows { margin-top: 0.75rem; }
+.price-label {
+  font-size: 0.68rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 400;
+  color: var(--gray-500);
+  display: block;
+  margin-bottom: 2px;
+  letter-spacing: 0.02em;
+  display: none;
+}
+
+.store-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--gray-500);
+  text-align: right;
+}
+
+.store-rows { margin-top: 0.6rem; }
 
 .store-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.35rem 0;
-  font-size: 0.9rem;
+  padding: 0.3rem 0;
+  font-size: 0.85rem;
 }
 
 .store-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .store-name { flex: 1; color: var(--gray-700); }
-.store-price { font-family: 'DM Mono', monospace; font-size: 0.9rem; }
+.store-price { font-family: 'DM Mono', monospace; font-size: 0.85rem; }
 .original-price { text-decoration: line-through; color: var(--gray-400); font-size: 0.8rem; margin-right: 4px; }
-.promo-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: #e8f5e9; color: #2e7d32; font-size: 0.65rem; font-weight: 600; border-radius: 3px; vertical-align: middle; }
-.promo-detail { margin-top: 4px; font-size: 0.75rem; color: #2e7d32; font-weight: 500; }
 
-.savings-pill {
+.promo-top-badge {
   display: inline-block;
-  margin-top: 0.6rem;
-  padding: 0.25rem 0.6rem;
-  background: var(--green-light);
-  color: var(--green);
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-top: auto;
+  padding-top: 8px;
+  letter-spacing: 0.01em;
+  align-self: flex-start;
 }
+.promo-top-badge.promo-green { background: #e8f5ee; color: #2d7a4f; }
+.promo-top-badge.promo-red { background: #fdf0ee; color: #c0392b; }
+.promo-top-badge.promo-amber { background: var(--amber-light); color: var(--amber); }
 
-.valid-until {
-  font-size: 0.78rem;
-  color: var(--gray-500);
-  margin-top: 0.4rem;
-}
-
-.single-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.78rem;
-  color: var(--gray-500);
-  margin-top: 0.3rem;
-}
+.promo-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: #e8f5e9; color: #2e7d32; font-size: 0.65rem; font-weight: 600; border-radius: 3px; vertical-align: middle; }
 .filter-dot {
   display: inline-block;
   width: 8px;
@@ -510,17 +531,23 @@ footer {
 </div>
 
 <div id="controls">
-  <div class="filter-chips">
-    <button class="chip active" data-filter="all">All</button>
-    <button class="chip" data-filter="lotte"><span class="filter-dot" style="background:#0057A8"></span> Lotte</button>
-    <button class="chip" data-filter="superindo"><span class="filter-dot" style="background:#E8211D"></span> Superindo</button>
+  <div style="display:flex;align-items:center;gap:0.6rem;">
+    <span style="font-size:0.78rem;color:var(--gray-500);">Store</span>
+    <div class="filter-chips">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="lotte"><span class="filter-dot" style="background:#0057A8"></span> Lotte</button>
+      <button class="chip" data-filter="superindo"><span class="filter-dot" style="background:#E8211D"></span> Superindo</button>
+    </div>
   </div>
-  <select class="sort-select" id="sort-select">
-    <option value="name" selected>Sort: Name</option>
-    <option value="cheapest">Sort: Cheapest</option>
-    <option value="savings">Sort: Savings</option>
-    <option value="expiry">Sort: Expiry</option>
-  </select>
+  <div style="display:flex;align-items:center;gap:0.6rem;">
+    <span style="font-size:0.78rem;color:var(--gray-500);">Sort by</span>
+    <select class="sort-select" id="sort-select">
+      <option value="name" selected>Name</option>
+      <option value="cheapest">Cheapest</option>
+      <option value="savings">Savings</option>
+      <option value="expiry">Expiry</option>
+    </select>
+  </div>
 </div>
 
 <div class="warning-banner" id="warning-banner">
@@ -616,6 +643,20 @@ function getRelativeDateText(isoDate) {
   if (diffDays === 0) return "Valid today";
   if (diffDays === 1) return "Valid for 1 day";
   return `Valid for ${diffDays} days`;
+}
+
+function getShortDateText(isoDate) {
+  if (!isoDate) return "";
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(isoDate);
+  target.setHours(0, 0, 0, 0);
+  const diffTime = target - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return "Expired";
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "1d";
+  return `${diffDays}d`;
 }
 
 function retryFetch(url, retries = 3, delay = 1000) {
@@ -751,24 +792,27 @@ function buildStoreRows(product) {
 function buildMatchedCard(product) {
   const normalized = normalizeProduct(product);
   const key = normalized.product_key || "";
-  const cheapestStore = product.cheapest_store || "";
-  const storeKey = cheapestStore.toLowerCase().replace(/\s+/g, "");
-  const savingsText = product.savings_pct ? `Save ${product.savings_pct}% vs ${product.most_expensive_store || "other"}` : "";
-  const validText = product.valid_until ? getRelativeDateText(product.valid_until) : "";
+  const savingsText = product.savings_pct ? `Save ${product.savings_pct}%` : "";
+  const shortDate = product.valid_until ? getShortDateText(product.valid_until) : "";
   const confBadge = product.match_confidence != null && product.match_confidence < 0.8
     ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
+  const promoBadge = savingsText
+    ? `<div class="promo-top-badge promo-green">${savingsText}</div>` : "";
   return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
-    <div class="card-header">
-      <div>
-        <div class="product-name">${product.name || "Unknown"}</div>
-        <div class="product-unit">${product.unit || ""}</div>
-      </div>
-      <div class="price-tag">${formatIDR(product.price_min)}</div>
+    <div class="card-body">
+      <div class="product-name">${product.name || "Unknown"}</div>
+      <div class="product-unit">${product.unit || ""}</div>
+      <div class="store-rows">${buildStoreRows(product)}</div>
+      ${confBadge}
+      ${promoBadge}
     </div>
-    <div class="store-rows">${buildStoreRows(product)}</div>
-    ${savingsText ? `<div class="savings-pill">${savingsText}</div>` : ""}
-    ${validText ? `<div class="valid-until">${validText}</div>` : ""}
-    ${confBadge}
+    <div class="card-footer">
+      <div class="price-tag">
+        <span class="price-label">from</span>
+        ${formatIDR(product.price_min)}
+      </div>
+      ${shortDate ? `<div class="store-meta">${shortDate} left</div>` : ""}
+    </div>
     <div class="detail-panel" id="detail-${key}"></div>
   </div>`;
 }
@@ -780,26 +824,34 @@ function buildSingleCard(product) {
   const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
   const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
   const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
-  const validText = product.valid_until ? getRelativeDateText(product.valid_until) : "";
+  const shortDate = product.valid_until ? getShortDateText(product.valid_until) : "";
   const confBadge = product.match_confidence != null && product.match_confidence < 0.8
     ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
   const displayPrice = s.effective_unit_price && s.effective_unit_price < s.price
     ? s.effective_unit_price
     : s.price;
   const hasPromo = s.effective_unit_price && s.effective_unit_price < s.price;
-  const promoDetail = hasPromo && s.promo ? `<div class="promo-detail">${s.promo}</div>` : "";
+  const promoLabel = hasPromo && s.promo ? s.promo : (product.promo_label || "");
+  const promoColorClass = promoLabel.toLowerCase().includes("diskon") ? "promo-red" : "promo-green";
+  const promoBadge = promoLabel
+    ? `<div class="promo-top-badge ${promoColorClass}">${promoLabel}</div>` : "";
   return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
-    <div class="card-header">
-      <div>
-        <div class="product-name">${product.name || "Unknown"}</div>
-        <div class="product-unit">${product.unit || ""}</div>
-      </div>
-      <div class="price-tag">${formatIDR(displayPrice)}</div>
+    <div class="card-body">
+      <div class="product-name">${product.name || "Unknown"}</div>
+      <div class="product-unit">${product.unit || ""}</div>
+      ${confBadge}
+      ${promoBadge}
     </div>
-    ${promoDetail}
-    <div class="single-badge"><span class="store-dot" style="background:${color}"></span> ${storeName}</div>
-    ${validText ? `<div class="valid-until">${validText}</div>` : ""}
-    ${confBadge}
+    <div class="card-footer">
+      <div class="price-tag">
+        <span class="price-label">price</span>
+        ${formatIDR(displayPrice)}
+      </div>
+      <div class="store-meta">
+        <span class="store-dot" style="background:${color}"></span>
+        ${storeName}${shortDate ? ` · ${shortDate}` : ""}
+      </div>
+    </div>
     <div class="detail-panel" id="detail-${key}"></div>
   </div>`;
 }
