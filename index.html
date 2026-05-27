@@ -295,6 +295,9 @@ main#product-grid {
 .promo-top-badge.promo-amber { background: var(--amber-light); color: var(--amber); }
 
 .promo-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: #e8f5e9; color: #2e7d32; font-size: 0.65rem; font-weight: 600; border-radius: 3px; vertical-align: middle; }
+.promo-badge.promo-red { background: #fdf0ee; color: #c0392b; }
+.promo-badge.promo-green { background: #e8f5ee; color: #2d7a4f; }
+.promo-badge.promo-amber { background: var(--amber-light); color: var(--amber); }
 .filter-dot {
   display: inline-block;
   width: 8px;
@@ -776,20 +779,41 @@ function getFilteredSortedProducts() {
   return all;
 }
 
+function filterPromos(promos) {
+  if (!promos || !Array.isArray(promos)) return [];
+  return promos.filter(p => p && !p.startsWith("*Harga"));
+}
+
+function getPromoColorClass(promo) {
+  if (!promo) return "promo-green";
+  const lower = promo.toLowerCase();
+  if (lower.includes("diskon")) return "promo-red";
+  if (lower.includes("gratis")) return "promo-green";
+  if (lower.includes("dapat")) return "promo-amber";
+  return "promo-green";
+}
+
+function buildPromoBadges(promos) {
+  const filtered = filterPromos(promos);
+  if (!filtered.length) return "";
+  return filtered.map(p => `<span class="promo-badge ${getPromoColorClass(p)}">${p}</span>`).join(" ");
+}
+
 function buildStoreRows(product) {
   const normalized = normalizeProduct(product);
   return normalized.stores.map(s => {
     const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
     const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "#c0bfb8";
     const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
-    const promoText = s.promo && s.promo.length ? ` (${s.promo.join(', ')})` : "";
+    const promoBadges = buildPromoBadges(s.promo);
     const displayPrice = s.effective_unit_price && s.effective_unit_price < s.price
       ? s.effective_unit_price
       : s.price;
     return `<div class="store-row">
       <span class="store-dot" style="background:${color}"></span>
       <span class="store-name">${storeName}</span>
-      <span class="store-price">${formatIDR(displayPrice)}${promoText}</span>
+      <span class="store-price">${formatIDR(displayPrice)}</span>
+      ${promoBadges}
     </div>`;
   }).join("");
 }
@@ -809,7 +833,7 @@ function buildMatchedCard(product) {
       <div class="product-unit">${product.unit || ""}</div>
       <div class="store-rows">${buildStoreRows(product)}</div>
       ${confBadge}
-      ${promoBadge}
+      ${promoBadgesSingle}
     </div>
     <div class="card-footer">
       <div class="price-tag">
@@ -836,10 +860,7 @@ function buildSingleCard(product) {
     ? s.effective_unit_price
     : s.price;
   const hasPromo = s.effective_unit_price && s.effective_unit_price < s.price;
-  const promoText = hasPromo && s.promo && s.promo.length ? s.promo.join(', ') : "";
-  const promoColorClass = promoText.toLowerCase().includes("diskon") ? "promo-red" : "promo-green";
-  const promoBadge = promoText
-    ? `<div class="promo-top-badge ${promoColorClass}">${promoText}</div>` : "";
+  const promoBadgesSingle = hasPromo ? buildPromoBadges(s.promo) : "";
   return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
     <div class="card-body">
       <div class="product-name">${product.name || "Unknown"}</div>
