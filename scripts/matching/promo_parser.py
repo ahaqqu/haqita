@@ -137,7 +137,7 @@ def parse_promo(promo_text: str | list[str] | None, base_price: int) -> PromoRes
         best = results[0]
 
     # Join all promo texts for display
-    display = "; ".join(promo_list)
+    display = ", ".join(promo_list)
 
     return PromoResult(
         promo_type=best.promo_type,

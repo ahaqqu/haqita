@@ -836,7 +836,7 @@ function buildSingleCard(product) {
     ? s.effective_unit_price
     : s.price;
   const hasPromo = s.effective_unit_price && s.effective_unit_price < s.price;
-  const promoText = hasPromo && s.promo && s.promo.length ? s.promo.join(', ') : (product.promo_label || "");
+  const promoText = hasPromo && s.promo && s.promo.length ? s.promo.join(', ') : "";
   const promoColorClass = promoText.toLowerCase().includes("diskon") ? "promo-red" : "promo-green";
   const promoBadge = promoText
     ? `<div class="promo-top-badge ${promoColorClass}">${promoText}</div>` : "";

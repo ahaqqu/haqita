@@ -23,13 +23,15 @@ def _normalize_promo(v) -> list[str] | None:
     if v is None:
         return None
     if isinstance(v, list):
-        return [str(x).strip() for x in v if x and str(x).strip()]
+        result = [str(x).strip() for x in v if x and str(x).strip()]
+        return result if result else None
     # Handle old stringified Python list: "['A', 'B']" or plain string
     s = str(v).strip()
     if s.startswith('[') and s.endswith(']'):
         try:
             items = ast.literal_eval(s)
-            return [str(x).strip() for x in items if x and str(x).strip()]
+            result = [str(x).strip() for x in items if x and str(x).strip()]
+            return result if result else None
         except (ValueError, SyntaxError):
             pass
     return [s] if s else None
@@ -76,7 +78,7 @@ def build_promo_summary(store_entries: list[dict]) -> dict:
     """Detect promos and build summary string."""
     has_promo = any(s["promo"] for s in store_entries)
     promo_parts = [
-        f"{'; '.join(s['promo'])} di {s['store']}"
+        f"{', '.join(s['promo'])} di {s['store']}"
         for s in store_entries if s["promo"]
     ]
     promo_summary = "; ".join(promo_parts) if promo_parts else ""

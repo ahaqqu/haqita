@@ -68,7 +68,8 @@ def _normalize_promo(promo) -> list[str] | None:
     if not promo:
         return None
     if isinstance(promo, list):
-        return [str(p).strip() for p in promo if p and str(p).strip()]
+        result = [str(p).strip() for p in promo if p and str(p).strip()]
+        return result if result else None
     return [str(promo).strip()]
 
 

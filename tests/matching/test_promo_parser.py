@@ -78,7 +78,7 @@ class TestParsePromo:
         # DISKON 20%: 80000, Beli 2 Gratis 1: 33333
         assert result.promo_type == "get_free"
         assert result.effective_unit_price == 33333
-        assert result.display == "DISKON 20%; Beli 2 Gratis 1"
+        assert result.display == "DISKON 20%, Beli 2 Gratis 1"
 
     def test_array_empty(self):
         result = parse_promo([], 15000)
@@ -90,7 +90,7 @@ class TestParsePromo:
         result = parse_promo(["DISKON 20%", "Harga Spesial"], 100000)
         assert result.promo_type == "discount_pct"
         assert result.effective_unit_price == 80000
-        assert result.display == "DISKON 20%; Harga Spesial"
+        assert result.display == "DISKON 20%, Harga Spesial"
 
 
 # ---------------------------------------------------------------------------

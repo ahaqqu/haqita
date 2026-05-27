@@ -181,7 +181,7 @@ class TestAppendToPriceHistory:
             'product_key': 'test--brand--100g', 'name': 'Test', 'brand': 'Brand',
             'unit': '100 g', 'store': 'Lotte',
             'price': 10000, 'effective_unit_price': 10000,
-            'promo': 'DAPAT 3 pcs', 'valid_from': '2026-05-01',
+            'promo': ['DAPAT 3 pcs'], 'valid_from': '2026-05-01',
             'valid_until': '2026-05-20', 'bundle_size': 3,
             'promo_type': 'bundle_buy', 'match_method': 'exact',
             'match_confidence': 1.0, 'image_path': 'database/scrape/lotte/img.jpg',
@@ -407,10 +407,10 @@ class TestBuildStoreEntry:
 
     def test_full(self):
         entry = build_store_entry('Superindo', 20000, 5000, bundle_size=4,
-                                  promo='DAPAT 4 pcs', promo_type='bundle_buy',
+                                  promo=['DAPAT 4 pcs'], promo_type='bundle_buy',
                                   valid_from='2026-05-01', valid_until='2026-05-20',
                                   image_path='img.jpg')
-        assert entry['promo'] == 'DAPAT 4 pcs'
+        assert entry['promo'] == ['DAPAT 4 pcs']
         assert entry['valid_from'] == '2026-05-01'
 
 
@@ -463,7 +463,7 @@ class TestBuildPromoSummary:
 
     def test_one_store_promo(self):
         entries = [
-            build_store_entry('Lotte', 10000, 10000, promo='Diskon 20%'),
+            build_store_entry('Lotte', 10000, 10000, promo=['Diskon 20%']),
             build_store_entry('Superindo', 12000, 12000),
         ]
         result = build_promo_summary(entries)
@@ -472,11 +472,11 @@ class TestBuildPromoSummary:
 
     def test_both_stores_promo(self):
         entries = [
-            build_store_entry('Lotte', 10000, 5000, promo='Beli 2 Gratis 1'),
-            build_store_entry('Superindo', 12000, 4000, promo='DAPAT 3 pcs'),
+            build_store_entry('Lotte', 10000, 5000, promo=['Beli 2 Gratis 1']),
+            build_store_entry('Superindo', 12000, 4000, promo=['DAPAT 3 pcs']),
         ]
         result = build_promo_summary(entries)
-        assert ';' in result['promo_summary']
+        assert ',' in result['promo_summary']
 
 
 class TestCalcValidUntil:
