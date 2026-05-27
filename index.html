@@ -744,6 +744,7 @@ function searchProducts(query) {
 }
 
 function getAllProducts() {
+  if (!consolidatedData) return [];
   const products = consolidatedData.products || [];
   const singles = consolidatedData.singles || [];
   return [...products, ...singles];
