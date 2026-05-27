@@ -3,6 +3,7 @@ Shared consolidation logic — rebuild active promo view from database.
 Used by both Stage 3 (consolidate.py) and Stage 4 (publish_html.py).
 """
 
+import ast
 from datetime import datetime
 
 DISPLAY_HINTS = {
@@ -17,8 +18,25 @@ DISPLAY_HINTS = {
 # Shared helpers — used by both consolidate.py and consolidation.py
 # ---------------------------------------------------------------------------
 
+def _normalize_promo(v) -> list[str] | None:
+    """Normalize promo to list[str] | None. Handles old string data."""
+    if v is None:
+        return None
+    if isinstance(v, list):
+        return [str(x).strip() for x in v if x and str(x).strip()]
+    # Handle old stringified Python list: "['A', 'B']" or plain string
+    s = str(v).strip()
+    if s.startswith('[') and s.endswith(']'):
+        try:
+            items = ast.literal_eval(s)
+            return [str(x).strip() for x in items if x and str(x).strip()]
+        except (ValueError, SyntaxError):
+            pass
+    return [s] if s else None
+
+
 def build_store_entry(store_name: str, price: float, effective_unit_price: float,
-                      bundle_size: int = 1, promo: str = None, promo_type: str = "single",
+                      bundle_size: int = 1, promo: list[str] = None, promo_type: str = "single",
                       valid_from: str = None, valid_until: str = None, image_path: str = None) -> dict:
     """Build a store entry dict for a product."""
     return {
@@ -57,7 +75,10 @@ def calc_price_stats(store_entries: list[dict]) -> dict:
 def build_promo_summary(store_entries: list[dict]) -> dict:
     """Detect promos and build summary string."""
     has_promo = any(s["promo"] for s in store_entries)
-    promo_parts = [f"{s['promo']} di {s['store']}" for s in store_entries if s["promo"]]
+    promo_parts = [
+        f"{'; '.join(s['promo'])} di {s['store']}"
+        for s in store_entries if s["promo"]
+    ]
     promo_summary = "; ".join(promo_parts) if promo_parts else ""
     return {"has_promo": has_promo, "promo_summary": promo_summary}
 
@@ -100,7 +121,7 @@ def build_consolidated_product(pkey: str, name: str, brand: str, unit: str,
 def build_single_product(pkey: str, name: str, brand: str, unit: str,
                           unit_type: str, unit_value_g, store_name: str,
                           price: float, effective_unit_price: float,
-                          promo: str = None, valid_from: str = None,
+                          promo: list[str] = None, valid_from: str = None,
                           valid_until: str = None, image_path: str = None) -> dict:
     """Build a single (unmatched) product dict."""
     return {
@@ -208,7 +229,7 @@ def generate_consolidated_from_history(history: dict, catalog: dict, today: str)
                     price=snap.get("price", 0),
                     effective_unit_price=snap.get("effective_unit_price", snap.get("price", 0)),
                     bundle_size=snap.get("bundle_size", 1),
-                    promo=snap.get("promo"),
+                    promo=_normalize_promo(snap.get("promo")),
                     promo_type=snap.get("promo_type", "single"),
                     valid_from=snap.get("valid_from"),
                     valid_until=snap.get("valid_until"),
@@ -239,7 +260,7 @@ def generate_consolidated_from_history(history: dict, catalog: dict, today: str)
                 store_name=snap["store"],
                 price=snap.get("price", 0),
                 effective_unit_price=snap.get("effective_unit_price", snap.get("price", 0)),
-                promo=snap.get("promo"),
+                promo=_normalize_promo(snap.get("promo")),
                 valid_from=snap.get("valid_from"),
                 valid_until=snap.get("valid_until"),
                 image_path=snap.get("image_path"),

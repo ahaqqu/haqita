@@ -42,7 +42,7 @@ PROMPT_CONVERT = """
 Now convert the products you described into a valid JSON array with this exact format.
 No explanations, no extra text, ONLY the JSON array:
 [
-  {"brand": "AICE", "name": "Sandwich Cookies Panda", "price": 39900, "unit": "6 x 45 ml", "promo": "BUY 1 GET 1"},
+  {"brand": "AICE", "name": "Sandwich Cookies Panda", "price": 39900, "unit": "6 x 45 ml", "promo": ["BUY 1 GET 1"]},
   {"brand": null, "name": "Gula Pasir", "price": 53000, "unit": "1 kg", "promo": null}
 ]
 
@@ -51,12 +51,12 @@ Rules:
 - name: Product name only.
 - price: Integer in IDR, no dots or commas. Indonesian thousands separator is '.' — ignore it.
 - unit: Full quantity (e.g., "85 g", "1.5 L"). Set to null if none.
-- promo: Promo text (e.g., "DAPAT 5 pcs", "Beli 2 Gratis 1"). Set to null if none.
+- promo: Array of promo texts (e.g., ["DAPAT 5 pcs", "Beli 2 Gratis 1"]). Set to null if none.
 """
 
 RETRY_CORRECTION = (
     "That was not valid. Return ONLY a JSON array: "
-    '[{"brand": "AICE", "name": "Sandwich Cookies Panda", "price": 39900, "unit": "6 x 45 ml", "promo": "BUY 1 GET 1"}] '
+    '[{"brand": "AICE", "name": "Sandwich Cookies Panda", "price": 39900, "unit": "6 x 45 ml", "promo": ["BUY 1 GET 1"]}] '
     "No other text."
 )
 

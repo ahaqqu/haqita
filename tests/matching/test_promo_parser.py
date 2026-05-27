@@ -66,6 +66,32 @@ class TestParsePromo:
         result = parse_promo("Diskon 20%", 100000)
         assert result.display == "Diskon 20%"
 
+    def test_array_single_item(self):
+        result = parse_promo(["DAPAT 5 pcs"], 15500)
+        assert result.promo_type == "bundle_buy"
+        assert result.unit_count == 5
+        assert result.effective_unit_price == 3100
+        assert result.display == "DAPAT 5 pcs"
+
+    def test_array_multiple_items(self):
+        result = parse_promo(["DISKON 20%", "Beli 2 Gratis 1"], 100000)
+        # DISKON 20%: 80000, Beli 2 Gratis 1: 33333
+        assert result.promo_type == "get_free"
+        assert result.effective_unit_price == 33333
+        assert result.display == "DISKON 20%; Beli 2 Gratis 1"
+
+    def test_array_empty(self):
+        result = parse_promo([], 15000)
+        assert result.promo_type == "single"
+        assert result.unit_count == 1
+        assert result.effective_unit_price == 15000
+
+    def test_array_mixed_match(self):
+        result = parse_promo(["DISKON 20%", "Harga Spesial"], 100000)
+        assert result.promo_type == "discount_pct"
+        assert result.effective_unit_price == 80000
+        assert result.display == "DISKON 20%; Harga Spesial"
+
 
 # ---------------------------------------------------------------------------
 # parse_period

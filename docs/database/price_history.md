@@ -18,7 +18,7 @@
       "store": "Lotte",
       "price": 15500,
       "effective_unit_price": 3100,
-      "promo": "DAPAT 5 pcs",
+      "promo": ["DAPAT 5 pcs"],
       "promo_type": "bundle_buy",
       "valid_from": "2026-05-07",
       "valid_until": "2026-05-20",
@@ -49,7 +49,7 @@
 | `store` | string | Store name (Lotte, Superindo) |
 | `price` | int | Raw price in IDR |
 | `effective_unit_price` | int | Price per unit after promo (e.g., bundle division) |
-| `promo` | string or null | Raw promo text as scraped |
+| `promo` | list[string] or null | Array of promo texts as scraped |
 | `promo_type` | string | "bundle_buy", "get_free", "discount_pct", "discount_fixed", "multi_price", "single" |
 | `valid_from` | string or null | ISO date when promo starts |
 | `valid_until` | string or null | ISO date when promo expires (null = always active) |

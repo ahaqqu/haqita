@@ -13,7 +13,7 @@ class TestValidateProduct:
             "brand": "Indomie",
             "unit": "85 g",
             "price": 15500,
-            "promo": "DAPAT 5 pcs",
+            "promo": ["DAPAT 5 pcs"],
             "period": "7 - 20 Mei 2026",
         }
         result, reason = validate_product(raw, "test.jpg")
@@ -65,10 +65,10 @@ class TestValidateProduct:
         assert result["brand"] is None
 
     def test_promo_preserved(self):
-        raw = {"name": "Item", "promo": "DAPAT 2 pcs", "price": 10000}
+        raw = {"name": "Item", "promo": ["DAPAT 2 pcs"], "price": 10000}
         result, reason = validate_product(raw, "test.jpg")
         assert result is not None
-        assert result["promo"] == "DAPAT 2 pcs"
+        assert result["promo"] == ["DAPAT 2 pcs"]
 
     def test_image_source_set(self):
         raw = {"name": "Item", "price": 5000}

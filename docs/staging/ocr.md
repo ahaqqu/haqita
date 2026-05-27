@@ -43,7 +43,7 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
       "brand": "Indomie",
       "unit": "85 g",
       "price": 3500,
-      "promo": "DAPAT 5 pcs",
+      "promo": ["DAPAT 5 pcs"],
       "period": "7 - 20 Mei 2026",
       "image_source": "promo_lotte_abc123.jpg",
       "ocr_raw_price": "Rp 3.500",
@@ -71,7 +71,7 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
 | `brand` | string\|null | Brand name (uppercase) |
 | `unit` | string\|null | Quantity (e.g., "85 g", "6 x 45 ml") |
 | `price` | int | Price in IDR |
-| `promo` | string\|null | Promo text (e.g., "DAPAT 5 pcs") |
+| `promo` | list[string]\|null | Array of promo texts (e.g., ["DAPAT 5 pcs", "Beli 2 Gratis 1"]) |
 | `period` | string\|null | Promo period (e.g., "7 - 20 Mei 2026") |
 | `image_source` | string | Source image filename |
 | `ocr_raw_price` | string | Raw price text from OCR |

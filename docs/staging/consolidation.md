@@ -25,7 +25,7 @@ Merges OCR results from both stores, matches same products across stores, comput
       "unit": "85 g",
       "unit_type": "weight",
       "stores": [
-        { "store": "Lotte", "price": 15500, "effective_unit_price": 3100, "bundle_size": 5, "promo": "DAPAT 5 pcs", "image_path": "database/scrape/lotte/20260516/promo_abc123.jpg" },
+        { "store": "Lotte", "price": 15500, "effective_unit_price": 3100, "bundle_size": 5, "promo": ["DAPAT 5 pcs"], "image_path": "database/scrape/lotte/20260516/promo_abc123.jpg" },
         { "store": "Superindo", "price": 3500, "effective_unit_price": 3500, "bundle_size": 1, "image_path": "database/scrape/superindo/20260516/promo_def456.jpg" }
       ],
       "price_min": 3100,

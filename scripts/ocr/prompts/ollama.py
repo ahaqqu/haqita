@@ -1,13 +1,13 @@
 _SUPERINDO = """List all products in this Superindo promo brochure.
 Return ONLY a JSON array. No other text.
 [
-  {"name": "product name", "price": 12345, "unit": "size if visible", "promo": "promo text if any"}
+  {"name": "product name", "price": 12345, "unit": "size if visible", "promo": ["promo text if any"]}
 ]"""
 
 _LOTTE = """List all products in this Lotte Mart promo brochure.
 Return ONLY a JSON array. No other text.
 [
-  {"name": "product name", "price": 12345, "unit": "size if visible", "promo": "promo text if any"}
+  {"name": "product name", "price": 12345, "unit": "size if visible", "promo": ["promo text if any"]}
 ]"""
 
 _PROMPTS = {
