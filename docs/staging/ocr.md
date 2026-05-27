@@ -21,8 +21,12 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
    - Parse JSON response into product dicts
    - Validate products (price range, name length)
    - Reject invalid products with reason
-4. Write results to `database/ocr/<store>/`
-5. Update state file with processed filenames
+4. If Gemini daily quota is exhausted (429 RESOURCE_EXHAUSTED with `PerDay` quota ID):
+   - Stop processing remaining images immediately (no retries)
+   - Save output and state for already-processed images
+   - Re-raise to prevent subsequent stores from attempting OCR
+5. Write results to `database/ocr/<store>/`
+6. Update state file with processed filenames
 
 ## OCR Output Schema
 
@@ -50,6 +54,7 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
   "rejected": [
     { "raw": { "name": "...", "price": 0 }, "reason": "price_invalid: 0", "image_source": "..." }
   ],
+  "quota_exhausted": "Daily quota exhausted: 429 You have exhausted your daily quota...",
   "stats": {
     "products_extracted": 42,
     "products_rejected": 2,

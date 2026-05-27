@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from scripts.config import load_config
 from scripts.ocr.ocr_processor import extract_products, validate_product
 from scripts.ocr.image_preprocess import preprocess_for_ocr
+from scripts.ocr.gemini_client import QuotaExhaustedError
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -132,6 +133,7 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
     all_products = []
     all_rejected = []
     processed_filenames = []
+    quota_exhausted = None
 
     for idx, img_path in enumerate(images_to_process, 1):
         print(f"[{idx}/{len(images_to_process)}] {img_path.name} ({img_path.stat().st_size / 1024:.0f} KB)")
@@ -159,6 +161,11 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
                 else:
                     prod['image_path'] = str(img_path).replace('\\', '/')
                     rejected.append({"raw": prod, "reason": reason})
+        except QuotaExhaustedError as e:
+            print(f"    [ERR] {provider.title()} daily quota exhausted. Stopping OCR for remaining images.")
+            print(f"    {e}")
+            quota_exhausted = str(e)
+            break
         except Exception as e:
             print(f"    [ERR] OCR failed: {e}")
             continue
@@ -181,12 +188,18 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
             Path(processed).unlink(missing_ok=True)
         print()
 
+    if quota_exhausted:
+        skipped = len(images_to_process) - len(processed_filenames)
+        print(f"[*] {skipped} image(s) skipped due to quota exhaustion")
+
     if dry_run:
         print(f"[*] Dry-run complete: {len(all_products)} products, {len(all_rejected)} rejected")
         print("    No file saved. State not updated.")
+        if quota_exhausted:
+            raise QuotaExhaustedError("Daily quota exhausted — OCR stopped")
         return
 
-    if not all_products and not all_rejected:
+    if not all_products and not all_rejected and not quota_exhausted:
         print("[*] No products extracted. Nothing to save.")
         return
 
@@ -207,6 +220,8 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
             "products_rejected": len(all_rejected),
         },
     }
+    if quota_exhausted:
+        output["quota_exhausted"] = quota_exhausted
 
     output_file.write_text(
         json.dumps(output, indent=2, ensure_ascii=False),
@@ -221,6 +236,9 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
     print(f"[*] Saved to {output_file}")
     print(f"[*] State updated: {len(processed_filenames)} image(s) marked as processed")
     print(f"    Total: {len(all_products)} products, {len(all_rejected)} rejected")
+
+    if quota_exhausted:
+        raise QuotaExhaustedError("Daily quota exhausted — OCR stopped")
 
 
 def main():

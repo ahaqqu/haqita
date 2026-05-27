@@ -10,6 +10,10 @@ from .prompts import get_prompt
 from .ocr_processor import _parse_ocr_json
 
 
+class QuotaExhaustedError(Exception):
+    """Daily quota exhausted — stop all OCR processing."""
+
+
 def parse_retry_delay(error_msg: str) -> int | None:
     """Parse retry delay from Gemini API error message."""
     patterns = [
@@ -58,6 +62,9 @@ def call_gemini_ocr(image_path: str, cfg: dict, max_retries: int = 3) -> list[di
             last_error = e
             err_str = str(e)
             if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "rate limit" in err_str.lower():
+                # Daily quota is permanent until reset — no point retrying
+                if "quota" in err_str.lower() and ("per day" in err_str.lower() or "daily" in err_str.lower() or "PerDay" in err_str):
+                    raise QuotaExhaustedError(f"Daily quota exhausted: {err_str[:200]}")
                 parsed_delay = parse_retry_delay(err_str)
                 wait_time = parsed_delay if parsed_delay else 60
                 if parsed_delay:
