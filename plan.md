@@ -1,16 +1,49 @@
-# Plan: Propagate `promo` from array to UI & database
+# Plan: Propagate `promo` from array to UI & database + Stop OCR on quota exhausted
 
-## Problem
+## User Feedback & Required Changes
 
-Gemini prompt (`gemini.py:9`) specifies `promo` as a JSON array, e.g. `["DISKON 20%", "MAX 1"]`. But `validate_product()` (`ocr_processor.py:80`) calls `str()` on it, producing `"['DISKON 20%', 'MAX 1']"` — a corrupted Python list literal — which is stored in the database and displayed ugly in the UI.
+### `buildStoreRows()` — Promo position must stay as-is
 
-## Goal
+**Current implementation (line 785):**
+```javascript
+const promoText = s.promo ? ` (${s.promo})` : "";
+const displayPrice = s.effective_unit_price && s.effective_unit_price < s.price
+  ? s.effective_unit_price
+  : s.price;
+return `<div class="store-row">
+  <span class="store-dot" style="background:${color}"></span>
+  <span class="store-name">${storeName}</span>
+  <span class="store-price">${formatIDR(displayPrice)}${promoText}</span>
+</div>`;
+```
 
-`promo` is stored as a JSON array everywhere (`list[str] | null`), and displayed cleanly in the UI.
+**User requirement:** Keep promo position (`after price`). But since it's now an array separated string, each part **can have different colors** (e.g., red for DISKON, green for MAX, etc). For initial implementation, join with `", "` as before. Future enhancement: colorize individual parts based on content.
+
+**Updated plan change (minimum viable):**
+```javascript
+// old
+const promoText = s.promo ? ` (${s.promo})` : "";
+// new
+const promoText = s.promo && s.promo.length ? ` (${s.promo.join(", ")})` : "";
+```
 
 ---
 
-## Changes (8 files)
+### Problem
+
+Gemini prompt (`gemini.py:9`) specifies `promo` as a JSON array, e.g. `["DISKON 20%", "MAX 1"]`. But `validate_product()` (`ocr_processor.py:80`) calls `str()` on it, producing `"['DISKON 20%', 'MAX 1']"` — a corrupted Python list literal — which is stored in the database and displayed badly in the UI.
+
+### Goal
+
+`promo` is stored as a JSON array everywhere (`list[str] | null`), and displayed cleanly in the UI.
+
+### No Data Migration
+
+User will re-scrape from scratch. Read-time normalization in `consolidation.py` is still needed as a safety net for any residual old data.
+
+---
+
+## Changes (11 files)
 
 ### 1. `scripts/ocr/ocr_processor.py` — Entry normalizer
 
@@ -21,7 +54,7 @@ def _normalize_promo(promo) -> list[str] | None:
     if not promo:
         return None
     if isinstance(promo, list):
-        return [str(p).strip() for p in promo if str(p).strip()]
+        return [str(p).strip() for p in promo if p and str(p).strip()]
     return [str(promo).strip()]
 ```
 
@@ -32,6 +65,8 @@ Replace line 80:
 # new
 'promo': _normalize_promo(raw.get('promo')),
 ```
+
+**Edge case guard**: `if p and str(p).strip()` filters out `None`, empty strings, and whitespace-only items before calling `str()`.
 
 ---
 
@@ -46,8 +81,8 @@ def parse_promo(promo_text: str | list[str] | None, base_price: int) -> PromoRes
 ```
 
 **Logic changes:**
-- Normalize input to `list[str]`
-- Iterate each promo string, try all regex patterns
+- Normalize input to `list[str]` at the top of the function
+- Iterate each promo string, try all regex patterns against each
 - Pick the result with the **lowest `effective_unit_price`** (best deal for customer)
 - Join all promo texts with `"; "` for the `display` field
 - If no pattern matches any item, fallback to `promo_type='single'` with joined display
@@ -72,21 +107,21 @@ promo_parts = [
 ]
 ```
 
-- `generate_consolidated_from_history()`: normalize promo when reading from `price_history.json` (old data may be string). Add helper:
+- `generate_consolidated_from_history()`: normalize promo when reading from `price_history.json` (safety net for residual old data). Add helper:
 
 ```python
 def _normalize_promo(v):
     if v is None:
         return None
     if isinstance(v, list):
-        return [str(x).strip() for x in v if str(x).strip()]
+        return [str(x).strip() for x in v if x and str(x).strip()]
     # Handle old stringified Python list: "['A', 'B']" or plain string
     s = str(v).strip()
     if s.startswith('[') and s.endswith(']'):
         import ast
         try:
             items = ast.literal_eval(s)
-            return [str(x).strip() for x in items if str(x).strip()]
+            return [str(x).strip() for x in items if x and str(x).strip()]
         except:
             pass
     return [s]
@@ -102,7 +137,7 @@ Call it on each `snap.get("promo")` at lines 211 and 242.
 - `build_store_entry()` / `build_single_product()` accept `list[str]`
 - History snapshots (lines 471, 486) serialize to JSON array automatically via `json.dump`
 
-No code changes needed here (assuming the type changes in consolidation.py are compatible).
+No code changes needed.
 
 ---
 
@@ -124,7 +159,29 @@ Also update `RETRY_CORRECTION` line 59.
 
 ---
 
-### 6. `index.html` — UI rendering
+### 6. `scripts/ocr/prompts/ollama.py` — Update dead-code prompts (cosmetic)
+
+Lines 4 and 10 have `"promo": "promo text if any"`. This file is not currently imported anywhere (prompts are hardcoded in `ollama_client.py`), but update for consistency:
+
+```python
+# old
+"promo": "promo text if any"
+# new
+"promo": ["promo text if any"]
+```
+
+---
+
+### 7. `index.html` — UI rendering
+
+**How promo arrays are shown to user:**
+
+| Location | Display | Example |
+|----------|---------|---------|
+| `buildStoreRows()` (price row) | ` (item1, item2)` after price | `Rp 31.000 (DISKON 20%, MAX 1)` |
+| `buildSingleCard()` (badge) | Full joined text in badge | `DISKON 20%, MAX 1` |
+| `buildMatchedCard()` | No promo text — only savings % | `Save 11%` |
+| `buildDetailPanel()` | No promo text — only effective price | `Rp 31.000 · Rp 25.000/pc` |
 
 **`buildStoreRows()` (~line 785):**
 ```javascript
@@ -133,6 +190,20 @@ const promoText = s.promo ? ` (${s.promo})` : "";
 // new
 const promoText = s.promo && s.promo.length ? ` (${s.promo.join(', ')})` : "";
 ```
+
+**Note**: Promo position is kept as-is (after price). In future, individual array items can be color-coded (e.g., red for DISKON, green for GET FREE).
+
+**`buildSingleCard()` (~line 839):**
+```javascript
+// old
+const promoLabel = hasPromo && s.promo ? s.promo : (product.promo_label || "");
+const promoColorClass = promoLabel.toLowerCase().includes("diskon") ? "promo-red" : "promo-green";
+// new
+const promoText = hasPromo && s.promo && s.promo.length ? s.promo.join(', ') : (product.promo_label || "");
+const promoColorClass = promoText.toLowerCase().includes("diskon") ? "promo-red" : "promo-green";
+```
+
+**Note**: Promo position is kept as-is (after price). In future, individual array items can be color-coded (e.g., red for DISKON, green for GET FREE).
 
 **`buildSingleCard()` (~line 839):**
 ```javascript
@@ -152,22 +223,31 @@ const promoBadge = promoLabel ? ... : "";
 const promoBadge = promoText ? ... : "";
 ```
 
+**Note**: `product.promo_label` is dead code (never set by backend). If it somehow becomes an array, `.toLowerCase()` will crash. Safe to leave as-is since backend never sets it.
+
 ---
 
-### 7. `scripts/ocr/prompts/gemini.py` — No change
+### 8. `scripts/ocr/prompts/gemini.py` — No change
 
 Already specifies `promo` as an array (line 9). No action needed.
 
 ---
 
-### 8. `scripts/publish_html.py` — No change
+### 9. `scripts/publish_html.py` — No change
 
 Passes data through unchanged. No action needed.
 
 ---
 
-### 9. `tests/ocr/test_ocr_validation.py` — Update test data
+### 10. `admin.html` — Verified no change needed
 
+No promo references found. Safe.
+
+---
+
+### 11. Tests — Update fixtures + add array tests
+
+**`tests/ocr/test_ocr_validation.py`:**
 - `test_promo_preserved` (line 68, 71):
   ```python
   # old
@@ -177,33 +257,35 @@ Passes data through unchanged. No action needed.
   raw = {"name": "Item", "promo": ["DAPAT 2 pcs"], "price": 10000}
   assert result["promo"] == ["DAPAT 2 pcs"]
   ```
-
 - `test_valid_product` (line 16): change `"promo": "DAPAT 5 pcs"` → `"promo": ["DAPAT 5 pcs"]`
 
----
-
-## Data Migration (existing `price_history.json`)
-
-The database has mixed formats:
-- `"DISKON 20%"` (plain string)
-- `"['DISKON 20%', 'MAX 1']"` (stringified Python list)
-
-Read-time normalization in `generate_consolidated_from_history()` (item 3 above) handles both. **One-time migration script is optional** but recommended for cleanliness:
-
-```python
-# scripts/migrate_promo_to_array.py
-# Reads price_history.json, converts all promo values to arrays, writes back.
-```
+**`tests/matching/test_promo_parser.py` — Add new tests:**
+- `test_array_single_item`: `parse_promo(["DAPAT 5 pcs"], 15500)` → same as string input
+- `test_array_multiple_items`: `parse_promo(["DISKON 20%", "MAX 1"], 100000)` → picks best effective price, display = `"DISKON 20%; MAX 1"`
+- `test_array_empty`: `parse_promo([], 15000)` → same as `None`
+- `test_array_mixed_match`: `parse_promo(["DISKON 20%", "Harga Spesial"], 100000)` → matches discount, ignores unrecognized
 
 ---
 
-# Issue 2: Stop OCR on daily quota exhausted (don't retry)
+## Documentation Updates
 
-## Problem
+These docs reference `promo` as `string|null` and must be updated:
+
+| File | Line(s) | Change |
+|------|---------|--------|
+| `docs/staging/ocr.md` | 42, 69 | `"promo": "DAPAT 5 pcs"` → `"promo": ["DAPAT 5 pcs"]`; type `string\|null` → `list[string]\|null` |
+| `docs/database/price_history.md` | 21, 52 | `"promo": "DAPAT 5 pcs"` → `"promo": ["DAPAT 5 pcs"]`; type `string or null` → `list[string] or null` |
+| `docs/staging/consolidation.md` | 28 | `"promo": "DAPAT 5 pcs"` → `"promo": ["DAPAT 5 pcs"]` |
+
+---
+
+## Issue 2: Stop OCR on Daily Quota Exhausted
+
+### Problem
 
 When Gemini daily quota is hit (429 RESOURCE_EXHAUSTED with quotaId `GenerateRequestsPerDayPerProjectPerModel-FreeTier`), `call_gemini_ocr()` retries 3 times with delays (55s, 60s, 59s) before failing. Then `run_ocr.py` catches the error and moves to the next image — which will also fail 3 times. All remaining images waste ~3 minutes each failing.
 
-## Goal
+### Goal
 
 Detect daily quota errors immediately, log once, stop OCR for all remaining images. Already OCR'd images continue to next stage.
 
@@ -245,7 +327,7 @@ if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "rate limit" in err_st
 
 ### 2. `scripts/ocr/ocr_processor.py` — Let `QuotaExhaustedError` propagate
 
-In `extract_products()` (~line 19-25), the `except` clause currently catches `(json.JSONDecodeError, ValueError)`. `QuotaExhaustedError` is neither, so it will propagate automatically. **No change needed** unless there's a generic `Exception` catch — there isn't. Verified: only catches specific exceptions.
+In `extract_products()` (~line 19-25), the `except` clause currently catches `(json.JSONDecodeError, ValueError)`. `QuotaExhaustedError` is neither, so it will propagate automatically. **No change needed**.
 
 ---
 
@@ -291,19 +373,11 @@ from scripts.ocr.gemini_client import QuotaExhaustedError
 - Already-processed images (1..N-1) are in `all_products` and `processed_filenames` → saved to output file and state → continue to next stage normally
 - Output file and state are still saved, so next run will skip already-OCR'd images
 
----
-
-## Summary (Issue 2)
-
-| File | Action |
-|------|--------|
-| `gemini_client.py` | Add `QuotaExhaustedError`, detect daily quota vs rate limit |
-| `ocr_processor.py` | No change (exception propagates automatically) |
-| `run_ocr.py` | Catch `QuotaExhaustedError`, break processing loop |
+**Note on `run_ocr_all.py`**: This Docker entrypoint runs Lotte then Superindo sequentially. If quota is exhausted during Lotte, the exception propagates and Superindo is **not** attempted. This is correct behavior — quota is per-project, not per-store.
 
 ---
 
-## Combined Summary (All Issues)
+## Combined Summary
 
 | File | Issue 1 (promo array) | Issue 2 (quota stop) |
 |------|-----------------------|----------------------|
@@ -312,9 +386,15 @@ from scripts.ocr.gemini_client import QuotaExhaustedError
 | `consolidation.py` | Update type hints, fix `build_promo_summary`, add read-time normalization | — |
 | `consolidate.py` | Pass-through (no change) | — |
 | `ollama_client.py` | Update prompt to request array | — |
+| `prompts/ollama.py` | Update dead-code prompts (cosmetic) | — |
 | `index.html` | Join array for inline/badge display | — |
 | `gemini.py` | No change | — |
 | `publish_html.py` | No change | — |
+| `admin.html` | Verified no change needed | — |
 | `test_ocr_validation.py` | Update fixtures to use arrays | — |
+| `test_promo_parser.py` | Add array input tests | — |
 | `gemini_client.py` | — | Add `QuotaExhaustedError`, detect daily quota vs rate limit |
 | `run_ocr.py` | — | Catch `QuotaExhaustedError`, break processing loop |
+| `docs/staging/ocr.md` | Update schema examples | — |
+| `docs/database/price_history.md` | Update schema examples | — |
+| `docs/staging/consolidation.md` | Update schema examples | — |
