@@ -137,24 +137,22 @@ def run_scrape(stores: list[str], dry_run: bool, logger: logging.Logger) -> dict
     return {"stores": store_results, "total_new": total_new}
 
 
-def run_ocr(stores: list[str], scrape_status: dict | None, dry_run: bool, logger: logging.Logger) -> dict:
-    """Run OCR stage only for stores with new images. Returns status dict."""
+def run_ocr(stores: list[str], dry_run: bool, logger: logging.Logger) -> dict:
+    """Run OCR stage for all requested stores. Returns status dict.
+
+    Per-image dedup is handled by OCR's own state file
+    (database/ocr/<store>/state.json).
+    """
     logger.info("=== Stage 2: OCR ===")
     store_results = {}
     total_products = 0
 
-    # Always run OCR - let it decide what to skip based on its own state
-    # OCR has built-in logic to skip already-processed images via state file
-    stores_with_new = stores
-
-    if not stores_with_new:
+    if not stores:
         logger.info("No stores requested. Skipping OCR.")
-        for store in stores:
-            store_results[store] = {"status": "skipped", "reason": "no_stores_requested"}
-        write_stage_status("ocr", {"stores": store_results, "total_products": 0}, logger)
-        return {"stores": store_results, "total_products": 0}
+        write_stage_status("ocr", {"stores": {}, "total_products": 0}, logger)
+        return {"stores": {}, "total_products": 0}
 
-    for store in stores_with_new:
+    for store in stores:
         logger.info("Running OCR for %s...", store)
         ocr_script = SCRIPTS / "ocr" / "run_ocr.py"
 
@@ -331,8 +329,7 @@ def main():
             print("  [SKIP] Scrape — already complete")
         else:
             print("  [RUN] Scrape")
-            scrape_result = run_scrape(stores, args.dry_run, logger)
-            scrape_status = scrape_result
+            run_scrape(stores, args.dry_run, logger)
 
         print()
 
@@ -341,7 +338,7 @@ def main():
             print("  [SKIP] OCR — already complete")
         else:
             print("  [RUN] OCR")
-            ocr_result = run_ocr(stores, scrape_status, args.dry_run, logger)
+            ocr_result = run_ocr(stores, args.dry_run, logger)
 
         print()
 
@@ -365,11 +362,11 @@ def main():
 
     elif args.full:
         # Stage 1: Scrape all stores
-        scrape_result = run_scrape(stores, args.dry_run, logger)
+        run_scrape(stores, args.dry_run, logger)
         print()
 
-        # Stage 2: OCR only stores with new images
-        ocr_result = run_ocr(stores, scrape_result, args.dry_run, logger)
+        # Stage 2: OCR all stores
+        ocr_result = run_ocr(stores, args.dry_run, logger)
         print()
 
         # Stage 3: Consolidation (always runs)
@@ -381,12 +378,10 @@ def main():
         print()
 
     elif args.stage == "scrape":
-        scrape_result = run_scrape(stores, args.dry_run, logger)
+        run_scrape(stores, args.dry_run, logger)
 
     elif args.stage == "ocr":
-        # For standalone OCR, check if scrape status exists
-        scrape_status = read_stage_status("scrape")
-        ocr_result = run_ocr(stores, scrape_status, args.dry_run, logger)
+        ocr_result = run_ocr(stores, args.dry_run, logger)
 
     elif args.stage == "consolidate":
         cons_result = run_consolidate(args.dry_run, logger)

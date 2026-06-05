@@ -6,19 +6,13 @@ logger = logging.getLogger(__name__)
 
 
 def extract_products(image_path: str, cfg: dict) -> list[dict]:
-    provider = cfg['ocr']['provider']
-    retries = cfg['ocr'].get(provider, {}).get('max_retries', 2)
+    retries = cfg['ocr'].get('gemini', {}).get('max_retries', 2)
 
-    if provider == 'gemini':
-        from .gemini_client import call_gemini_ocr
-        fn = call_gemini_ocr
-    else:
-        from .ollama_client import call_ollama_ocr
-        fn = call_ollama_ocr
+    from .gemini_client import call_gemini_ocr
 
     for attempt in range(retries):
         try:
-            return fn(image_path, cfg)
+            return call_gemini_ocr(image_path, cfg)
         except (json.JSONDecodeError, ValueError) as e:
             if attempt == retries - 1:
                 raise

@@ -8,7 +8,6 @@ import logging
 import os
 from enum import Enum
 
-import requests
 from sklearn.metrics.pairwise import cosine_similarity
 
 from scripts.matching.normalizer import (
@@ -162,52 +161,6 @@ Rules:
 Reply with exactly one word: YES or NO"""
 
 
-def _detect_docker() -> bool:
-    """Detect if running inside Docker."""
-    return (
-        os.path.exists('/.dockerenv')
-        or os.path.exists('/proc/1/cgroup')
-        or os.getenv('container') is not None
-    )
-
-
-def _ollama_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
-    """Send pairs to Ollama for binary yes/no verification (one API call per pair)."""
-    base_url = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-    if _detect_docker():
-        base_url = base_url.replace('localhost', 'host.docker.internal')
-
-    model = cfg.get('consolidation', {}).get('ai_verifier', {}).get('ai_model', 'qwen3:4b')
-    timeout = cfg.get('consolidation', {}).get('ai_verifier', {}).get('timeout_seconds', 120)
-
-    results: list[str | None] = []
-
-    for p in pairs:
-        prompt = AI_PROMPT_TEMPLATE.format(
-            store_a=p['store_a'], name_a=p['name_a'], unit_a=p.get('unit_a', ''), price_a=p.get('price_a', 0),
-            store_b=p['store_b'], name_b=p['name_b'], unit_b=p.get('unit_b', ''), price_b=p.get('price_b', 0),
-        )
-        try:
-            resp = requests.post(
-                f"{base_url}/api/chat",
-                json={"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False, "temperature": 0},
-                timeout=timeout,
-            )
-            resp.raise_for_status()
-            reply = resp.json().get('message', {}).get('content', '').strip().upper()
-            if 'YES' in reply:
-                results.append('YES')
-            elif 'NO' in reply:
-                results.append('NO')
-            else:
-                results.append(None)
-        except Exception as e:
-            logger.error("AI verification failed for pair: %s", e)
-            results.append(None)
-
-    return results
-
-
 def _gemini_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
     """Send pairs to Gemini for binary yes/no verification."""
     import google.genai as genai
@@ -243,14 +196,11 @@ def _gemini_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
 
 
 def gate6_ai_verifier(pairs: list[dict], cfg: dict) -> list[str | None]:
-    """Gate 6: Send ambiguous pairs to AI (Ollama or Gemini) for binary yes/no."""
+    """Gate 6: Send ambiguous pairs to Gemini for binary yes/no."""
     if not cfg.get('consolidation', {}).get('gates', {}).get('gate6_ai_verifier', True):
         return [None] * len(pairs)
 
-    provider = cfg.get('consolidation', {}).get('ai_verifier', {}).get('provider', 'ollama')
-    if provider == 'gemini':
-        return _gemini_verify(pairs, cfg)
-    return _ollama_verify(pairs, cfg)
+    return _gemini_verify(pairs, cfg)
 
 
 # ---------------------------------------------------------------------------

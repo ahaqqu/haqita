@@ -203,24 +203,24 @@ class TestGate6AIVerifier:
         results = gate6_ai_verifier(pairs, cfg)
         assert results == [None]
 
-    @patch('scripts.matching.matcher._ollama_verify')
-    def test_ollama_yes(self, mock_verify):
+    @patch('scripts.matching.matcher._gemini_verify')
+    def test_gemini_yes(self, mock_verify):
         mock_verify.return_value = ['YES']
         cfg = _cfg()
         pairs = [{'store_a': 'Lotte', 'name_a': 'X', 'store_b': 'Superindo', 'name_b': 'X'}]
         results = gate6_ai_verifier(pairs, cfg)
         assert results == ['YES']
 
-    @patch('scripts.matching.matcher._ollama_verify')
-    def test_ollama_no(self, mock_verify):
+    @patch('scripts.matching.matcher._gemini_verify')
+    def test_gemini_no(self, mock_verify):
         mock_verify.return_value = ['NO']
         cfg = _cfg()
         pairs = [{'store_a': 'Lotte', 'name_a': 'X', 'store_b': 'Superindo', 'name_b': 'Y'}]
         results = gate6_ai_verifier(pairs, cfg)
         assert results == ['NO']
 
-    @patch('scripts.matching.matcher._ollama_verify')
-    def test_ollama_garbage(self, mock_verify):
+    @patch('scripts.matching.matcher._gemini_verify')
+    def test_gemini_garbage(self, mock_verify):
         mock_verify.return_value = ['MAYBE']
         cfg = _cfg()
         pairs = [{'store_a': 'Lotte', 'name_a': 'X', 'store_b': 'Superindo', 'name_b': 'Y'}]
@@ -277,92 +277,11 @@ class TestGate4Embedding:
 
 
 # ---------------------------------------------------------------------------
-# _detect_docker
-# ---------------------------------------------------------------------------
-
-from scripts.matching.matcher import _detect_docker
-
-
-class TestDetectDocker:
-    def test_not_in_docker_by_default(self):
-        """Should return False when no docker indicators are present."""
-        # Clean environment — no /.dockerenv, no /proc/1/cgroup, no container
-        result = _detect_docker()
-        assert result is False or result is True  # acceptable either way
-
-    @patch('scripts.matching.matcher.os.path.exists')
-    def test_dockerenv_detected(self, mock_exists):
-        mock_exists.side_effect = lambda p: p == '/.dockerenv'
-        assert _detect_docker() is True
-
-
-# ---------------------------------------------------------------------------
-# _ollama_verify (prompt building)
-# ---------------------------------------------------------------------------
-
-from scripts.matching.matcher import _ollama_verify, _gemini_verify
-
-
-class TestOllamaVerify:
-    def test_empty_pairs(self):
-        cfg = _cfg()
-        assert _ollama_verify([], cfg) == []
-
-    @patch('scripts.matching.matcher.requests.post')
-    def test_yes_response(self, mock_post):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'message': {'content': 'YES'}}
-        mock_post.return_value = mock_resp
-
-        cfg = _cfg()
-        pairs = [{'store_a': 'Lotte', 'name_a': 'Indomie', 'unit_a': '85 g', 'price_a': 3000,
-                  'store_b': 'Superindo', 'name_b': 'Indomie', 'unit_b': '85 g', 'price_b': 3500}]
-        results = _ollama_verify(pairs, cfg)
-        assert results == ['YES']
-
-    @patch('scripts.matching.matcher.requests.post')
-    def test_no_response(self, mock_post):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'message': {'content': 'NO'}}
-        mock_post.return_value = mock_resp
-
-        cfg = _cfg()
-        pairs = [{'store_a': 'Lotte', 'name_a': 'A', 'unit_a': '85 g', 'price_a': 3000,
-                  'store_b': 'Superindo', 'name_b': 'B', 'unit_b': '1 L', 'price_b': 3500}]
-        results = _ollama_verify(pairs, cfg)
-        assert results == ['NO']
-
-    @patch('scripts.matching.matcher.requests.post')
-    def test_api_error_returns_none(self, mock_post):
-        mock_post.side_effect = Exception("Connection error")
-
-        cfg = _cfg()
-        pairs = [{'store_a': 'Lotte', 'name_a': 'A', 'store_b': 'Superindo', 'name_b': 'B'}]
-        results = _ollama_verify(pairs, cfg)
-        assert results == [None]
-
-    @patch('scripts.matching.matcher.requests.post')
-    def test_multiple_pairs(self, mock_post):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'message': {'content': 'YES'}}
-        mock_post.return_value = mock_resp
-
-        cfg = _cfg()
-        pairs = [
-            {'store_a': 'Lotte', 'name_a': 'A', 'unit_a': '85 g', 'price_a': 3000,
-             'store_b': 'Superindo', 'name_b': 'A', 'unit_b': '85 g', 'price_b': 3500},
-            {'store_a': 'Lotte', 'name_a': 'B', 'unit_a': '1 L', 'price_a': 5000,
-             'store_b': 'Superindo', 'name_b': 'B', 'unit_b': '1 L', 'price_b': 5200},
-        ]
-        results = _ollama_verify(pairs, cfg)
-        assert len(results) == 2
-        # Each pair gets its own API call now (fixed batching bug)
-        assert mock_post.call_count == 2
-
-
-# ---------------------------------------------------------------------------
 # _gemini_verify
 # ---------------------------------------------------------------------------
+
+from scripts.matching.matcher import _gemini_verify
+
 
 class TestGeminiVerify:
     def test_empty_pairs(self):

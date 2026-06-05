@@ -87,7 +87,7 @@ def atomic_write_json(data: dict, path: str) -> None:
                                      delete=False, encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
         tmp_path = f.name
-    shutil.move(tmp_path, path)
+    os.replace(tmp_path, path)
 
 
 # ---------------------------------------------------------------------------
@@ -269,20 +269,6 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
     if cfg.get('consolidation', {}).get('gates', {}).get('gate4_embedding', True):
         model_name = cfg.get('consolidation', {}).get('embedding_model', 'paraphrase-multilingual-MiniLM-L12-v2')
         embedding_model = load_embedding_model(model_name)
-
-    # 4b. Setup Ollama if AI verifier uses it
-    ai_provider = cfg.get('consolidation', {}).get('ai_verifier', {}).get('provider', 'ollama')
-    if ai_provider == 'ollama' and cfg.get('consolidation', {}).get('gates', {}).get('gate6_ai_verifier', True):
-        ollama_model = cfg.get('consolidation', {}).get('ai_verifier', {}).get('ai_model', 'qwen3:4b')
-        from scripts.setup_ollama import setup_ollama
-        ollama_success = setup_ollama(model=ollama_model)
-        if not ollama_success:
-            run_mode = os.getenv("RUN_MODE", "").lower()
-            if run_mode == "docker":
-                raise RuntimeError("Ollama failed to connect. In Docker mode, ensure Ollama is running on host with OLLAMA_BASE_URL=http://host.docker.internal:11434. Also ensure model is pulled: ollama pull qwen3:4b")
-            else:
-                raise RuntimeError("Ollama failed to start. Ensure 'ollama serve' is running and 'ollama pull qwen3:4b' has been executed.")
-        print("[*] Ollama ready for AI verification")
 
     # 5. Run matching pipeline
     print("[*] Running matching pipeline ...")

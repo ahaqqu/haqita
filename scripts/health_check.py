@@ -93,72 +93,24 @@ def check_directories() -> tuple[bool, list[str]]:
 
 
 def check_ocr_provider(cfg: dict, verbose: bool = False) -> tuple[bool, str]:
-    """Check OCR provider is configured and reachable."""
-    provider = cfg.get("ocr", {}).get("provider", "ollama")
-
-    if provider == "gemini":
-        import os
-        api_key = cfg.get("ocr", {}).get("gemini", {}).get("api_key") or os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            return False, "GEMINI_API_KEY not set (required when OCR_PROVIDER=gemini)"
-        if verbose:
-            masked = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
-            return True, f"Gemini API key set ({masked})"
-        return True, "Gemini API key set"
-
-    elif provider == "ollama":
-        try:
-            import requests
-            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-            resp = requests.get(f"{base_url}/api/tags", timeout=5)
-            if resp.status_code == 200:
-                models = resp.json().get("models", [])
-                model_names = [m.get("name", "") for m in models]
-                ocr_model = cfg.get("ocr", {}).get("ollama", {}).get("model", "qwen3-vl:7b")
-                if any(ocr_model in m for m in model_names):
-                    return True, f"Ollama running, model {ocr_model} available"
-                return True, f"Ollama running (model {ocr_model} not found, available: {', '.join(model_names[:5])})"
-            return False, f"Ollama returned status {resp.status_code}"
-        except requests.ConnectionError:
-            return False, "Ollama not running at localhost:11434"
-        except Exception as e:
-            return False, f"Ollama check failed: {e}"
-
-    return False, f"Unknown OCR provider: {provider}"
+    """Check Gemini API key is set."""
+    import os
+    api_key = cfg.get("ocr", {}).get("gemini", {}).get("api_key") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return False, "GEMINI_API_KEY not set (required for OCR)"
+    if verbose:
+        masked = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
+        return True, f"Gemini API key set ({masked})"
+    return True, "Gemini API key set"
 
 
 def check_ai_verifier(cfg: dict, verbose: bool = False) -> tuple[bool, str]:
-    """Check AI verifier provider is configured."""
-    verifier_cfg = cfg.get("consolidation", {}).get("ai_verifier", {})
-    provider = verifier_cfg.get("provider", "ollama")
-
-    if provider == "ollama":
-        try:
-            import requests
-            import os
-            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-            model = verifier_cfg.get("ai_model", "qwen3:4b")
-            resp = requests.get(f"{base_url}/api/tags", timeout=5)
-            if resp.status_code == 200:
-                models = resp.json().get("models", [])
-                model_names = [m.get("name", "") for m in models]
-                if any(model in m for m in model_names):
-                    return True, f"AI verifier Ollama model {model} available"
-                return True, f"AI verifier Ollama model {model} not found (available: {', '.join(model_names[:5])})"
-            return False, f"Ollama returned status {resp.status_code}"
-        except requests.ConnectionError:
-            return False, "Ollama not running (required for AI verifier)"
-        except Exception as e:
-            return False, f"AI verifier check failed: {e}"
-
-    elif provider == "gemini":
-        import os
-        api_key = cfg.get("ocr", {}).get("gemini", {}).get("api_key") or os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            return False, "GEMINI_API_KEY not set (required when AI verifier uses Gemini)"
-        return True, "Gemini AI verifier configured"
-
-    return False, f"Unknown AI verifier provider: {provider}"
+    """Check AI verifier (Gemini) is configured."""
+    import os
+    api_key = cfg.get("ocr", {}).get("gemini", {}).get("api_key") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return False, "GEMINI_API_KEY not set (required for AI verifier)"
+    return True, "Gemini AI verifier configured"
 
 
 def main():

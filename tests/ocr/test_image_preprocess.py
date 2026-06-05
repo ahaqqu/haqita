@@ -3,18 +3,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from scripts.ocr.image_preprocess import preprocess_for_ocr, split_image_halves
-
-MOCK_CFG = {
-    "ocr": {
-        "provider": "ollama",
-        "ollama": {
-            "image_min_width_px": 1400,
-            "image_contrast_enhance": 1.0,
-            "image_sharpness_enhance": 1.0,
-        }
-    }
-}
+from scripts.ocr.image_preprocess import split_image_halves
 
 
 def _create_test_image(width: int, height: int, path: str):
@@ -28,34 +17,6 @@ def _cleanup(path: str):
         Path(path).unlink(missing_ok=True)
     except PermissionError:
         pass
-
-
-class TestPreprocessForOcr:
-    def test_scales_up_small_image(self):
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
-            path = f.name
-        try:
-            _create_test_image(800, 600, path)
-            result = preprocess_for_ocr(path, MOCK_CFG)
-            from PIL import Image
-            with Image.open(result) as processed:
-                assert processed.width >= 1400
-            _cleanup(result)
-        finally:
-            _cleanup(path)
-
-    def test_large_image_unchanged(self):
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
-            path = f.name
-        try:
-            _create_test_image(2000, 1500, path)
-            result = preprocess_for_ocr(path, MOCK_CFG)
-            from PIL import Image
-            with Image.open(result) as processed:
-                assert processed.width == 2000
-            _cleanup(result)
-        finally:
-            _cleanup(path)
 
 
 class TestSplitImageHalves:

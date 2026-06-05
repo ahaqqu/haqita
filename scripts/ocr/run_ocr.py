@@ -12,7 +12,6 @@ Options:
     --store STORE          Store name: lotte or superindo (default: lotte)
     --image FILENAME       Process specific image only (default: all new)
     --dry-run              Report products without saving to file
-    --no-docker            Run natively (not in Docker)
 """
 
 import argparse
@@ -27,7 +26,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from scripts.config import load_config
 from scripts.ocr.ocr_processor import extract_products, validate_product
-from scripts.ocr.image_preprocess import preprocess_for_ocr
 from scripts.ocr.gemini_client import QuotaExhaustedError
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -137,21 +135,12 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
     for idx, img_path in enumerate(images_to_process, 1):
         print(f"[{idx}/{len(images_to_process)}] {img_path.name} ({img_path.stat().st_size / 1024:.0f} KB)")
 
-        print("    Preprocessing...", end=" ")
-        sys.stdout.flush()
-        try:
-            processed = preprocess_for_ocr(str(img_path), cfg)
-            print("OK")
-        except Exception as e:
-            print(f"FAIL: {e}")
-            continue
-
         print(f"    Processing image [{idx}/{len(images_to_process)}] {img_path.name} ({img_path.stat().st_size / 1024:.0f} KB) for OCR to {provider}")
 
         t0 = time.time()
         validated, rejected = [], []
         try:
-            products_raw = extract_products(processed, cfg)
+            products_raw = extract_products(str(img_path), cfg)
             for prod in products_raw:
                 clean, reason = validate_product(prod, img_path.name)
                 if clean:
@@ -182,9 +171,6 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
         all_products.extend(validated)
         all_rejected.extend(rejected)
         processed_filenames.append(img_path.name)
-
-        if str(processed) != str(img_path):
-            Path(processed).unlink(missing_ok=True)
         print()
 
     if quota_exhausted:
@@ -245,7 +231,6 @@ def main():
     parser.add_argument('--store', type=str, default='lotte', help='Store name: lotte or superindo')
     parser.add_argument('--image', type=str, default=None, help='Process specific image only')
     parser.add_argument('--dry-run', action='store_true', help='Report products without saving')
-    parser.add_argument('--no-docker', action='store_true', help='Run natively')
     args = parser.parse_args()
 
     cfg = load_config(store=args.store)

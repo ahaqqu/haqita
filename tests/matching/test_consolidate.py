@@ -476,7 +476,11 @@ class TestBuildPromoSummary:
             build_store_entry('Superindo', 12000, 4000, promo=['DAPAT 3 pcs']),
         ]
         result = build_promo_summary(entries)
-        assert ',' in result['promo_summary']
+        assert result['has_promo'] is True
+        assert 'Beli 2 Gratis 1' in result['promo_summary']
+        assert 'DAPAT 3 pcs' in result['promo_summary']
+        assert 'Lotte' in result['promo_summary']
+        assert 'Superindo' in result['promo_summary']
 
 
 class TestCalcValidUntil:

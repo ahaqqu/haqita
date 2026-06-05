@@ -1181,8 +1181,6 @@ async function loadData(isRefresh = false) {
     }
     if (consolidatedData?.generated_at) {
       updateFreshnessBar(consolidatedData.generated_at);
-    } else if (consolidatedData?.metadata?.last_updated) {
-      updateFreshnessBar(consolidatedData.metadata.last_updated);
     }
     renderCards();
     if (!isRefresh) {

@@ -6,14 +6,14 @@ Downloads current promo brochure images from supermarket websites.
 
 | | |
 |---|---|
-| **Input** | Superindo / Lotte Mart website URLs (from `config.yaml`) |
+| **Input** | Superindo / Lotte Mart website URLs (hardcoded in each scraper) |
 | **Output** | Brochure images in `database/scrape/<store>/<YYYYMMDD>/` (JPG/PNG) |
 | **State** | `database/scrape/<store>/state.json` — MD5 tracking to skip already-seen images |
 | **Dry-run** | Reports new images without downloading |
 
 ## How It Works
 
-1. Fetch HTML from configured store URLs
+1. Fetch HTML from hardcoded store URLs
 2. Parse HTML to extract promo image URLs
 3. Download each image, compute MD5 hash
 4. Check size/dimension thresholds (skip too-small images)
@@ -29,29 +29,22 @@ Each downloaded image is classified as:
 |---|---|
 | `[NEW]` | New image, downloaded and saved |
 | `[SKIP]` | Already processed (MD5 match) |
-| `[SKIP]` | Too small (below `min_image_size_kb`) |
+| `[SKIP]` | Too small (below `BaseScraper.min_image_size_kb`, default 50 KB) |
 | `[SKIP]` | Dimensions too small (below `min_dimension`) |
 | `[SKIP]` | Duplicate content within same run (same MD5) |
 | `[ERR]` | Download failed |
 
 ## Configuration
 
-Store-specific settings in `config.yaml`:
+Scraper URLs and per-store settings are hardcoded in their respective modules:
 
-```yaml
-scrapers:
-  lotte:
-    url: https://www.lottemart.co.id/all-promo-mart
-    min_image_size_kb: 50
-    request_delay_seconds: 2
+- `scripts/scrapers/lotte.py` — `LOTTE_URL` constant
+- `scripts/scrapers/superindo.py` — URL list and `REGION_FILTER`
 
-  superindo:
-    urls:
-      - https://www.superindo.co.id/promosi/katalog-super-hemat/
-      - https://www.superindo.co.id/promosi/promo-koran/
-    region_filter: jabodetabek-palembang
-    min_image_size_kb: 50
-    request_delay_seconds: 2
+`BaseScraper` defaults (override by subclass attribute):
+
+```python
+min_image_size_kb: int = 50
 ```
 
 ## Usage

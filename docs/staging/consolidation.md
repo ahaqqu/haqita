@@ -100,10 +100,7 @@ consolidation:
     gate6_ai_verifier: true
 
   ai_verifier:
-    provider: ollama
-    ai_model: qwen3:4b
     gemini_model: gemini-3-flash-preview
-    ai_batch_size: 20
 ```
 
 ## Promo Parsing
@@ -141,7 +138,7 @@ Via `haqita.bat` → Option [4] → Consolidation submenu:
 
 ## Verbose Logging
 
-Run with `--verbose` flag to get detailed match results in `database/logs/consolidate_<timestamp>.log`:
+Run with `--verbose` flag to get detailed match results in `output/logs/consolidate_<timestamp>.log`:
 
 - All matched pairs with match method and confidence
 - All lotte-only and superindo-only products
