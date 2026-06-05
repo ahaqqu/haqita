@@ -310,3 +310,112 @@ class TestGeminiVerify:
         pairs = [{'store_a': 'Lotte', 'name_a': 'A', 'store_b': 'Superindo', 'name_b': 'A'}]
         results = _gemini_verify(pairs, cfg)
         assert results == ['YES']
+
+    @patch('google.genai')
+    @patch('scripts.common.http_client.time.sleep')
+    def test_503_retries_then_succeeds(self, mock_sleep, mock_genai):
+        mock_client = MagicMock()
+        mock_genai.Client.return_value = mock_client
+
+        mock_resp = MagicMock()
+        mock_resp.text = "YES"
+        mock_client.models.generate_content.side_effect = [
+            Exception("503 UNAVAILABLE. high demand"),
+            Exception("503 UNAVAILABLE. high demand"),
+            mock_resp,
+        ]
+
+        cfg = _cfg()
+        cfg.setdefault('ocr', {}).setdefault('gemini', {})['api_key'] = 'test-key'
+        pairs = [{'store_a': 'Lotte', 'name_a': 'A', 'store_b': 'Superindo', 'name_b': 'A'}]
+        results = _gemini_verify(pairs, cfg)
+        assert results == ['YES']
+        assert mock_client.models.generate_content.call_count == 3
+
+    @patch('google.genai')
+    @patch('scripts.common.http_client.time.sleep')
+    def test_503_exhausts_retries_returns_none(self, mock_sleep, mock_genai):
+        mock_client = MagicMock()
+        mock_genai.Client.return_value = mock_client
+        mock_client.models.generate_content.side_effect = Exception("503 UNAVAILABLE. high demand")
+
+        cfg = _cfg()
+        cfg.setdefault('consolidation', {}).setdefault('ai_verifier', {})['max_retries'] = 2
+        cfg.setdefault('ocr', {}).setdefault('gemini', {})['api_key'] = 'test-key'
+        pairs = [{'store_a': 'Lotte', 'name_a': 'A', 'store_b': 'Superindo', 'name_b': 'A'}]
+        results = _gemini_verify(pairs, cfg)
+        assert results == [None]
+        assert mock_client.models.generate_content.call_count == 2
+
+    @patch('google.genai')
+    @patch('scripts.common.http_client.time.sleep')
+    def test_per_minute_rate_limit_retries(self, mock_sleep, mock_genai):
+        mock_client = MagicMock()
+        mock_genai.Client.return_value = mock_client
+
+        mock_resp = MagicMock()
+        mock_resp.text = "YES"
+        mock_client.models.generate_content.side_effect = [
+            Exception("429 RESOURCE_EXHAUSTED: Please retry in 30s"),
+            mock_resp,
+        ]
+
+        cfg = _cfg()
+        cfg.setdefault('consolidation', {}).setdefault('ai_verifier', {})['max_retries'] = 2
+        cfg.setdefault('ocr', {}).setdefault('gemini', {})['api_key'] = 'test-key'
+        pairs = [{'store_a': 'Lotte', 'name_a': 'A', 'store_b': 'Superindo', 'name_b': 'A'}]
+        results = _gemini_verify(pairs, cfg)
+        assert results == ['YES']
+        assert mock_sleep.call_count == 1
+        assert mock_sleep.call_args[0][0] == 45
+
+    @patch('google.genai')
+    @patch('scripts.common.http_client.time.sleep')
+    def test_daily_quota_does_not_retry(self, mock_sleep, mock_genai):
+        mock_client = MagicMock()
+        mock_genai.Client.return_value = mock_client
+        mock_client.models.generate_content.side_effect = Exception(
+            "429 RESOURCE_EXHAUSTED: Quota exceeded for quota metric GenerateRequests per day"
+        )
+
+        cfg = _cfg()
+        cfg.setdefault('consolidation', {}).setdefault('ai_verifier', {})['max_retries'] = 3
+        cfg.setdefault('ocr', {}).setdefault('gemini', {})['api_key'] = 'test-key'
+        pairs = [
+            {'store_a': 'Lotte', 'name_a': 'A', 'store_b': 'Superindo', 'name_b': 'A'},
+            {'store_a': 'Lotte', 'name_a': 'B', 'store_b': 'Superindo', 'name_b': 'B'},
+        ]
+        results = _gemini_verify(pairs, cfg)
+        assert results == [None, None]
+        assert mock_client.models.generate_content.call_count == 1
+        assert mock_sleep.call_count == 0
+
+    @patch('google.genai')
+    @patch('scripts.common.http_client.time.sleep')
+    def test_per_pair_retries_are_independent(self, mock_sleep, mock_genai):
+        mock_client = MagicMock()
+        mock_genai.Client.return_value = mock_client
+
+        yes_resp = MagicMock()
+        yes_resp.text = "YES"
+        no_resp = MagicMock()
+        no_resp.text = "NO"
+        third_resp = MagicMock()
+        third_resp.text = "YES"
+        mock_client.models.generate_content.side_effect = [
+            Exception("503 UNAVAILABLE"),
+            yes_resp,
+            no_resp,
+            third_resp,
+        ]
+
+        cfg = _cfg()
+        cfg.setdefault('ocr', {}).setdefault('gemini', {})['api_key'] = 'test-key'
+        pairs = [
+            {'store_a': 'Lotte', 'name_a': 'A', 'store_b': 'Superindo', 'name_b': 'A'},
+            {'store_a': 'Lotte', 'name_a': 'B', 'store_b': 'Superindo', 'name_b': 'B'},
+            {'store_a': 'Lotte', 'name_a': 'C', 'store_b': 'Superindo', 'name_b': 'C'},
+        ]
+        results = _gemini_verify(pairs, cfg)
+        assert results == ['YES', 'NO', 'YES']
+        assert mock_client.models.generate_content.call_count == 4

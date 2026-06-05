@@ -10,6 +10,7 @@ from enum import Enum
 
 from sklearn.metrics.pairwise import cosine_similarity
 
+from scripts.common.http_client import QuotaExhaustedError, retry_call
 from scripts.matching.normalizer import (
     canonical_tokens,
     normalize_brand,
@@ -161,6 +162,30 @@ Rules:
 Reply with exactly one word: YES or NO"""
 
 
+def _verify_one_pair(client, model_name: str, prompt: str, max_retries: int) -> str | None:
+    """Call Gemini once per attempt, retrying transient errors.
+
+    Returns 'YES'/'NO' on a parseable reply, None on unparseable reply or
+    after exhausting all retries. Raises QuotaExhaustedError on daily quota
+    so the caller can skip remaining pairs.
+    """
+    def _call():
+        return client.models.generate_content(model=model_name, contents=prompt)
+    try:
+        resp = retry_call(_call, max_retries=max_retries, context="ai_verifier")
+    except QuotaExhaustedError:
+        raise
+    except Exception as e:
+        logger.error("AI verification gave up after %d attempts: %s", max_retries, e)
+        return None
+    reply = resp.text.strip().upper()
+    if 'YES' in reply:
+        return 'YES'
+    if 'NO' in reply:
+        return 'NO'
+    return None
+
+
 def _gemini_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
     """Send pairs to Gemini for binary yes/no verification."""
     import google.genai as genai
@@ -170,7 +195,9 @@ def _gemini_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
         logger.error("GEMINI_API_KEY not set for AI verifier")
         return [None] * len(pairs)
 
-    model_name = cfg.get('consolidation', {}).get('ai_verifier', {}).get('gemini_model', 'gemini-3-flash-preview')
+    ai_cfg = cfg.get('consolidation', {}).get('ai_verifier', {})
+    model_name = ai_cfg.get('gemini_model', 'gemini-3-flash-preview')
+    max_retries = ai_cfg.get('max_retries', 3)
     client = genai.Client(api_key=api_key)
     results: list[str | None] = []
 
@@ -180,17 +207,12 @@ def _gemini_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
             store_b=p['store_b'], name_b=p['name_b'], unit_b=p.get('unit_b', ''), price_b=p.get('price_b', 0),
         )
         try:
-            resp = client.models.generate_content(model=model_name, contents=prompt)
-            reply = resp.text.strip().upper()
-            if 'YES' in reply:
-                results.append('YES')
-            elif 'NO' in reply:
-                results.append('NO')
-            else:
-                results.append(None)
-        except Exception as e:
-            logger.error("Gemini AI verification failed: %s", e)
+            results.append(_verify_one_pair(client, model_name, prompt, max_retries))
+        except QuotaExhaustedError as e:
+            logger.error("Stopping AI verifier early: %s", e)
             results.append(None)
+            results.extend([None] * (len(pairs) - len(results)))
+            break
 
     return results
 

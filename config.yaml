@@ -28,6 +28,7 @@ consolidation:
   # AI verifier (for ambiguous pairs)
   ai_verifier:
     gemini_model: gemini-2.5-flash
+    max_retries: 3                        # Retry transient 503/429 errors with backoff
 
 monitoring:
   review_queue_max: 100
