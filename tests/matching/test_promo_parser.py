@@ -29,17 +29,18 @@ class TestParsePromo:
     def test_diskon_pct(self):
         result = parse_promo("Diskon 20%", 100000)
         assert result.promo_type == "discount_pct"
-        assert result.effective_unit_price == 80000
+        # OCR captures the post-discount price; no further math applied
+        assert result.effective_unit_price == 100000
 
     def test_diskon_25(self):
         result = parse_promo("Diskon 25%", 24900)
         assert result.promo_type == "discount_pct"
-        assert result.effective_unit_price == 18675
+        assert result.effective_unit_price == 24900
 
     def test_hemat_fixed(self):
         result = parse_promo("Hemat Rp 5.000", 20000)
         assert result.promo_type == "discount_fixed"
-        assert result.effective_unit_price == 15000
+        assert result.effective_unit_price == 20000
 
     def test_multi_price(self):
         result = parse_promo("3 pcs / Rp15.000", 15000)
@@ -89,7 +90,10 @@ class TestParsePromo:
     def test_array_mixed_match(self):
         result = parse_promo(["DISKON 20%", "Harga Spesial"], 100000)
         assert result.promo_type == "discount_pct"
-        assert result.effective_unit_price == 80000
+        # DISKON 20% no longer applies math → effective = 100000
+        # "Harga Spesial" (unrecognized) → 100000
+        # Best (lowest) = 100000
+        assert result.effective_unit_price == 100000
         assert result.display == "DISKON 20%, Harga Spesial"
 
 

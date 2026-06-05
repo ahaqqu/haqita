@@ -2,6 +2,12 @@
 Indonesian promo text parser.
 
 Detects promo type and computes effective unit price / unit count.
+
+Effective unit price math:
+- bundle_buy / get_free / multi_price: division (per-piece price from total bundle)
+- discount_pct / discount_fixed: NO math. The OCR captures the post-discount
+  price in the `price` field per the OCR prompt rules, so applying the
+  discount again would double-discount and produce a too-low value.
 """
 
 import re
@@ -70,21 +76,19 @@ def _parse_single_promo(promo_text: str, base_price: int) -> PromoResult:
                 )
             elif ptype == 'discount_pct':
                 pct = int(m.group(1))
-                discounted = max(1, base_price * (100 - pct) // 100)
                 return PromoResult(
                     promo_type='discount_pct',
                     display=promo_text,
                     unit_count=1,
-                    effective_unit_price=discounted,
+                    effective_unit_price=base_price,
                 )
             elif ptype == 'discount_fixed':
                 saved = _parse_price(m.group(1))
-                discounted = max(1, base_price - saved)
                 return PromoResult(
                     promo_type='discount_fixed',
                     display=promo_text,
                     unit_count=1,
-                    effective_unit_price=discounted,
+                    effective_unit_price=base_price,
                 )
 
     return PromoResult(
@@ -98,7 +102,14 @@ def _parse_single_promo(promo_text: str, base_price: int) -> PromoResult:
 def parse_promo(promo_text: str | list[str] | None, base_price: int) -> PromoResult:
     """
     Returns a PromoResult. Falls back to single-unit if no pattern matches.
-    base_price: the price field from OCR (may be total bundle price).
+    base_price: the price field from OCR.
+
+    For bundle promos (get_free / bundle_buy / multi_price), base_price is the
+    total bundle price from the brochure and we divide it by the unit count.
+
+    For discount promos (discount_pct / discount_fixed), base_price is already
+    the post-discount price captured by the OCR (see gemini.py prompt). We do
+    not apply any further math — using the OCR price as-is is the end price.
 
     Accepts a single string, a list of strings, or None.
     When given a list, parses each item independently and returns the result
