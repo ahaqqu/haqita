@@ -6,7 +6,6 @@ Each gate is an isolated function. The orchestrator checks config before calling
 
 import logging
 import os
-import re
 from enum import Enum
 
 import requests
@@ -268,14 +267,6 @@ def load_embedding_model(model_name: str):
 def compute_embeddings(names: list[str], model) -> list:
     """Compute embeddings for a list of names."""
     return model.encode(names, convert_to_numpy=True)
-
-
-def compute_similarity_matrix(names_a: list[str], names_b: list[str], model) -> list[list[float]]:
-    """Returns similarity[i][j] for names_a[i] vs names_b[j]."""
-    from sklearn.metrics.pairwise import cosine_similarity
-    emb_a = compute_embeddings(names_a, model)
-    emb_b = compute_embeddings(names_b, model)
-    return cosine_similarity(emb_a, emb_b).tolist()
 
 
 # ---------------------------------------------------------------------------

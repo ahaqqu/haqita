@@ -9,7 +9,7 @@ store-specific behavior (HTML parsing, image collection).
 import hashlib
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import field
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path

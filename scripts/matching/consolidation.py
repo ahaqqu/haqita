@@ -10,7 +10,6 @@ DISPLAY_HINTS = {
     "stores": {"Lotte": "Lotte", "Superindo": "Superindo"},
     "store_colors": {"Lotte": "#0057A8", "Superindo": "#E8211D"},
     "currency": "IDR",
-    "locale": "id-ID",
 }
 
 

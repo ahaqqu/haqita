@@ -598,7 +598,7 @@ footer {
 
 <div id="load-more-sentinel" style="height: 1px;"></div>
 
-<footer id="footer">
+<footer>
   <div class="footer-inner">
     <span id="footer-stats"></span>
     <span id="footer-review"></span>
@@ -620,7 +620,6 @@ let isLoadingMore = false;
 function getDefaultDisplayHints() {
   return {
     currency: "Rp",
-    locale: "en-ID",
     stores: { lotte: "Lotte", superindo: "Superindo" },
     store_colors: { lotte: "#0057A8", superindo: "#E8211D" }
   };
@@ -629,28 +628,6 @@ function getDefaultDisplayHints() {
 function formatIDR(n) {
   if (n == null) return "-";
   return displayHints.currency + " " + n.toLocaleString("id-ID");
-}
-
-function formatDate(isoDate) {
-  if (!isoDate) return "";
-  const d = new Date(isoDate);
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
-}
-
-function getRelativeDateText(isoDate) {
-  if (!isoDate) return "";
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(isoDate);
-  target.setHours(0, 0, 0, 0);
-  const diffTime = target - now;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays < 0) return "Expired";
-  if (diffDays === 0) return "Valid today";
-  if (diffDays === 1) return "Valid for 1 day";
-  return `Valid for ${diffDays} days`;
 }
 
 function getShortDateText(isoDate) {
@@ -678,13 +655,13 @@ async function tryLoadWithFallback(basePath, fallbackPath, filename) {
   const tryPath = (path) => retryFetch(`${path}/${filename}`);
   try {
     const resp = await tryPath(basePath);
-    if (resp.ok) return { data: await resp.json(), from: basePath, isSample: false };
+    if (resp.ok) return { data: await resp.json(), from: basePath };
   } catch (e) {}
   try {
     const resp = await tryPath(fallbackPath);
-    if (resp.ok) return { data: await resp.json(), from: fallbackPath, isSample: true };
+    if (resp.ok) return { data: await resp.json(), from: fallbackPath };
   } catch (e) {}
-  return { data: null, from: null, isSample: false };
+  return { data: null, from: null };
 }
 
 function validateData(data, type) {
@@ -867,7 +844,7 @@ function buildSingleCard(product) {
       <div class="product-name">${product.name || "Unknown"}</div>
       <div class="product-unit">${product.unit || ""}</div>
       ${confBadge}
-      ${promoBadge}
+      ${promoBadgesSingle}
     </div>
     <div class="card-footer">
       <div class="price-tag">
@@ -1174,10 +1151,6 @@ async function loadData(isRefresh = false) {
     if (!histOk && consOk) {
       if (!isRefresh) renderWarning("Price history unavailable. Charts will not display.");
       priceHistoryData = null;
-    }
-    if (!histOk && !consOk) {
-      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
-      return;
     }
     const isSample = consolidatedData?.is_sample === true || priceHistoryData?.is_sample === true;
     if (isSample) {
