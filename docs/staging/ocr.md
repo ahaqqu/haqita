@@ -43,7 +43,7 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
       "brand": "Indomie",
       "unit": "85 g",
       "price": 3500,
-      "promo": "DAPAT 5 pcs",
+      "promo": ["DAPAT 5 pcs"],
       "period": "7 - 20 Mei 2026",
       "image_source": "promo_lotte_abc123.jpg",
       "ocr_raw_price": "Rp 3.500",
@@ -71,52 +71,39 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
 | `brand` | string\|null | Brand name (uppercase) |
 | `unit` | string\|null | Quantity (e.g., "85 g", "6 x 45 ml") |
 | `price` | int | Price in IDR |
-| `promo` | string\|null | Promo text (e.g., "DAPAT 5 pcs") |
+| `promo` | list[string]\|null | Array of promo texts (e.g., ["DAPAT 5 pcs", "Beli 2 Gratis 1"]) |
 | `period` | string\|null | Promo period (e.g., "7 - 20 Mei 2026") |
 | `image_source` | string | Source image filename |
 | `ocr_raw_price` | string | Raw price text from OCR |
 | `ocr_confidence` | float | Confidence score (0.0–1.0) |
 | `image_path` | string | Relative path to source image |
 
-## OCR Providers
+## OCR Provider
 
-Configured in `config.yaml`:
+Gemini (cloud) is the only OCR provider. Configured in `config.yaml`:
 
 ```yaml
 ocr:
-  provider: gemini  # or "ollama"
-
-  ollama:
-    model: qwen3-vl:7b
-    num_ctx: 8192
-    timeout_seconds: 300
-    max_retries: 2
-    temperature: 0
-    preprocess: true
-    image_min_width_px: 1400
-    image_contrast_enhance: 1.4
-    image_sharpness_enhance: 1.2
+  provider: gemini
 
   gemini:
-    model: gemini-3-flash-preview
-    timeout_seconds: 60
+    model: gemini-3.5-flash
     max_retries: 2
 ```
 
-Switch via `.env`:
+Get a free API key at https://aistudio.google.com/apikey and set it in `.env`:
 ```env
-OCR_PROVIDER=gemini   # or "ollama"
 GEMINI_API_KEY=your_key_here
 ```
 
 ## Validation Rules
 
 Products are rejected if:
-- Price is 0, negative, or outside valid range (`validation.min_price` to `validation.max_price`)
-- Product name is too short (`validation.min_product_name_length`)
+- Price is 0, negative, or outside valid range (hardcoded: 100 – 1,000,000 IDR in `ocr_processor.py:clean_price`)
+- Product name is too short (hardcoded: < 3 chars in `ocr_processor.py:validate_product`)
 - Price cannot be parsed as integer
 
-Products with low OCR confidence (`< validation.ocr_confidence_flag_threshold`) are flagged for review but not rejected.
+`ocr_confidence` is captured on each product but no automatic flagging is currently applied.
 
 ## Usage
 

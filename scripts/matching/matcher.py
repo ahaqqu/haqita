@@ -6,12 +6,11 @@ Each gate is an isolated function. The orchestrator checks config before calling
 
 import logging
 import os
-import re
 from enum import Enum
 
-import requests
 from sklearn.metrics.pairwise import cosine_similarity
 
+from scripts.common.http_client import QuotaExhaustedError, retry_call
 from scripts.matching.normalizer import (
     canonical_tokens,
     normalize_brand,
@@ -163,50 +162,28 @@ Rules:
 Reply with exactly one word: YES or NO"""
 
 
-def _detect_docker() -> bool:
-    """Detect if running inside Docker."""
-    return (
-        os.path.exists('/.dockerenv')
-        or os.path.exists('/proc/1/cgroup')
-        or os.getenv('container') is not None
-    )
+def _verify_one_pair(client, model_name: str, prompt: str, max_retries: int) -> str | None:
+    """Call Gemini once per attempt, retrying transient errors.
 
-
-def _ollama_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
-    """Send pairs to Ollama for binary yes/no verification (one API call per pair)."""
-    base_url = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-    if _detect_docker():
-        base_url = base_url.replace('localhost', 'host.docker.internal')
-
-    model = cfg.get('consolidation', {}).get('ai_verifier', {}).get('ai_model', 'qwen3:4b')
-    timeout = cfg.get('consolidation', {}).get('ai_verifier', {}).get('timeout_seconds', 120)
-
-    results: list[str | None] = []
-
-    for p in pairs:
-        prompt = AI_PROMPT_TEMPLATE.format(
-            store_a=p['store_a'], name_a=p['name_a'], unit_a=p.get('unit_a', ''), price_a=p.get('price_a', 0),
-            store_b=p['store_b'], name_b=p['name_b'], unit_b=p.get('unit_b', ''), price_b=p.get('price_b', 0),
-        )
-        try:
-            resp = requests.post(
-                f"{base_url}/api/chat",
-                json={"model": model, "messages": [{"role": "user", "content": prompt}], "stream": False, "temperature": 0},
-                timeout=timeout,
-            )
-            resp.raise_for_status()
-            reply = resp.json().get('message', {}).get('content', '').strip().upper()
-            if 'YES' in reply:
-                results.append('YES')
-            elif 'NO' in reply:
-                results.append('NO')
-            else:
-                results.append(None)
-        except Exception as e:
-            logger.error("AI verification failed for pair: %s", e)
-            results.append(None)
-
-    return results
+    Returns 'YES'/'NO' on a parseable reply, None on unparseable reply or
+    after exhausting all retries. Raises QuotaExhaustedError on daily quota
+    so the caller can skip remaining pairs.
+    """
+    def _call():
+        return client.models.generate_content(model=model_name, contents=prompt)
+    try:
+        resp = retry_call(_call, max_retries=max_retries, context="ai_verifier")
+    except QuotaExhaustedError:
+        raise
+    except Exception as e:
+        logger.error("AI verification gave up after %d attempts: %s", max_retries, e)
+        return None
+    reply = resp.text.strip().upper()
+    if 'YES' in reply:
+        return 'YES'
+    if 'NO' in reply:
+        return 'NO'
+    return None
 
 
 def _gemini_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
@@ -218,7 +195,9 @@ def _gemini_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
         logger.error("GEMINI_API_KEY not set for AI verifier")
         return [None] * len(pairs)
 
-    model_name = cfg.get('consolidation', {}).get('ai_verifier', {}).get('gemini_model', 'gemini-3-flash-preview')
+    ai_cfg = cfg.get('consolidation', {}).get('ai_verifier', {})
+    model_name = ai_cfg.get('gemini_model', 'gemini-3-flash-preview')
+    max_retries = ai_cfg.get('max_retries', 3)
     client = genai.Client(api_key=api_key)
     results: list[str | None] = []
 
@@ -228,30 +207,22 @@ def _gemini_verify(pairs: list[dict], cfg: dict) -> list[str | None]:
             store_b=p['store_b'], name_b=p['name_b'], unit_b=p.get('unit_b', ''), price_b=p.get('price_b', 0),
         )
         try:
-            resp = client.models.generate_content(model=model_name, contents=prompt)
-            reply = resp.text.strip().upper()
-            if 'YES' in reply:
-                results.append('YES')
-            elif 'NO' in reply:
-                results.append('NO')
-            else:
-                results.append(None)
-        except Exception as e:
-            logger.error("Gemini AI verification failed: %s", e)
+            results.append(_verify_one_pair(client, model_name, prompt, max_retries))
+        except QuotaExhaustedError as e:
+            logger.error("Stopping AI verifier early: %s", e)
             results.append(None)
+            results.extend([None] * (len(pairs) - len(results)))
+            break
 
     return results
 
 
 def gate6_ai_verifier(pairs: list[dict], cfg: dict) -> list[str | None]:
-    """Gate 6: Send ambiguous pairs to AI (Ollama or Gemini) for binary yes/no."""
+    """Gate 6: Send ambiguous pairs to Gemini for binary yes/no."""
     if not cfg.get('consolidation', {}).get('gates', {}).get('gate6_ai_verifier', True):
         return [None] * len(pairs)
 
-    provider = cfg.get('consolidation', {}).get('ai_verifier', {}).get('provider', 'ollama')
-    if provider == 'gemini':
-        return _gemini_verify(pairs, cfg)
-    return _ollama_verify(pairs, cfg)
+    return _gemini_verify(pairs, cfg)
 
 
 # ---------------------------------------------------------------------------
@@ -268,14 +239,6 @@ def load_embedding_model(model_name: str):
 def compute_embeddings(names: list[str], model) -> list:
     """Compute embeddings for a list of names."""
     return model.encode(names, convert_to_numpy=True)
-
-
-def compute_similarity_matrix(names_a: list[str], names_b: list[str], model) -> list[list[float]]:
-    """Returns similarity[i][j] for names_a[i] vs names_b[j]."""
-    from sklearn.metrics.pairwise import cosine_similarity
-    emb_a = compute_embeddings(names_a, model)
-    emb_b = compute_embeddings(names_b, model)
-    return cosine_similarity(emb_a, emb_b).tolist()
 
 
 # ---------------------------------------------------------------------------

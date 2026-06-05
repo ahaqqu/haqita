@@ -6,19 +6,13 @@ logger = logging.getLogger(__name__)
 
 
 def extract_products(image_path: str, cfg: dict) -> list[dict]:
-    provider = cfg['ocr']['provider']
-    retries = cfg['ocr'].get(provider, {}).get('max_retries', 2)
+    retries = cfg['ocr'].get('gemini', {}).get('max_retries', 2)
 
-    if provider == 'gemini':
-        from .gemini_client import call_gemini_ocr
-        fn = call_gemini_ocr
-    else:
-        from .ollama_client import call_ollama_ocr
-        fn = call_ollama_ocr
+    from .gemini_client import call_gemini_ocr
 
     for attempt in range(retries):
         try:
-            return fn(image_path, cfg)
+            return call_gemini_ocr(image_path, cfg)
         except (json.JSONDecodeError, ValueError) as e:
             if attempt == retries - 1:
                 raise
@@ -63,6 +57,16 @@ def clean_unit(raw: str | None) -> str | None:
     return s if s else None
 
 
+def _normalize_promo(promo) -> list[str] | None:
+    """Normalize promo to a list of strings or None."""
+    if not promo:
+        return None
+    if isinstance(promo, list):
+        result = [str(p).strip() for p in promo if p and str(p).strip()]
+        return result if result else None
+    return [str(promo).strip()]
+
+
 def validate_product(raw: dict, image_source: str) -> tuple[dict | None, str | None]:
     name = str(raw.get('name', '')).strip()
     if len(name) < 3:
@@ -77,7 +81,7 @@ def validate_product(raw: dict, image_source: str) -> tuple[dict | None, str | N
         'brand': str(raw['brand']).strip() if raw.get('brand') else None,
         'unit': clean_unit(raw.get('unit')),
         'price': price,
-        'promo': str(raw['promo']).strip() if raw.get('promo') else None,
+        'promo': _normalize_promo(raw.get('promo')),
         'period': str(raw['period']).strip() if raw.get('period') else None,
         'image_source': image_source,
         'ocr_raw_price': str(raw.get('price', '')),

@@ -71,8 +71,7 @@ Same schema as Stage 3's internal consolidated output:
   "display_hints": {
     "stores": ["Lotte", "Superindo"],
     "store_colors": { "Lotte": "#0057A8", "Superindo": "#E8211D" },
-    "currency": "IDR",
-    "locale": "id-ID"
+    "currency": "IDR"
   },
   "products": [
     {
@@ -81,7 +80,7 @@ Same schema as Stage 3's internal consolidated output:
       "brand": "Indomie",
       "unit": "85 g",
       "stores": [
-        { "store": "Lotte", "price": 15500, "effective_unit_price": 3100, "bundle_size": 5, "promo": "DAPAT 5 pcs", "valid_until": "2026-05-20", "image_path": "database/scrape/lotte/..." },
+        { "store": "Lotte", "price": 15500, "effective_unit_price": 3100, "bundle_size": 5, "promo": ["DAPAT 5 pcs"], "valid_until": "2026-05-20", "image_path": "database/scrape/lotte/..." },
         { "store": "Superindo", "price": 3500, "effective_unit_price": 3500, "promo": null, "valid_until": null, "image_path": "database/scrape/superindo/..." }
       ],
       "price_min": 3100,

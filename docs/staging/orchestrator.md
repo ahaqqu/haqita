@@ -16,11 +16,10 @@ Selecting **[1]** from the main menu opens a submenu:
 
 | Choice | Mode | Description |
 |---|---|---|
-| **1** | Normal | Scrape → OCR → Consolidate (writes to database) |
-| **2** | Dry-run | Preview all stages, no database changes |
-| **3** | Verbose | Full run with detailed log in `database/logs/` |
-| **4** | Verbose + Dry-run | Preview with detailed log, no changes |
-| **5** | Resume | Continue from last failed stage, skip completed stages |
+| **1** | Verbose | Full run with detailed log in `output/logs/` |
+| **2** | Non-verbose | Normal run (writes to database, no detailed log) |
+| **3** | Dry-run + verbose | Preview all stages, no database changes, detailed log |
+| **4** | Resume | Continue from last failed stage, skip completed stages |
 
 ## Resume
 
@@ -77,7 +76,7 @@ Each stage writes its result to `database/stage_results/` as JSON. The next stag
 
 ## Smart OCR Skipping
 
-The orchestrator reads `scrape_status.json` before running OCR. Only stores with `new_count > 0` get OCR'd. This saves API quota when one store has no new images.
+The orchestrator reads `scrape_status.json` after Stage 1 and records per-store status (`new_images` / `no_new` / `complete` / `skipped`) in `ocr_status.json`. Actual per-image skipping is handled by OCR's own state file (`database/ocr/<store>/state.json`), which tracks filenames already processed — so the orchestrator always invokes the OCR script for every requested store, and OCR itself decides what to re-process.
 
 ## Logging
 
@@ -91,8 +90,8 @@ When running in verbose mode, detailed logs are written to:
 
 | File | Contents |
 |---|---|
-| `database/logs/orchestrator_<timestamp>.log` | Orchestrator stage transitions, subprocess results |
-| `database/logs/consolidate_<timestamp>.log` | Detailed match results, gate rejections, review items |
+| `output/logs/orchestrator_<timestamp>.log` | Orchestrator stage transitions, subprocess results |
+| `output/logs/consolidate_<timestamp>.log` | Detailed match results, gate rejections, review items |
 
 ### Verbose Log Contents
 

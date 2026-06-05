@@ -6,7 +6,6 @@ content hashing, and downloads images for later OCR processing.
 """
 
 import argparse
-import json
 import sys
 from datetime import datetime
 from pathlib import Path

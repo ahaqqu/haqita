@@ -29,17 +29,13 @@ class TestRunOcrQuotaExhausted:
 
         processed_images = []
 
-        def mock_preprocess(path, cfg):
-            return path
-
         def mock_extract(path, cfg):
             processed_images.append(Path(path).name)
             if Path(path).name == "img2.jpg":
                 raise QuotaExhaustedError("Daily quota exhausted")
             return [{"name": "Product", "price": 5000}]
 
-        with patch('scripts.ocr.run_ocr.preprocess_for_ocr', side_effect=mock_preprocess), \
-             patch('scripts.ocr.run_ocr.extract_products', side_effect=mock_extract), \
+        with patch('scripts.ocr.run_ocr.extract_products', side_effect=mock_extract), \
              patch('scripts.ocr.run_ocr.save_ocr_state'), \
              patch('scripts.ocr.run_ocr.load_ocr_state', return_value={'processed': [], 'last_run': None}):
             with pytest.raises(QuotaExhaustedError):
@@ -58,9 +54,6 @@ class TestRunOcrQuotaExhausted:
 
         saved_state = {}
 
-        def mock_preprocess(path, cfg):
-            return path
-
         def mock_extract(path, cfg):
             if Path(path).name == "img2.jpg":
                 raise QuotaExhaustedError("Daily quota exhausted")
@@ -69,8 +62,7 @@ class TestRunOcrQuotaExhausted:
         def mock_save_state(store, state):
             saved_state.update(state)
 
-        with patch('scripts.ocr.run_ocr.preprocess_for_ocr', side_effect=mock_preprocess), \
-             patch('scripts.ocr.run_ocr.extract_products', side_effect=mock_extract), \
+        with patch('scripts.ocr.run_ocr.extract_products', side_effect=mock_extract), \
              patch('scripts.ocr.run_ocr.save_ocr_state', side_effect=mock_save_state), \
              patch('scripts.ocr.run_ocr.load_ocr_state', return_value={'processed': [], 'last_run': None}):
             with pytest.raises(QuotaExhaustedError):
@@ -85,14 +77,10 @@ class TestRunOcrQuotaExhausted:
 
         (scrape_dir / "img1.jpg").write_bytes(b"fake")
 
-        def mock_preprocess(path, cfg):
-            return path
-
         def mock_extract(path, cfg):
             raise QuotaExhaustedError("Daily quota exhausted")
 
-        with patch('scripts.ocr.run_ocr.preprocess_for_ocr', side_effect=mock_preprocess), \
-             patch('scripts.ocr.run_ocr.extract_products', side_effect=mock_extract), \
+        with patch('scripts.ocr.run_ocr.extract_products', side_effect=mock_extract), \
              patch('scripts.ocr.run_ocr.save_ocr_state'), \
              patch('scripts.ocr.run_ocr.load_ocr_state', return_value={'processed': [], 'last_run': None}):
             with pytest.raises(QuotaExhaustedError):
@@ -112,16 +100,12 @@ class TestRunOcrQuotaExhausted:
         for name in ["img1.jpg", "img2.jpg", "img3.jpg", "img4.jpg"]:
             (scrape_dir / name).write_bytes(b"fake")
 
-        def mock_preprocess(path, cfg):
-            return path
-
         def mock_extract(path, cfg):
             if Path(path).name == "img2.jpg":
                 raise QuotaExhaustedError("Daily quota exhausted")
             return [{"name": "Product", "price": 5000}]
 
-        with patch('scripts.ocr.run_ocr.preprocess_for_ocr', side_effect=mock_preprocess), \
-             patch('scripts.ocr.run_ocr.extract_products', side_effect=mock_extract), \
+        with patch('scripts.ocr.run_ocr.extract_products', side_effect=mock_extract), \
              patch('scripts.ocr.run_ocr.save_ocr_state'), \
              patch('scripts.ocr.run_ocr.load_ocr_state', return_value={'processed': [], 'last_run': None}):
             with pytest.raises(QuotaExhaustedError):

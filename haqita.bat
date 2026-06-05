@@ -9,15 +9,11 @@ if exist ".env" (
     )
 )
 
-:: Default to native if RUN_MODE not set
-if "!RUN_MODE!"=="" set RUN_MODE=native
-
 :MENU
 cls
 echo ========================================
 echo        Haqita - Grocery Price Tool
 echo ========================================
-echo  Run mode: !RUN_MODE!
 echo.
  echo  [1] Run full pipeline
  echo  [2] Stage 1: Scrape
@@ -81,7 +77,6 @@ echo ========================================
 echo  Running Full Pipeline
 echo ========================================
 echo.
-echo  Mode: !RUN_MODE!
 echo  Stage 1: Scrape all stores
 echo  Stage 2: OCR all scraped images
 echo  Stage 3: Consolidate (update database)
@@ -90,11 +85,7 @@ echo  Press any key to start, or Ctrl+C to cancel...
 pause >nul
 echo.
 
-if "!RUN_MODE!"=="docker" (
-    docker compose -f docker\docker-compose.yml run --build pipeline
-) else (
-    python scripts/orchestrator.py --full --serve
-)
+python scripts/orchestrator.py --full --serve
 
 echo ========================================
 echo  Pipeline complete.
@@ -109,7 +100,6 @@ echo ========================================
 echo  Running Full Pipeline — Verbose
 echo ========================================
 echo.
-echo  Mode: !RUN_MODE!
 echo  Detailed log will be written to output/logs/
 echo.
 echo  Press any key to start, or Ctrl+C to cancel...
@@ -131,7 +121,6 @@ echo ========================================
 echo  Running Full Pipeline — Dry-run + verbose
 echo ========================================
 echo.
-echo  Mode: !RUN_MODE!
 echo  Detailed log will be written to output/logs/
 echo  No changes will be made to the database.
 echo.
@@ -201,11 +190,7 @@ echo ========================================
 echo  Scrape Lotte Mart
 echo ========================================
 echo.
-if "!RUN_MODE!"=="docker" (
-    docker compose -f docker\docker-compose.yml run --build scrape-lotte
-) else (
-    python scripts/scrapers/lotte.py
-)
+python scripts/scrapers/lotte.py
 echo.
 pause
 goto STAGE_SCRAPE
@@ -216,11 +201,7 @@ echo ========================================
 echo  Scrape Superindo
 echo ========================================
 echo.
-if "!RUN_MODE!"=="docker" (
-    docker compose -f docker\docker-compose.yml run --build scrape-superindo
-) else (
-    python scripts/scrapers/superindo.py
-)
+python scripts/scrapers/superindo.py
 echo.
 pause
 goto STAGE_SCRAPE
@@ -231,15 +212,11 @@ echo ========================================
 echo  Scrape All Stores
 echo ========================================
 echo.
-if "!RUN_MODE!"=="docker" (
-    docker compose -f docker\docker-compose.yml run --build scrape
-) else (
-    echo --- Lotte Mart ---
-    python scripts/scrapers/lotte.py
-    echo.
-    echo --- Superindo ---
-    python scripts/scrapers/superindo.py
-)
+echo --- Lotte Mart ---
+python scripts/scrapers/lotte.py
+echo.
+echo --- Superindo ---
+python scripts/scrapers/superindo.py
 echo.
 pause
 goto STAGE_SCRAPE
@@ -296,11 +273,7 @@ echo ========================================
 echo  OCR — Lotte
 echo ========================================
 echo.
-if "!RUN_MODE!"=="docker" (
-    docker compose -f docker\docker-compose.yml run --build ocr-lotte
-) else (
-    python scripts/ocr/run_ocr.py --store lotte
-)
+python scripts/ocr/run_ocr.py --store lotte
 echo.
 pause
 goto STAGE_OCR
@@ -311,11 +284,7 @@ echo ========================================
 echo  OCR — Superindo
 echo ========================================
 echo.
-if "!RUN_MODE!"=="docker" (
-    docker compose -f docker\docker-compose.yml run --build ocr-superindo
-) else (
-    python scripts/ocr/run_ocr.py --store superindo
-)
+python scripts/ocr/run_ocr.py --store superindo
 echo.
 pause
 goto STAGE_OCR
@@ -326,15 +295,11 @@ echo ========================================
 echo  OCR — Both Stores
 echo ========================================
 echo.
-if "!RUN_MODE!"=="docker" (
-    docker compose -f docker\docker-compose.yml run --build ocr
-) else (
-    echo --- Lotte ---
-    python scripts/ocr/run_ocr.py --store lotte
-    echo.
-    echo --- Superindo ---
-    python scripts/ocr/run_ocr.py --store superindo
-)
+echo --- Lotte ---
+python scripts/ocr/run_ocr.py --store lotte
+echo.
+echo --- Superindo ---
+python scripts/ocr/run_ocr.py --store superindo
 echo.
 pause
 goto STAGE_OCR
@@ -460,11 +425,7 @@ echo ========================================
 echo  Running Consolidation
 echo ========================================
 echo.
-if "!RUN_MODE!"=="docker" (
-    docker compose -f docker\docker-compose.yml run --build consolidate
-) else (
-    python scripts/consolidate.py
-)
+python scripts/consolidate.py
 echo.
 pause
 goto STAGE_CONSOLIDATION
@@ -507,7 +468,6 @@ goto STAGE_CONSOLIDATION
  echo  [2] Dry-run (preview copies)
  echo  [3] Verbose (show file sizes)
  echo  [4] Verbose + Dry-run
- echo  [5] Docker mode
  echo  [0] Back
  echo.
 
@@ -517,7 +477,6 @@ goto STAGE_CONSOLIDATION
  if "%pub_choice%"=="2" goto PUBLISH_HTML_DRYRUN
  if "%pub_choice%"=="3" goto PUBLISH_HTML_VERBOSE
  if "%pub_choice%"=="4" goto PUBLISH_HTML_VERBOSE_DRYRUN
- if "%pub_choice%"=="5" goto PUBLISH_HTML_DOCKER
  if "%pub_choice%"=="0" goto MENU
 
  echo Invalid choice. Press any key to try again...
@@ -564,17 +523,6 @@ goto STAGE_CONSOLIDATION
  echo ========================================
  echo.
  python scripts/publish_html.py --verbose --dry-run
- echo.
- pause
- goto STAGE_PUBLISH_HTML
-
- :PUBLISH_HTML_DOCKER
- cls
- echo ========================================
- echo  Publish HTML (Docker)
- echo ========================================
- echo.
- docker compose -f docker\docker-compose.yml run --build publish-html
  echo.
  pause
  goto STAGE_PUBLISH_HTML

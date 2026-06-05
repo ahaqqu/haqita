@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from scripts.ocr.ocr_processor import validate_product, _parse_ocr_json
+from scripts.ocr.ocr_processor import validate_product, _parse_ocr_json, _normalize_promo
 
 
 class TestValidateProduct:
@@ -13,7 +13,7 @@ class TestValidateProduct:
             "brand": "Indomie",
             "unit": "85 g",
             "price": 15500,
-            "promo": "DAPAT 5 pcs",
+            "promo": ["DAPAT 5 pcs"],
             "period": "7 - 20 Mei 2026",
         }
         result, reason = validate_product(raw, "test.jpg")
@@ -65,10 +65,10 @@ class TestValidateProduct:
         assert result["brand"] is None
 
     def test_promo_preserved(self):
-        raw = {"name": "Item", "promo": "DAPAT 2 pcs", "price": 10000}
+        raw = {"name": "Item", "promo": ["DAPAT 2 pcs"], "price": 10000}
         result, reason = validate_product(raw, "test.jpg")
         assert result is not None
-        assert result["promo"] == "DAPAT 2 pcs"
+        assert result["promo"] == ["DAPAT 2 pcs"]
 
     def test_image_source_set(self):
         raw = {"name": "Item", "price": 5000}
@@ -124,3 +124,35 @@ class TestParseOcrJson:
         import pytest
         with pytest.raises(ValueError, match="No JSON array found"):
             _parse_ocr_json("")
+
+
+class TestNormalizePromo:
+    def test_none_input(self):
+        assert _normalize_promo(None) is None
+
+    def test_empty_string(self):
+        assert _normalize_promo("") is None
+
+    def test_empty_list(self):
+        assert _normalize_promo([]) is None
+
+    def test_single_string(self):
+        assert _normalize_promo("DISKON 20%") == ["DISKON 20%"]
+
+    def test_list_input(self):
+        assert _normalize_promo(["DISKON 20%", "Beli 2 Gratis 1"]) == ["DISKON 20%", "Beli 2 Gratis 1"]
+
+    def test_list_with_none_filtered(self):
+        assert _normalize_promo(["DISKON 20%", None, "Beli 2 Gratis 1"]) == ["DISKON 20%", "Beli 2 Gratis 1"]
+
+    def test_list_with_empty_strings_filtered(self):
+        assert _normalize_promo(["DISKON 20%", "", "  ", "Beli 2 Gratis 1"]) == ["DISKON 20%", "Beli 2 Gratis 1"]
+
+    def test_whitespace_trimmed(self):
+        assert _normalize_promo(["  DISKON 20%  ", "  Beli 2 Gratis 1  "]) == ["DISKON 20%", "Beli 2 Gratis 1"]
+
+    def test_numeric_input_converted(self):
+        assert _normalize_promo([123, 456]) == ["123", "456"]
+
+    def test_single_none_in_list(self):
+        assert _normalize_promo([None]) is None

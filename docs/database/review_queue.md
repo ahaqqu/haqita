@@ -46,8 +46,11 @@ Items are queued when the matching pipeline encounters uncertainty:
 
 | Gate | Condition | Reason |
 |---|---|---|
-| Gate 5 (Price Check) | Per-unit price ratio exceeds `price_ratio_max` (default 3.0x) | `price_ratio_exceeded` |
-| Gate 6 (AI Verifier) | LLM returns "REVIEW" for an ambiguous pair | `ai_ambiguous` |
+| Gate 5 (Price Check) | Per-unit price ratio exceeds `price_ratio_max` (default 3.0x) | `price_ratio_too_high` |
+| Gate 6 (AI Verifier) | LLM returns "NO" for an ambiguous pair | `ai_verifier_said_no` |
+| Gate 6 (AI Verifier) | LLM returns an unexpected / unparseable response | `ai_verifier_unexpected` |
+
+Other gates (0–2) record rejections in the verbose log only — they do not enqueue to `review_queue.json`.
 
 ## Behavior
 

@@ -1,34 +1,8 @@
-scrapers:
-  lotte:
-    url: https://www.lottemart.co.id/all-promo-mart
-    min_image_size_kb: 50
-    request_delay_seconds: 2
-
-  superindo:
-    urls:
-      - https://www.superindo.co.id/promosi/katalog-super-hemat/
-      - https://www.superindo.co.id/promosi/promo-koran/
-    region_filter: jabodetabek-palembang
-    min_image_size_kb: 50
-    request_delay_seconds: 2
-
 ocr:
   provider: gemini
 
-  ollama:
-    model: qwen3-vl:7b
-    num_ctx: 8192
-    timeout_seconds: 300
-    max_retries: 2
-    temperature: 0
-    preprocess: true                    # Upscale + enhance before OCR (Ollama only)
-    image_min_width_px: 1400
-    image_contrast_enhance: 1.4
-    image_sharpness_enhance: 1.2
-
   gemini:
-    model: gemini-3-flash-preview
-    timeout_seconds: 60
+    model: gemini-3.5-flash
     max_retries: 2
 
 consolidation:
@@ -53,17 +27,8 @@ consolidation:
 
   # AI verifier (for ambiguous pairs)
   ai_verifier:
-    provider: gemini                 # "ollama" or "gemini"
-    ai_model: qwen3:4b               # Ollama model
-    gemini_model: gemini-2.5-flash  # Gemini model (if provider=gemini)
-    ai_batch_size: 20
-
-validation:
-  min_price: 100
-  max_price: 1_000_000
-  min_product_name_length: 3
-  ocr_confidence_flag_threshold: 0.7  # Flag for review (don't reject)
+    gemini_model: gemini-2.5-flash
+    max_retries: 3                        # Retry transient 503/429 errors with backoff
 
 monitoring:
   review_queue_max: 100
-  metrics_enabled: true

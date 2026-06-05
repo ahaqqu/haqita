@@ -295,6 +295,9 @@ main#product-grid {
 .promo-top-badge.promo-amber { background: var(--amber-light); color: var(--amber); }
 
 .promo-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: #e8f5e9; color: #2e7d32; font-size: 0.65rem; font-weight: 600; border-radius: 3px; vertical-align: middle; }
+.promo-badge.promo-red { background: #fdf0ee; color: #c0392b; }
+.promo-badge.promo-green { background: #e8f5ee; color: #2d7a4f; }
+.promo-badge.promo-amber { background: var(--amber-light); color: var(--amber); }
 .filter-dot {
   display: inline-block;
   width: 8px;
@@ -595,7 +598,7 @@ footer {
 
 <div id="load-more-sentinel" style="height: 1px;"></div>
 
-<footer id="footer">
+<footer>
   <div class="footer-inner">
     <span id="footer-stats"></span>
     <span id="footer-review"></span>
@@ -617,7 +620,6 @@ let isLoadingMore = false;
 function getDefaultDisplayHints() {
   return {
     currency: "Rp",
-    locale: "en-ID",
     stores: { lotte: "Lotte", superindo: "Superindo" },
     store_colors: { lotte: "#0057A8", superindo: "#E8211D" }
   };
@@ -626,28 +628,6 @@ function getDefaultDisplayHints() {
 function formatIDR(n) {
   if (n == null) return "-";
   return displayHints.currency + " " + n.toLocaleString("id-ID");
-}
-
-function formatDate(isoDate) {
-  if (!isoDate) return "";
-  const d = new Date(isoDate);
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
-}
-
-function getRelativeDateText(isoDate) {
-  if (!isoDate) return "";
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(isoDate);
-  target.setHours(0, 0, 0, 0);
-  const diffTime = target - now;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays < 0) return "Expired";
-  if (diffDays === 0) return "Valid today";
-  if (diffDays === 1) return "Valid for 1 day";
-  return `Valid for ${diffDays} days`;
 }
 
 function getShortDateText(isoDate) {
@@ -675,13 +655,13 @@ async function tryLoadWithFallback(basePath, fallbackPath, filename) {
   const tryPath = (path) => retryFetch(`${path}/${filename}`);
   try {
     const resp = await tryPath(basePath);
-    if (resp.ok) return { data: await resp.json(), from: basePath, isSample: false };
+    if (resp.ok) return { data: await resp.json(), from: basePath };
   } catch (e) {}
   try {
     const resp = await tryPath(fallbackPath);
-    if (resp.ok) return { data: await resp.json(), from: fallbackPath, isSample: true };
+    if (resp.ok) return { data: await resp.json(), from: fallbackPath };
   } catch (e) {}
-  return { data: null, from: null, isSample: false };
+  return { data: null, from: null };
 }
 
 function validateData(data, type) {
@@ -741,6 +721,7 @@ function searchProducts(query) {
 }
 
 function getAllProducts() {
+  if (!consolidatedData) return [];
   const products = consolidatedData.products || [];
   const singles = consolidatedData.singles || [];
   return [...products, ...singles];
@@ -776,20 +757,41 @@ function getFilteredSortedProducts() {
   return all;
 }
 
+function filterPromos(promos) {
+  if (!promos || !Array.isArray(promos)) return [];
+  return promos.filter(p => p && !p.startsWith("*Harga"));
+}
+
+function getPromoColorClass(promo) {
+  if (!promo) return "promo-green";
+  const lower = promo.toLowerCase();
+  if (lower.includes("diskon")) return "promo-red";
+  if (lower.includes("gratis")) return "promo-green";
+  if (lower.includes("dapat")) return "promo-amber";
+  return "promo-green";
+}
+
+function buildPromoBadges(promos) {
+  const filtered = filterPromos(promos);
+  if (!filtered.length) return "";
+  return filtered.map(p => `<span class="promo-badge ${getPromoColorClass(p)}">${p}</span>`).join(" ");
+}
+
 function buildStoreRows(product) {
   const normalized = normalizeProduct(product);
   return normalized.stores.map(s => {
     const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
     const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "#c0bfb8";
     const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
-    const promoText = s.promo ? ` (${s.promo})` : "";
+    const promoBadges = buildPromoBadges(s.promo);
     const displayPrice = s.effective_unit_price && s.effective_unit_price < s.price
       ? s.effective_unit_price
       : s.price;
     return `<div class="store-row">
       <span class="store-dot" style="background:${color}"></span>
       <span class="store-name">${storeName}</span>
-      <span class="store-price">${formatIDR(displayPrice)}${promoText}</span>
+      <span class="store-price">${formatIDR(displayPrice)}</span>
+      ${promoBadges}
     </div>`;
   }).join("");
 }
@@ -836,16 +838,13 @@ function buildSingleCard(product) {
     ? s.effective_unit_price
     : s.price;
   const hasPromo = s.effective_unit_price && s.effective_unit_price < s.price;
-  const promoLabel = hasPromo && s.promo ? s.promo : (product.promo_label || "");
-  const promoColorClass = promoLabel.toLowerCase().includes("diskon") ? "promo-red" : "promo-green";
-  const promoBadge = promoLabel
-    ? `<div class="promo-top-badge ${promoColorClass}">${promoLabel}</div>` : "";
+  const promoBadgesSingle = hasPromo ? buildPromoBadges(s.promo) : "";
   return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
     <div class="card-body">
       <div class="product-name">${product.name || "Unknown"}</div>
       <div class="product-unit">${product.unit || ""}</div>
       ${confBadge}
-      ${promoBadge}
+      ${promoBadgesSingle}
     </div>
     <div class="card-footer">
       <div class="price-tag">
@@ -1153,10 +1152,6 @@ async function loadData(isRefresh = false) {
       if (!isRefresh) renderWarning("Price history unavailable. Charts will not display.");
       priceHistoryData = null;
     }
-    if (!histOk && !consOk) {
-      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
-      return;
-    }
     const isSample = consolidatedData?.is_sample === true || priceHistoryData?.is_sample === true;
     if (isSample) {
       const banner = document.getElementById("sample-banner");
@@ -1186,8 +1181,6 @@ async function loadData(isRefresh = false) {
     }
     if (consolidatedData?.generated_at) {
       updateFreshnessBar(consolidatedData.generated_at);
-    } else if (consolidatedData?.metadata?.last_updated) {
-      updateFreshnessBar(consolidatedData.metadata.last_updated);
     }
     renderCards();
     if (!isRefresh) {

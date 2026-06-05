@@ -416,7 +416,7 @@ function renderList() {
     const aName = STORE_NAMES[aStoreKey] || a.store || "Unknown";
     const bName = STORE_NAMES[bStoreKey] || b.store || "Unknown";
 
-    return `<div class="review-item status-${status}" data-key="${key}">
+    return `<div class="review-item status-${status}">
       <div class="review-header">
         <span class="review-reason">${item.reason || "unknown"}</span>
         <span class="review-time">${formatDate(item.detected_at)}</span>

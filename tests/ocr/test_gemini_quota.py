@@ -38,7 +38,7 @@ def _mock_gemini(cfg, error_msg, max_retries=3):
          patch('scripts.ocr.gemini_client.get_prompt', return_value='test prompt'), \
          patch('scripts.ocr.gemini_client.load_dotenv'), \
          patch('builtins.open', mock_open(read_data=b'fake-image')), \
-         patch('scripts.ocr.gemini_client.time.sleep'):
+         patch('scripts.common.http_client.time.sleep'):
         return call_gemini_ocr('test.jpg', cfg, max_retries=max_retries)
 
 

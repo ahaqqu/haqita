@@ -13,14 +13,12 @@ def test_load_config_basic():
     assert 'scrapers' in cfg or 'consolidation' in cfg
 
 
-def test_load_config_env_overrides(monkeypatch):
-    """Verify that .env overrides are applied."""
-    monkeypatch.setenv("OCR_PROVIDER", "gemini")
-    monkeypatch.setenv("AI_VERIFIER_PROVIDER", "gemini")
+def test_load_config_env_override(monkeypatch):
+    """Verify that GEMINI_API_KEY from .env overrides config."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key-from-env")
     from scripts.config import load_config
     cfg = load_config()
-    assert cfg.get('ocr', {}).get('provider') == "gemini"
-    assert cfg.get('consolidation', {}).get('ai_verifier', {}).get('provider') == "gemini"
+    assert cfg.get('ocr', {}).get('gemini', {}).get('api_key') == "test-key-from-env"
 
 
 def test_load_config_sets_store():

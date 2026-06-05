@@ -22,7 +22,7 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
                                                    consolidated_*)           index.html
 ```
 
-Each stage runs independently. If a stage fails, select **[1] → [5] Resume** to continue from where it left off — completed stages are skipped automatically.
+Each stage runs independently. If a stage fails, select **[1] → [4] Resume** to continue from where it left off — completed stages are skipped automatically.
 
 **Matching pipeline** (inside Stage 3): 7 gates — unit type → brand → token Jaccard → exact match → embedding → price check → AI verifier. Each gate is individually toggleable via `config.yaml`.
 
@@ -52,19 +52,6 @@ Then open `http://localhost:8080` in a browser. Features:
 
 > Opening `index.html` directly via `file://` will fail due to CORS. An HTTP server is required.
 
-## Run Mode
-
-Set `RUN_MODE` in `.env`:
-
-```env
-RUN_MODE=native   # or "docker"
-```
-
-| Mode | Description |
-|---|---|
-| `native` (default) | Runs scripts directly on your machine |
-| `docker` | Runs stages in Docker containers |
-
 ## Menu
 
 Run `haqita.bat` to access the interactive menu. Options [2]-[5] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
@@ -74,32 +61,25 @@ Run `haqita.bat` to access the interactive menu. Options [2]-[5] run a **single 
  [2] Stage 1: Scrape          → scrape only (submenu: All, Lotte, Superindo, Dry-run)
  [3] Stage 2: OCR             → OCR only (submenu: All, Lotte, Superindo, Specific, Dry-run)
  [4] Stage 3: Consolidation   → consolidate only (submenu: Run, Dry-run, Custom dir)
- [5] Stage 4: Publish HTML    → generate active_promo.json + copy for browser (Run, Dry-run, Verbose, Docker)
+ [5] Stage 4: Publish HTML    → generate active_promo.json + copy for browser (Run, Dry-run, Verbose)
  [6] Tests                    → submenu: Integration tests, Matching tests
  [7] Health check             → pre-flight verification
  [0] Exit
 ```
 
-### Resume (Option [1] → [5])
+### Resume (Option [1] → [4])
 
-If a stage fails during a full pipeline run, fix the issue and select **[1] → [5] Resume**. The orchestrator reads stage status files and skips already-completed stages, continuing from where it left off. No need to rerun stages one by one.
+If a stage fails during a full pipeline run, fix the issue and select **[1] → [4] Resume**. The orchestrator reads stage status files and skips already-completed stages, continuing from where it left off. No need to rerun stages one by one.
 
-## OCR Providers
+## OCR Provider
 
-| Provider | Setup | Best for |
-|---|---|---|
-| **Gemini** (default) | Set `GEMINI_API_KEY` in `.env` | Higher accuracy, cloud-based |
-| **Ollama** | Run `ollama serve` locally | Free, offline, no API key |
-
-Switch via `.env`: `OCR_PROVIDER=gemini` or `OCR_PROVIDER=ollama`
+Gemini (cloud) is the only OCR provider. Set `GEMINI_API_KEY` in `.env` (free tier at https://aistudio.google.com/apikey).
 
 ## Requirements
 
 - Python 3.12+
-- Ollama with `qwen3-vl:7b` (if using Ollama)
-- NVIDIA GPU recommended (~3.3 GiB VRAM), works on CPU
+- Gemini API key (free tier)
 - Windows 10+
-- Docker (optional, only when `RUN_MODE=docker`)
 
 ## Testing
 
@@ -132,7 +112,6 @@ haqita/
 ├── admin.html                        ← Admin UI: review queue management
 ├── config.yaml                       ← All tunable settings
 ├── .env                              ← Configuration (API keys, provider toggles)
-├── docker/                           ← Docker configuration
 ├── scripts/
 │   ├── scrapers/                     ← Stage 1: Web scrapers
 │   ├── ocr/                          ← Stage 2: OCR processors

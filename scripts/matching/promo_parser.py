@@ -36,19 +36,8 @@ def _parse_price(raw: str) -> int:
     return int(raw.replace('.', '').replace(',', ''))
 
 
-def parse_promo(promo_text: str | None, base_price: int) -> PromoResult:
-    """
-    Returns a PromoResult. Falls back to single-unit if no pattern matches.
-    base_price: the price field from OCR (may be total bundle price).
-    """
-    if not promo_text:
-        return PromoResult(
-            promo_type='single',
-            display='',
-            unit_count=1,
-            effective_unit_price=base_price,
-        )
-
+def _parse_single_promo(promo_text: str, base_price: int) -> PromoResult:
+    """Parse a single promo text string and return PromoResult."""
     for pattern, ptype in _PATTERNS:
         m = re.search(pattern, promo_text, re.IGNORECASE)
         if m:
@@ -103,6 +92,58 @@ def parse_promo(promo_text: str | None, base_price: int) -> PromoResult:
         display=promo_text,
         unit_count=1,
         effective_unit_price=base_price,
+    )
+
+
+def parse_promo(promo_text: str | list[str] | None, base_price: int) -> PromoResult:
+    """
+    Returns a PromoResult. Falls back to single-unit if no pattern matches.
+    base_price: the price field from OCR (may be total bundle price).
+
+    Accepts a single string, a list of strings, or None.
+    When given a list, parses each item independently and returns the result
+    with the lowest effective_unit_price (best deal for customer).
+    """
+    if not promo_text:
+        return PromoResult(
+            promo_type='single',
+            display='',
+            unit_count=1,
+            effective_unit_price=base_price,
+        )
+
+    # Normalize to list
+    if isinstance(promo_text, str):
+        promo_list = [promo_text]
+    else:
+        promo_list = [p for p in promo_text if p and str(p).strip()]
+
+    if not promo_list:
+        return PromoResult(
+            promo_type='single',
+            display='',
+            unit_count=1,
+            effective_unit_price=base_price,
+        )
+
+    # Parse each promo string and pick the best deal
+    results = [_parse_single_promo(p, base_price) for p in promo_list]
+
+    # Filter out 'single' type (no match) if we have any real matches
+    matched = [r for r in results if r.promo_type != 'single']
+    if matched:
+        best = min(matched, key=lambda r: r.effective_unit_price)
+    else:
+        best = results[0]
+
+    # Join all promo texts for display
+    display = ", ".join(promo_list)
+
+    return PromoResult(
+        promo_type=best.promo_type,
+        display=display,
+        unit_count=best.unit_count,
+        effective_unit_price=best.effective_unit_price,
     )
 
 
