@@ -17,7 +17,7 @@ def call_gemini_ocr(image_path: str, cfg: dict, max_retries: int = 3) -> list[di
     load_dotenv()
     gemini_cfg = cfg['ocr'].get('gemini', {})
     store = cfg.get('store', 'superindo')
-    prompt = get_prompt('gemini', store)
+    prompt = get_prompt(store)
 
     api_key = gemini_cfg.get('api_key') or os.getenv('GEMINI_API_KEY')
     if not api_key:
