@@ -1,0 +1,17 @@
+# Core runtime
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+Pillow>=10.0.0
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# OCR / AI
+google-genai>=1.0.0
+
+# Matching / embeddings
+sentence-transformers>=3.0.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
+
+# Tests
+pytest>=8.0.0

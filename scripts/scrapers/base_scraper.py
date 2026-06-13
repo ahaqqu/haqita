@@ -9,6 +9,7 @@ store-specific behavior (HTML parsing, image collection).
 import hashlib
 import json
 import os
+import time
 from dataclasses import field
 from datetime import datetime
 from io import BytesIO
@@ -17,6 +18,35 @@ from urllib.parse import urlparse
 
 import requests
 from PIL import Image
+
+
+def _request_with_retries(
+    method: str,
+    url: str,
+    headers: dict,
+    proxies: dict,
+    timeout: int,
+    retries: int = 3,
+    backoff: float = 2.0,
+    **kwargs,
+):
+    """Execute a requests call with retries on connection/DNS failures."""
+    last_exc = None
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.request(
+                method, url, headers=headers, proxies=proxies, timeout=timeout, **kwargs
+            )
+            resp.raise_for_status()
+            return resp
+        except requests.exceptions.RequestException as exc:
+            last_exc = exc
+            if attempt == retries:
+                raise
+            sleep_seconds = backoff * (2**attempt)
+            print(f"[WARN] Request failed ({exc}), retrying in {sleep_seconds}s...")
+            time.sleep(sleep_seconds)
+    raise last_exc
 
 # Default HTTP headers used by all scrapers
 DEFAULT_HEADERS = {
@@ -77,15 +107,13 @@ def filename_from_url(url: str, md5_prefix: str = "") -> str:
 
 def download_image(url: str, headers: dict, proxies: dict, timeout: int = 120) -> bytes:
     """Download image bytes from URL."""
-    resp = requests.get(url, headers=headers, proxies=proxies, timeout=timeout)
-    resp.raise_for_status()
+    resp = _request_with_retries("GET", url, headers, proxies, timeout)
     return resp.content
 
 
 def fetch_html(url: str, headers: dict, proxies: dict, timeout: int = 60) -> str:
     """Fetch HTML content from URL."""
-    resp = requests.get(url, headers=headers, proxies=proxies, timeout=timeout)
-    resp.raise_for_status()
+    resp = _request_with_retries("GET", url, headers, proxies, timeout)
     return resp.text
 
 

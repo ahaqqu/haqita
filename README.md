@@ -28,8 +28,22 @@ Each stage runs independently. If a stage fails, select **[1] → [4] Resume** t
 
 ## Quick Start
 
+### Windows
+
 ```cmd
 haqita.bat
+```
+
+### Ubuntu / WSL
+
+```bash
+./haqita.sh
+```
+
+On the first run, `haqita.sh` automatically creates a Python virtual environment (`.venv`) and installs all required packages from `requirements.txt`. If you ever need to reinstall dependencies, run:
+
+```bash
+./haqita.sh --setup
 ```
 
 Launches an interactive menu. Select **[1]** for the full pipeline, or run individual stages ([2]–[4]). Each stage has a dry-run mode.
@@ -54,7 +68,7 @@ Then open `http://localhost:8080` in a browser. Features:
 
 ## Menu
 
-Run `haqita.bat` to access the interactive menu. Options [2]-[5] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
+Run `haqita.bat` (Windows) or `./haqita.sh` (Ubuntu/WSL) to access the interactive menu. Options [2]-[5] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
 
 ```
  [1] Run full pipeline        → submenu: Normal, Dry-run, Verbose, Verbose+Dry-run, Resume
@@ -77,13 +91,20 @@ Gemini (cloud) is the only OCR provider. Set `GEMINI_API_KEY` in `.env` (free ti
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.12+ (3.12 or 3.13 recommended; 3.14+ may not have wheels for all ML packages yet)
 - Gemini API key (free tier)
-- Windows 10+
+- Windows 10+ (for `haqita.bat`) or Linux/WSL with bash (for `haqita.sh`)
+
+On a fresh Ubuntu/WSL system, `haqita.sh` handles Python package installation automatically. You only need Python 3.12+ installed:
+
+```bash
+sudo apt update
+sudo apt install python3.12 python3.12-venv python3-pip
+```
 
 ## Testing
 
-Via `haqita.bat` → Option [5]:
+Via `haqita.bat`/`./haqita.sh` → Option [5]:
 
 | Choice | Action |
 |---|---|
@@ -107,7 +128,9 @@ Via `haqita.bat` → Option [5]:
 
 ```
 haqita/
-├── haqita.bat                        ← Interactive launch menu
+├── haqita.bat                        ← Interactive launch menu (Windows)
+├── haqita.sh                         ← Interactive launch menu (Ubuntu/WSL)
+├── requirements.txt                  ← Python dependencies
 ├── index.html                        ← Main UI: product browser (search, filter, sort, charts)
 ├── admin.html                        ← Admin UI: review queue management
 ├── config.yaml                       ← All tunable settings

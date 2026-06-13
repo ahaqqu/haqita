@@ -25,7 +25,7 @@ Selecting **[1]** from the main menu opens a submenu:
 
 If a stage fails during a full pipeline run:
 
-1. Fix the issue (e.g., restart Ollama, check API key)
+1. Fix the issue (e.g., check API key)
 2. Select **[1] → [5] Resume** from the main menu
 3. The orchestrator reads `database/stage_results/` status files and skips already-completed stages
 4. Pipeline continues from the first incomplete stage

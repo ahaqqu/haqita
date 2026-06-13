@@ -5,7 +5,7 @@ Checks:
 1. Python version >= 3.12
 2. Required pip packages installed
 3. config.yaml exists and is valid
-4. OCR provider configuration (Gemini API key or Ollama connectivity)
+4. OCR provider configuration (Gemini API key)
 5. Required directories exist
 6. AI verifier provider connectivity
 

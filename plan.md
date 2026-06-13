@@ -43,7 +43,7 @@ User will re-scrape from scratch. Read-time normalization in `consolidation.py` 
 
 ---
 
-## Changes (11 files)
+## Changes (9 files)
 
 ### 1. `scripts/ocr/ocr_processor.py` — Entry normalizer
 
@@ -141,38 +141,7 @@ No code changes needed.
 
 ---
 
-### 5. `scripts/ocr/ollama_client.py` — Prompt consistency
-
-Update the Ollama `PROMPT_CONVERT` example (line 45-46) and instruction (line 54):
-
-```python
-# old
-'{"brand": "AICE", "name": "Sandwich Cookies Panda", "price": 39900, "unit": "6 x 45 ml", "promo": "BUY 1 GET 1"}'
-"- promo: Promo text (e.g., ...). Set to null if none."
-
-# new
-'{"brand": "AICE", "name": "Sandwich Cookies Panda", "price": 39900, "unit": "6 x 45 ml", "promo": ["BUY 1 GET 1"]}'
-"- promo: Array of promo texts. Set to null if none."
-```
-
-Also update `RETRY_CORRECTION` line 59.
-
----
-
-### 6. `scripts/ocr/prompts/ollama.py` — Update dead-code prompts (cosmetic)
-
-Lines 4 and 10 have `"promo": "promo text if any"`. This file is not currently imported anywhere (prompts are hardcoded in `ollama_client.py`), but update for consistency:
-
-```python
-# old
-"promo": "promo text if any"
-# new
-"promo": ["promo text if any"]
-```
-
----
-
-### 7. `index.html` — UI rendering
+### 5. `index.html` — UI rendering
 
 **How promo arrays are shown to user:**
 
@@ -385,8 +354,6 @@ from scripts.ocr.gemini_client import QuotaExhaustedError
 | `promo_parser.py` | Accept `str\|list\|None`, iterate for best match | — |
 | `consolidation.py` | Update type hints, fix `build_promo_summary`, add read-time normalization | — |
 | `consolidate.py` | Pass-through (no change) | — |
-| `ollama_client.py` | Update prompt to request array | — |
-| `prompts/ollama.py` | Update dead-code prompts (cosmetic) | — |
 | `index.html` | Join array for inline/badge display | — |
 | `gemini.py` | No change | — |
 | `publish_html.py` | No change | — |

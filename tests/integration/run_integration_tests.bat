@@ -134,7 +134,7 @@ echo.
 if !EXIT_CODE! equ 0 (
     echo [PASS] Products extracted successfully, matches assert.
 ) else if !EXIT_CODE! equ 1 (
-    echo [SKIP] Infrastructure not available (Ollama/Gemini).
+    echo [SKIP] Infrastructure not available (Gemini).
 ) else if !EXIT_CODE! equ 2 (
     echo [INFO] OCR ran but no products found.
 ) else if !EXIT_CODE! equ 3 (

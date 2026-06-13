@@ -1,6 +1,6 @@
 # Stage 2: OCR
 
-Extracts product data from brochure images using Gemini or Ollama vision models.
+Extracts product data from brochure images using Gemini vision models.
 
 ## Overview
 
@@ -16,8 +16,8 @@ Extracts product data from brochure images using Gemini or Ollama vision models.
 1. Scan `database/scrape/<store>/` for image files (JPG/PNG/WebP)
 2. Compare filenames against state file — skip already-processed images
 3. For each new image:
-   - Optionally preprocess (upscale, enhance contrast/sharpness for Ollama)
-   - Send to configured OCR provider (Gemini or Ollama)
+   - Optionally preprocess (upscale, enhance contrast/sharpness)
+   - Send to Gemini for OCR
    - Parse JSON response into product dicts
    - Validate products (price range, name length)
    - Reject invalid products with reason

@@ -871,13 +871,13 @@ Feed a manually crafted HTML with non-discounted products. Verify they appear in
 | Aspect | Lotte / Superindo | Astro |
 |---|---|---|
 | **Source format** | Brochure images (JPG/PNG) | Live HTML webpage |
-| **Extraction method** | OCR via Ollama or Gemini | BeautifulSoup HTML parse |
+| **Extraction method** | OCR via Gemini | BeautifulSoup HTML parse |
 | **Data freshness** | Weekly (brochure cycle) | Near real-time (can change daily) |
 | **Promo detection** | Inferred from promo text field | Explicit: discount % + two prices in HTML |
 | **OCR errors** | Yes — numeral corruption, unit errors | None — structured clean text |
 | **Price reliability** | Medium | High |
 | **Location dependency** | No (citywide brochure) | Yes — prices vary by hub ID |
-| **Requires Ollama** | Yes | No |
+| **Requires Gemini API** | Yes | No |
 | **Requires internet** | Yes (image download) | Yes (web request) |
 | **Valid-until date** | Usually present in brochure | Rarely present on promo pages |
 | **Bundle pricing** | Common (dapat 5 pcs) | Sometimes (handled by `promo_parser`) |
