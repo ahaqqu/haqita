@@ -89,6 +89,43 @@ header {
   50% { opacity: 0.5; }
 }
 
+.tab-bar {
+  max-width: 1200px;
+  margin: 0.75rem auto 0;
+  padding: 0 1.5rem;
+  display: flex;
+  gap: 0.4rem;
+}
+.tab {
+  padding: 0.45rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid var(--gray-100);
+  background: white;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--gray-700);
+}
+.tab:hover { border-color: var(--gray-300); }
+.tab.active {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+.tab-view { display: none; }
+.tab-view.active { display: block; }
+.promo-type-group { margin-bottom: 1.5rem; }
+.promo-type-header { font-size: 0.9rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 2px solid var(--gray-100); }
+.promo-card { background: white; border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm); }
+.promo-card-header { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.promo-count-badge { background: var(--green-light); color: var(--green); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+.promo-card-meta { display: flex; gap: 0.4rem; margin-top: 0.3rem; }
+.promo-store-badge { display: inline-block; }
+.brochure-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+.brochure-card { background: white; border-radius: var(--radius-sm); padding: 0.75rem; box-shadow: var(--shadow-sm); }
+
 #search-bar {
   max-width: 1200px;
   margin: 1rem auto 0;
@@ -531,7 +568,14 @@ footer {
       <span id="freshness-text">Loading...</span>
     </div>
   </div>
+  <nav class="tab-bar">
+    <button class="tab active" data-tab="products">Products</button>
+    <button class="tab" data-tab="promos">Promos</button>
+    <button class="tab" data-tab="brochures">Brochures</button>
+  </nav>
 </header>
+
+<section id="view-products" class="tab-view active">
 
 <div id="search-bar">
   <input type="text" id="search-input" placeholder="Search products..." autocomplete="off">
@@ -597,6 +641,20 @@ footer {
 </div>
 
 <div id="load-more-sentinel" style="height: 1px;"></div>
+
+</section>
+
+<section id="view-promos" class="tab-view">
+  <div id="promos-content" style="max-width:1200px;margin:1rem auto;padding:0 1.5rem;">
+    <p style="color:var(--gray-500);">Loading promos...</p>
+  </div>
+</section>
+
+<section id="view-brochures" class="tab-view">
+  <div id="brochures-content" style="max-width:1200px;margin:1rem auto;padding:0 1.5rem;">
+    <p style="color:var(--gray-500);">Loading brochures...</p>
+  </div>
+</section>
 
 <footer>
   <div class="footer-inner">
@@ -1183,6 +1241,8 @@ async function loadData(isRefresh = false) {
       updateFreshnessBar(consolidatedData.generated_at);
     }
     renderCards();
+    renderPromos();
+    renderBrochures();
     if (!isRefresh) {
       setupHashRouting();
       setTimeout(() => applyHashAfterLoad(), 150);
@@ -1237,6 +1297,186 @@ loadMoreObserver.observe(document.getElementById("load-more-sentinel"));
 
 document.getElementById("warning-retry").addEventListener("click", () => {
   loadData();
+});
+
+function renderPromos() {
+  const el = document.getElementById("promos-content");
+  if (!el || !consolidatedData) return;
+  const catalog = consolidatedData.promo_catalog;
+  if (!catalog || !catalog.length) {
+    el.innerHTML = '<div class="empty-box"><h3>No promos available</h3><p>Promo data will appear here after the next pipeline run.</p></div>';
+    return;
+  }
+  const typeLabels = { discount_pct: "Discount %", discount_fixed: "Discount (Fixed)", bogo: "Buy One Get One", bundle: "Bundle", member_price: "Member Price", promo_price: "Promo Price", freebie: "Freebie", quantity_limit: "Quantity Limit", special: "Other" };
+  const groups = {};
+  catalog.forEach(p => {
+    const label = typeLabels[p.type] || "Other";
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(p);
+  });
+  let html = '<div class="filter-chips" style="margin-bottom:1rem">';
+  html += '<button class="chip active" data-promo-filter="all">All</button>';
+  html += '<button class="chip" data-promo-filter="lotte">Lotte</button>';
+  html += '<button class="chip" data-promo-filter="superindo">Superindo</button>';
+  html += '</div>';
+  const order = ["Discount %", "Discount (Fixed)", "Buy One Get One", "Bundle", "Member Price", "Promo Price", "Freebie", "Quantity Limit", "Other"];
+  order.forEach(label => {
+    if (!groups[label]) return;
+    html += '<div class="promo-type-group"><h3 class="promo-type-header">' + label + '</h3>';
+    groups[label].forEach(p => {
+      const storeHtml = Object.entries(p.stores || {}).map(([s, c]) => '<span class="promo-store-badge" style="background:' + (s === 'Lotte' ? 'var(--lotte)' : 'var(--superindo)') + ';color:white;padding:2px 6px;border-radius:4px;font-size:0.75rem">' + s + ' ' + c + '</span>').join(' ');
+      html += '<div class="promo-card" data-promo-key="' + p.key + '">';
+      html += '<div class="promo-card-header"><strong>' + p.display + '</strong> <span class="promo-count-badge">' + p.product_count + ' products</span></div>';
+      html += '<div class="promo-card-meta">' + storeHtml + '</div>';
+      if (p.example_products && p.example_products.length) {
+        html += '<div class="promo-card-products" style="display:none;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--gray-100)">';
+        p.example_products.forEach(name => {
+          html += '<div class="promo-product-link" style="cursor:pointer;padding:0.2rem 0;font-size:0.85rem;color:var(--green)">' + name + '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+  // Click to expand products
+  el.querySelectorAll(".promo-card-header").forEach(h => {
+    h.addEventListener("click", () => {
+      const list = h.parentElement.querySelector(".promo-card-products");
+      if (list) list.style.display = list.style.display === "none" ? "block" : "none";
+    });
+  });
+  // Store filter
+  el.querySelectorAll("[data-promo-filter]").forEach(chip => {
+    chip.addEventListener("click", () => {
+      el.querySelectorAll("[data-promo-filter]").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      const filter = chip.dataset.promoFilter;
+      el.querySelectorAll(".promo-card").forEach(card => {
+        if (filter === "all") { card.style.display = "block"; return; }
+        const stores = card.querySelector(".promo-card-meta")?.textContent || "";
+        card.style.display = stores.toLowerCase().includes(filter) ? "block" : "none";
+      });
+    });
+  });
+  // Product link click → switch to Products tab and search
+  el.querySelectorAll(".promo-product-link").forEach(link => {
+    link.addEventListener("click", () => {
+      const name = link.textContent;
+      document.querySelector('[data-tab="products"]').click();
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) {
+        searchInput.value = name;
+        searchInput.dispatchEvent(new Event("input"));
+      }
+    });
+  });
+}
+
+function renderBrochures() {
+  const el = document.getElementById("brochures-content");
+  if (!el || !consolidatedData) return;
+  const products = consolidatedData.products || [];
+  const singles = consolidatedData.singles || [];
+  const all = [...products, ...singles];
+  const brochures = {};
+  all.forEach(item => {
+    const stores = item.stores || [item];
+    (Array.isArray(stores) ? stores : [stores]).forEach(se => {
+      const img = se.image_path || item.image_path;
+      if (!img) return;
+      if (!brochures[img]) brochures[img] = { image_path: img, store: se.store || item.store, products: [], count: 0 };
+      brochures[img].count++;
+      if (brochures[img].products.length < 10) brochures[img].products.push(item);
+    });
+  });
+  if (!Object.keys(brochures).length) {
+    el.innerHTML = '<div class="empty-box"><h3>No brochures available</h3><p>Brochure images will appear here once products have associated brochure images.</p></div>';
+    return;
+  }
+  const storeGroups = {};
+  Object.values(brochures).forEach(b => {
+    const dateMatch = b.image_path.match(/\/(\d{4})(\d{2})(\d{2})\//);
+    const dateStr = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : "Unknown date";
+    if (!storeGroups[b.store]) storeGroups[b.store] = {};
+    if (!storeGroups[b.store][dateStr]) storeGroups[b.store][dateStr] = [];
+    storeGroups[b.store][dateStr].push(b);
+  });
+  let html = '<div class="filter-chips" style="margin-bottom:1rem">';
+  html += '<button class="chip active" data-brochure-filter="all">All</button>';
+  html += '<button class="chip" data-brochure-filter="Lotte">Lotte</button>';
+  html += '<button class="chip" data-brochure-filter="Superindo">Superindo</button>';
+  html += '</div>';
+  Object.keys(storeGroups).sort().forEach(storeName => {
+    html += '<div class="brochure-store-group" data-brochure-store="' + storeName + '">';
+    html += '<h3 class="promo-type-header">' + storeName + '</h3>';
+    Object.keys(storeGroups[storeName]).sort().reverse().forEach(dateStr => {
+      html += '<h4 style="font-size:0.82rem;color:var(--gray-600);margin:0.5rem 0 0.3rem">' + dateStr + '</h4>';
+      html += '<div class="brochure-grid">';
+      storeGroups[storeName][dateStr].forEach(b => {
+        html += '<div class="brochure-card">';
+        html += '<div class="brochure-img-wrap" style="cursor:pointer">';
+        html += '<img src="' + b.image_path + '" alt="' + b.store + ' brochure" loading="lazy" style="width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;object-fit:cover;background:var(--gray-100)" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">';
+        html += '<div class="brochure-fallback" style="display:none;width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;align-items:center;justify-content:center;font-size:0.75rem;color:var(--gray-500);background:var(--gray-100)">' + b.store + ' (' + b.count + ' products)</div>';
+        html += '<div style="margin-top:0.3rem;font-size:0.78rem;color:var(--gray-700);font-weight:500">' + b.store + ' <span style="color:var(--gray-500);font-weight:400">(' + b.count + ')</span></div>';
+        html += '</div>';
+        html += '<div class="brochure-products" style="display:none;margin-top:0.5rem;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem">';
+        b.products.forEach(item => {
+          const normalized = normalizeProduct(item);
+          html += normalized.stores.length > 1 ? buildMatchedCard(item) : buildSingleCard(item);
+        });
+        html += '</div></div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+  el.querySelectorAll(".brochure-img-wrap").forEach(wrap => {
+    wrap.addEventListener("click", () => {
+      const products = wrap.nextElementSibling;
+      if (products) products.style.display = products.style.display === "none" ? "grid" : "none";
+    });
+  });
+  el.querySelectorAll(".brochure-products .product-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const key = card.dataset.key;
+      document.querySelector('[data-tab="products"]').click();
+      setTimeout(() => expandCard(key), 100);
+    });
+    card.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); document.querySelector('[data-tab="products"]').click(); setTimeout(() => expandCard(card.dataset.key), 100); }
+    });
+  });
+  el.querySelectorAll("[data-brochure-filter]").forEach(chip => {
+    chip.addEventListener("click", () => {
+      el.querySelectorAll("[data-brochure-filter]").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      const filter = chip.dataset.brochureFilter;
+      el.querySelectorAll(".brochure-store-group").forEach(group => {
+        group.style.display = (filter === "all" || group.dataset.brochureStore === filter) ? "block" : "none";
+      });
+    });
+  });
+}
+
+// Tab navigation
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    if (tab.classList.contains("active")) return;
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-view").forEach(v => v.classList.remove("active"));
+    tab.classList.add("active");
+    const view = document.getElementById("view-" + tab.dataset.tab);
+    if (view) view.classList.add("active");
+    if (tab.dataset.tab === "promos") {
+      renderPromos();
+    }
+    if (tab.dataset.tab === "brochures") {
+      renderBrochures();
+    }
+  });
 });
 
 loadData();

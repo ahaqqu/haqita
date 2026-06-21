@@ -64,8 +64,37 @@ def main():
         review_data = review_data.get("items", [])
     consolidated["stats"]["flagged_for_review"] = len(review_data)
 
+    promo_map: dict[str, dict] = {}
+    for item_list in (consolidated.get("products", []), consolidated.get("singles", [])):
+        for item in item_list:
+            stores = item.get("stores", [item])
+            for se in stores if isinstance(stores, list) else [item]:
+                sp = se.get("standardized_promo") or item.get("standardized_promo")
+                if sp and sp.get("display_summary"):
+                    key = sp["display_summary"].lower().replace(" ", "-").replace("%", "persen").replace(".", "-").replace("!", "")
+                    display = sp["display_summary"]
+                    store_name = se.get("store", item.get("store", "unknown"))
+                    if key not in promo_map:
+                        promo_map[key] = {
+                            "key": key,
+                            "display": display,
+                            "type": sp["best_type"],
+                            "discount_pct": sp.get("discount_pct"),
+                            "product_count": 0,
+                            "stores": {},
+                            "example_products": [],
+                        }
+                    promo_map[key]["product_count"] += 1
+                    promo_map[key]["stores"][store_name] = promo_map[key]["stores"].get(store_name, 0) + 1
+                    if len(promo_map[key]["example_products"]) < 5:
+                        promo_map[key]["example_products"].append(item.get("name", ""))
+
+    promo_catalog = sorted(promo_map.values(), key=lambda x: -x["product_count"])
+    consolidated["promo_catalog"] = promo_catalog
+
     copies = [
         (consolidated, HTML_DIR / "active_promo.json", "active_promo.json"),
+        (promo_catalog, HTML_DIR / "promo_catalog.json", "promo_catalog.json"),
         (PRICE_HISTORY_SRC, HTML_DIR / "price_history.json", "price_history.json"),
         (review_path, HTML_DIR / "review_queue.json", "review_queue.json"),
     ]

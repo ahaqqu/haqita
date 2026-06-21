@@ -487,6 +487,7 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
         # 7c. Generate consolidated output from database (includes carry-forward of still-valid promos)
         print("[*] Generating consolidated output from database ...")
         consolidated = generate_consolidated_from_history(history, catalog, today)
+        atomic_write_json(history, str(history_path))
         consolidated['scrape_dates'] = {
             'Lotte': lotte_date or '',
             'Superindo': superindo_date or '',

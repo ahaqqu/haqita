@@ -159,6 +159,300 @@ def parse_promo(promo_text: str | list[str] | None, base_price: int) -> PromoRes
 
 
 # ---------------------------------------------------------------------------
+# Promo normalization and categorization (for UI display)
+# ---------------------------------------------------------------------------
+
+_TITLE_CASE = {
+    'diskon': 'Diskon',
+    'ekstra': 'Ekstra',
+    'stiker': 'Stiker',
+    'gratis': 'Gratis',
+    'hemat': 'Hemat',
+    'lebih': 'Lebih',
+    'seharga': 'Seharga',
+    'harga': 'Harga',
+    'spesial': 'Spesial',
+    'spesial!': 'Spesial!',
+    'promo': 'Promo',
+    'super': 'Super',
+    'mulai': 'Mulai',
+    'beli': 'Beli',
+    'satuan': 'Satuan',
+    'anggota': 'Anggota',
+    'khusus': 'Khusus',
+    'member': 'Member',
+    'special': 'Special',
+    'price': 'Price',
+    'baru': 'Baru',
+    'pilihan': 'Pilihan',
+    'segar': 'Segar',
+    'minggu': 'Minggu',
+    'ini': 'Ini',
+    'fresh': 'Fresh',
+    'deals': 'Deals!',
+    'deals!': 'Deals!',
+    'pwp': 'PWP',
+    'maks': 'Maks.',
+    'maks.': 'Maks.',
+    'max': 'Maks.',
+    'extra': 'Ekstra',
+    'anti': 'Anti',
+    'bocor': 'Bocor',
+    'serap': 'Serap',
+    'semua': 'Semua',
+    'rasa': 'Rasa',
+    'karton': 'Karton',
+    'isi': 'Isi',
+    'tpk': 'Tpk',
+    'produk': 'Produk',
+    'alami': 'Alami',
+    'naturally': 'Naturally',
+    'apel': 'Apel',
+    'fuji': 'Fuji',
+    'deal': 'Deal',
+}
+
+_QTY_UNITS = {
+    'pch', 'pck', 'box', 'btl', 'bag', 'psg', 'bdd', 'klg',
+    'krt', 'pot', 'sak', 'sct', 'tpk', 'tub',
+}
+
+def _title_case_promo(text: str) -> str:
+    """Apply title casing to known promo words while preserving numbers/prices."""
+    words = text.split()
+    result = []
+    for w in words:
+        # Preserve numbers and prices
+        if re.match(r'^[\d.,]+$', w):
+            result.append(w)
+        elif re.match(r'^\d+%$', w):
+            result.append(w)
+        elif re.match(r'^\d', w):
+            result.append(w)
+        else:
+            lower = w.lower()
+            if lower in _TITLE_CASE:
+                result.append(_TITLE_CASE[lower])
+            elif len(w) > 1 and w.isupper():
+                result.append(w.capitalize())
+            else:
+                result.append(w)
+    return ' '.join(result)
+
+
+def normalize_promo_text(text: str) -> list[str]:
+    """
+    Normalize a promo text string into clean, title-cased segment(s).
+
+    Returns a list of one or more normalized promo strings.
+    Splits composite promos like 'DISKON 20% EKSTRA STIKER' into separate entries.
+    """
+    if not text or not text.strip():
+        return []
+
+    text = text.strip()
+
+    # Split composite promos: "DISKON X% EKSTRA STIKER" → ["Diskon X%", "Ekstra Stiker"]
+    m = re.match(r'(DISKON\s+\d+%)\s+(EKSTRA\s+STIKER)', text, re.IGNORECASE)
+    if m:
+        return [_title_case_promo(m.group(1)), _title_case_promo(m.group(2))]
+
+    m = re.match(r'(HARGA\s+SPESIAL)\s+(EKSTRA\s+STIKER)', text, re.IGNORECASE)
+    if m:
+        return [_title_case_promo(m.group(1)), _title_case_promo(m.group(2))]
+
+    return [_title_case_promo(text)]
+
+
+def categorize_promo(text: str) -> str:
+    """
+    Categorize a single normalized promo string into a promo type.
+
+    Returns one of: discount_pct, discount_fixed, bogo, bundle,
+                     member_price, promo_price, freebie, quantity_limit, special
+    """
+    lower = text.lower().strip()
+
+    if re.match(r'^diskon\s+\d+%', lower):
+        return 'discount_pct'
+    if re.match(r'^hemat\s+\d+%', lower):
+        return 'discount_pct'
+
+    if re.match(r'^\d+\s+gratis\s+\d+', lower):
+        return 'bogo'
+    if re.match(r'beli\s+\d+\s+gratis\s+\d+', lower):
+        return 'bogo'
+    if re.match(r'gratis\s+\d+\s*\(', lower):
+        return 'bogo'
+    if lower == 'gratis':
+        return 'bogo'
+
+    if 'khusus member' in lower:
+        return 'member_price'
+    if 'member special price' in lower:
+        return 'member_price'
+    if 'ekstra diskon member' in lower:
+        return 'member_price'
+    if 'pwp' == lower or lower.startswith('pwp '):
+        return 'member_price'
+
+    if lower.startswith('gratis jasa'):
+        return 'freebie'
+    if lower.startswith('gratis es'):
+        return 'freebie'
+    if lower.startswith('disertai pembelian'):
+        return 'freebie'
+
+    if re.match(r'^maks\.?\s+\d+\s+[a-z]', lower):
+        return 'quantity_limit'
+    if text.strip().startswith('MAX'):
+        return 'quantity_limit'
+
+    if re.match(r'^hemat\s+rp', lower):
+        return 'discount_fixed'
+    if re.match(r'^beli\s+\d+\s+rp', lower):
+        return 'discount_fixed'
+    if re.match(r'^[\d]+\s*&\s*[\d]+\s+\w+', lower):
+        return 'discount_fixed'
+    if lower.startswith('harga promo '):
+        return 'discount_fixed'
+
+    if 'harga spesial' in lower:
+        return 'promo_price'
+    if 'harga mulai' in lower:
+        return 'promo_price'
+    if 'super promo' in lower:
+        return 'promo_price'
+    if 'promo 1 hari' in lower:
+        return 'promo_price'
+    if 'super deal' in lower:
+        return 'promo_price'
+    if 'fresh deals' in lower:
+        return 'promo_price'
+    if 'pilihan segar' in lower:
+        return 'promo_price'
+
+    if re.match(r'^\d+\s+lebih\s+hemat', lower):
+        return 'bundle'
+    if re.match(r'^\d+\s+seharga', lower):
+        return 'bundle'
+    if re.match(r'beli\s+\d+\s+harga\s+satuan', lower):
+        return 'bundle'
+    if re.match(r'beli\s+\d+\s+lebih\s*!?', lower):
+        return 'bundle'
+    if 'beli banyak lebih hemat' in lower:
+        return 'bundle'
+    if 'lebih hemat' == lower or 'lebih hemat!' == lower:
+        return 'bundle'
+    if re.match(r'^ekstra stiker', lower):
+        return 'bundle'
+    if re.match(r'^extra stiker', lower):
+        return 'bundle'
+    if re.match(r'^extra \+?\d+\s+pcs', lower):
+        return 'bundle'
+    if 'ekstra serap' in lower:
+        return 'bundle'
+    if re.match(r'^ekstra \+?\d+\s+pcs', lower):
+        return 'bundle'
+    if 'karton isi' in lower:
+        return 'bundle'
+    if lower == 'ekstra diskon':
+        return 'promo_price'
+
+    if 'anti bocor' in lower:
+        return 'special'
+    if 'semua rasa' in lower:
+        return 'special'
+    if 'produk baru' in lower:
+        return 'special'
+    if lower.startswith('naturally '):
+        return 'special'
+
+    return 'special'
+
+
+def standardize_promo_list(promos: list[str] | None) -> dict | None:
+    """
+    Standardize a list of promo strings into a structured dictionary.
+
+    Given the raw promo strings from a snapshot, returns:
+    {
+      "normalized": ["Diskon 20%", "Ekstra Stiker"],
+      "types": ["discount_pct", "bundle"],
+      "best_type": "discount_pct",
+      "discount_pct": 20,
+      "max_qty": 4,
+      "display_summary": "Diskon 20%"
+    }
+
+    Returns None for empty/null input.
+    """
+    if not promos:
+        return None
+
+    # Normalize to list
+    if isinstance(promos, str):
+        promo_list = [promos]
+    else:
+        promo_list = [p for p in promos if p and str(p).strip()]
+
+    if not promo_list:
+        return None
+
+    all_normalized: list[str] = []
+    all_types: list[str] = []
+    discount_pct: int | None = None
+    max_qty: int | None = None
+
+    for raw in promo_list:
+        segments = normalize_promo_text(raw)
+        for seg in segments:
+            all_normalized.append(seg)
+            cat = categorize_promo(seg)
+            all_types.append(cat)
+
+            if cat == 'discount_pct':
+                m = re.search(r'(\d+)%', seg)
+                if m:
+                    val = int(m.group(1))
+                    if discount_pct is None or val > discount_pct:
+                        discount_pct = val
+
+            if cat == 'quantity_limit':
+                m = re.search(r'maks\.?\s*(\d+)', seg.lower())
+                if m:
+                    val = int(m.group(1))
+                    if max_qty is None or val > max_qty:
+                        max_qty = val
+
+    if not all_normalized:
+        return None
+
+    type_priority = {
+        'discount_pct': 0,
+        'member_price': 1,
+        'bogo': 2,
+        'promo_price': 3,
+        'discount_fixed': 4,
+        'bundle': 5,
+        'freebie': 6,
+        'quantity_limit': 7,
+        'special': 8,
+    }
+    best_type = min(all_types, key=lambda t: type_priority.get(t, 99))
+    display_summary = all_normalized[0]
+
+    return {
+        'normalized': all_normalized,
+        'types': all_types,
+        'best_type': best_type,
+        'discount_pct': discount_pct,
+        'max_qty': max_qty,
+        'display_summary': display_summary,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Date parsing
 # ---------------------------------------------------------------------------
 
@@ -223,3 +517,68 @@ def parse_period(period: str | None) -> tuple[str | None, str | None]:
         return None, _to_iso(int(m.group(1)), m.group(2), m.group(3))
 
     return None, None
+
+
+# ---------------------------------------------------------------------------
+# Unit tests (run via `python scripts/matching/promo_parser.py`)
+# ---------------------------------------------------------------------------
+
+if __name__ == '__main__':
+    # normalize_promo_text
+    assert normalize_promo_text('') == []
+    assert normalize_promo_text(None) == []
+    assert normalize_promo_text('  ') == []
+    assert normalize_promo_text('DISKON 20%') == ['Diskon 20%']
+    assert normalize_promo_text('DISKON 20% EKSTRA STIKER') == ['Diskon 20%', 'Ekstra Stiker']
+    assert normalize_promo_text('HARGA SPESIAL EKSTRA STIKER') == ['Harga Spesial', 'Ekstra Stiker']
+    assert normalize_promo_text('HEMAT 40%') == ['Hemat 40%']
+    assert normalize_promo_text('2 GRATIS 1') == ['2 Gratis 1']
+    assert normalize_promo_text('GRATIS') == ['Gratis']
+    assert normalize_promo_text('maks. 4 pck') == ['Maks. 4 pck']
+    assert normalize_promo_text('MAX 4 box') == ['Maks. 4 box']
+    assert normalize_promo_text('KHUSUS MEMBER') == ['Khusus Member']
+    assert normalize_promo_text('Beli 1 Rp 16.800') == ['Beli 1 Rp 16.800']
+
+    # categorize_promo
+    assert categorize_promo('Diskon 20%') == 'discount_pct'
+    assert categorize_promo('Hemat 40%') == 'discount_pct'
+    assert categorize_promo('Diskon 15%') == 'discount_pct'
+    assert categorize_promo('1 Gratis 1') == 'bogo'
+    assert categorize_promo('2 Gratis 1') == 'bogo'
+    assert categorize_promo('Gratis') == 'bogo'
+    assert categorize_promo('2 Lebih Hemat') == 'bundle'
+    assert categorize_promo('2 Seharga 20.980') == 'bundle'
+    assert categorize_promo('Beli 2 Harga Satuan') == 'bundle'
+    assert categorize_promo('Ekstra Stiker') == 'bundle'
+    assert categorize_promo('Khusus Member') == 'member_price'
+    assert categorize_promo('Member Special Price') == 'member_price'
+    assert categorize_promo('PWP') == 'member_price'
+    assert categorize_promo('Harga Spesial') == 'promo_price'
+    assert categorize_promo('Fresh Deals!') == 'promo_price'
+    assert categorize_promo('12 & 14 Juni 15.490') == 'discount_fixed'
+    assert categorize_promo('Beli 1 Rp 16.800') == 'discount_fixed'
+    assert categorize_promo('Maks. 4 pck') == 'quantity_limit'
+    assert categorize_promo('Maks. 4 box') == 'quantity_limit'
+    assert categorize_promo('Gratis Es Batu') == 'freebie'
+    assert categorize_promo('Disertai Pembelian 365 Teh Celup 25\'s Hitam Box 25x2gr') == 'freebie'
+    assert categorize_promo('Anti Bocor') == 'special'
+
+    # standardize_promo_list
+    assert standardize_promo_list(None) is None
+    assert standardize_promo_list([]) is None
+    assert standardize_promo_list(['']) is None
+    r = standardize_promo_list(['DISKON 20% EKSTRA STIKER'])
+    assert r is not None
+    assert r['normalized'] == ['Diskon 20%', 'Ekstra Stiker']
+    assert r['types'] == ['discount_pct', 'bundle']
+    assert r['best_type'] == 'discount_pct'
+    assert r['discount_pct'] == 20
+    assert r['max_qty'] is None
+    assert r['display_summary'] == 'Diskon 20%'
+
+    r2 = standardize_promo_list(['maks. 4 pck'])
+    assert r2 is not None
+    assert r2['best_type'] == 'quantity_limit'
+    assert r2['max_qty'] == 4
+
+    print('All assertions passed!')

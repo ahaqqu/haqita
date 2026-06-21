@@ -6,6 +6,8 @@ Used by both Stage 3 (consolidate.py) and Stage 4 (publish_html.py).
 import ast
 from datetime import datetime
 
+from scripts.matching.promo_parser import standardize_promo_list
+
 DISPLAY_HINTS = {
     "stores": {"Lotte": "Lotte", "Superindo": "Superindo"},
     "store_colors": {"Lotte": "#0057A8", "Superindo": "#E8211D"},
@@ -38,9 +40,10 @@ def _normalize_promo(v) -> list[str] | None:
 
 def build_store_entry(store_name: str, price: float, effective_unit_price: float,
                       bundle_size: int = 1, promo: list[str] = None, promo_type: str = "single",
-                      valid_from: str = None, valid_until: str = None, image_path: str = None) -> dict:
+                      valid_from: str = None, valid_until: str = None, image_path: str = None,
+                      standardized_promo: dict = None) -> dict:
     """Build a store entry dict for a product."""
-    return {
+    entry = {
         "store": store_name,
         "price": price,
         "effective_unit_price": effective_unit_price,
@@ -51,6 +54,9 @@ def build_store_entry(store_name: str, price: float, effective_unit_price: float
         "valid_until": valid_until,
         "image_path": image_path,
     }
+    if standardized_promo is not None:
+        entry["standardized_promo"] = standardized_promo
+    return entry
 
 
 def calc_price_stats(store_entries: list[dict]) -> dict:
@@ -123,9 +129,10 @@ def build_single_product(pkey: str, name: str, brand: str, unit: str,
                           unit_type: str, unit_value_g, store_name: str,
                           price: float, effective_unit_price: float,
                           promo: list[str] = None, valid_from: str = None,
-                          valid_until: str = None, image_path: str = None) -> dict:
+                          valid_until: str = None, image_path: str = None,
+                          standardized_promo: dict = None) -> dict:
     """Build a single (unmatched) product dict."""
-    return {
+    entry = {
         "key": pkey,
         "name": name,
         "brand": brand,
@@ -140,6 +147,9 @@ def build_single_product(pkey: str, name: str, brand: str, unit: str,
         "valid_until": valid_until,
         "image_path": image_path,
     }
+    if standardized_promo is not None:
+        entry["standardized_promo"] = standardized_promo
+    return entry
 
 
 def build_match_methods(consolidated_products: list[dict]) -> dict:
@@ -204,6 +214,14 @@ def generate_consolidated_from_history(history: dict, catalog: dict, today: str)
         if key not in latest or snap.get("date", "") > latest[key].get("date", ""):
             latest[key] = snap
 
+    # Enrich all snapshots with standardized_promo
+    for snap in history["snapshots"]:
+        raw = snap.get("promo")
+        if raw is not None and raw != "" and raw != []:
+            snap["standardized_promo"] = standardize_promo_list(raw)
+        elif "standardized_promo" in snap:
+            del snap["standardized_promo"]
+
     product_groups = {}
     for (pkey, store), snap in latest.items():
         if pkey not in product_groups:
@@ -235,6 +253,7 @@ def generate_consolidated_from_history(history: dict, catalog: dict, today: str)
                     valid_from=snap.get("valid_from"),
                     valid_until=snap.get("valid_until"),
                     image_path=snap.get("image_path"),
+                    standardized_promo=snap.get("standardized_promo"),
                 ))
 
             match_method = None
@@ -265,6 +284,7 @@ def generate_consolidated_from_history(history: dict, catalog: dict, today: str)
                 valid_from=snap.get("valid_from"),
                 valid_until=snap.get("valid_until"),
                 image_path=snap.get("image_path"),
+                standardized_promo=snap.get("standardized_promo"),
             ))
 
     matched_count = len(consolidated_products)
