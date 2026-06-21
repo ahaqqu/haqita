@@ -1,14 +1,18 @@
 """
 Haqita Pipeline Orchestrator.
 
-Chains scrape -> OCR -> consolidation stages with JSON-based inter-stage communication.
-Each stage writes its status to database/stage_results/ for the next stage to consume.
+Chains scrape -> OCR -> consolidation -> publish HTML -> Cloudflare sync -> deploy
+stages with JSON-based inter-stage communication. Each stage writes its status to
+output/stage_results/ for the next stage to consume and for resume support.
 
 Usage:
     python scripts/orchestrator.py --full
     python scripts/orchestrator.py --stage scrape
     python scripts/orchestrator.py --stage ocr --stores lotte
     python scripts/orchestrator.py --stage consolidate
+    python scripts/orchestrator.py --stage publish-html
+    python scripts/orchestrator.py --stage cloudflare-sync
+    python scripts/orchestrator.py --stage deploy
     python scripts/orchestrator.py --full --dry-run
     python scripts/orchestrator.py --full --verbose
 """
@@ -306,16 +310,48 @@ def run_cloudflare_sync(dry_run: bool, logger: logging.Logger) -> dict:
     return status
 
 
+def run_deploy(dry_run: bool, logger: logging.Logger) -> dict:
+    """Run Stage 6: Deploy."""
+    logger.info("=== Stage 6: Deploy ===")
+    deploy_script = SCRIPTS / "deploy.py"
+
+    if not deploy_script.exists():
+        logger.error("deploy.py not found at %s", deploy_script)
+        return {"status": "error", "error": "deploy script not found"}
+
+    cmd = [sys.executable, str(deploy_script)]
+    if dry_run:
+        cmd.append("--dry-run")
+
+    logger.debug("Running: %s", " ".join(cmd))
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+
+    if result.stdout.strip():
+        for line in result.stdout.splitlines():
+            print(f"  {line}")
+
+    if result.returncode != 0:
+        logger.error("Stage 6 failed: %s", result.stderr.strip()[:200])
+        return {"status": "error", "error": result.stderr.strip()[:200]}
+
+    status = {"status": "complete"}
+    if dry_run:
+        status["status"] = "dry_run"
+
+    write_stage_status("deploy", status, logger)
+    return status
+
+
 def main():
     parser = argparse.ArgumentParser(description="Haqita Pipeline Orchestrator")
-    parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate, publish-html, cloudflare-sync")
-    parser.add_argument("--stage", choices=["scrape", "ocr", "consolidate", "publish-html", "cloudflare-sync"], help="Run a single stage")
+    parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate, publish-html, cloudflare-sync, deploy")
+    parser.add_argument("--stage", choices=["scrape", "ocr", "consolidate", "publish-html", "cloudflare-sync", "deploy"], help="Run a single stage")
     parser.add_argument("--stores", default="lotte,superindo", help="Comma-separated store names (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Preview what would run without making changes")
     parser.add_argument("--verbose", action="store_true", help="Detailed logging to file")
     parser.add_argument("--resume", action="store_true", help="Resume from last failed stage")
-    parser.add_argument("--serve", action="store_true", help="Start HTTP server after pipeline completes")
-    parser.add_argument("--port", type=int, default=8080, help="HTTP server port (default: 8080)")
+    parser.add_argument("--serve", action="store_true", help="[DEPRECATED] Stage 6 deploy now handles local serving; this flag is kept for compatibility")
+    parser.add_argument("--port", type=int, default=8080, help="HTTP server port when using --serve (default: 8080)")
     args = parser.parse_args()
 
     if not args.full and not args.stage:
@@ -349,6 +385,7 @@ def main():
         cons_status = read_stage_status("consolidate")
         publish_status = read_stage_status("publish_html")
         cf_sync_status = read_stage_status("cloudflare_sync")
+        deploy_status = read_stage_status("deploy")
 
         scrape_done = scrape_status and scrape_status.get("stores") and all(
             info.get("status") in ("new_images", "no_new", "dry_run")
@@ -361,6 +398,7 @@ def main():
         cons_done = cons_status and cons_status.get("status") in ("complete", "dry_run")
         publish_done = publish_status and publish_status.get("status") in ("complete", "dry_run")
         cf_sync_done = cf_sync_status and cf_sync_status.get("status") in ("complete", "dry_run")
+        deploy_done = deploy_status and deploy_status.get("status") in ("complete", "dry_run")
 
         if scrape_done:
             logger.info("Scrape already complete, skipping")
@@ -407,6 +445,15 @@ def main():
 
         print()
 
+        if deploy_done:
+            logger.info("Deploy already complete, skipping")
+            print("  [SKIP] Deploy — already complete")
+        else:
+            print("  [RUN] Deploy")
+            deploy_result = run_deploy(args.dry_run, logger)
+
+        print()
+
     elif args.full:
         # Stage 1: Scrape all stores
         run_scrape(stores, args.dry_run, logger)
@@ -431,6 +478,13 @@ def main():
             sys.exit(1)
         print()
 
+        # Stage 6: Deploy
+        deploy_result = run_deploy(args.dry_run, logger)
+        if deploy_result.get("status") == "error":
+            logger.error("Stage 6 failed. Use --resume to continue from here.")
+            sys.exit(1)
+        print()
+
     elif args.stage == "scrape":
         run_scrape(stores, args.dry_run, logger)
 
@@ -446,6 +500,9 @@ def main():
     elif args.stage == "cloudflare-sync":
         cf_sync_result = run_cloudflare_sync(args.dry_run, logger)
 
+    elif args.stage == "deploy":
+        deploy_result = run_deploy(args.dry_run, logger)
+
     elapsed = time.time() - t_start
 
     # Final summary
@@ -455,20 +512,23 @@ def main():
     print(f"  Time: {elapsed:.1f}s")
     print("=" * 60)
 
-    # Start HTTP server if --serve flag provided
+    # --serve is deprecated: Stage 6 deploy now handles local serving.
+    # Keep the flag accepted so existing commands do not break.
     if args.serve:
-        class QuietHandler(http.server.SimpleHTTPRequestHandler):
-            def log_message(self, format, *args):
-                pass
+        logger.warning("--serve is deprecated. Stage 6 deploy starts the local HTTP server when deploy.local is true.")
+        if not args.full:
+            class QuietHandler(http.server.SimpleHTTPRequestHandler):
+                def log_message(self, format, *args):
+                    pass
 
-        try:
-            print(f"\n[*] Starting HTTP server on http://localhost:{args.port}")
-            print(f"[*] Open http://localhost:{args.port}/index.html to view results")
-            print("[*] Press Ctrl+C to stop\n")
-            with socketserver.TCPServer(("", args.port), QuietHandler) as httpd:
-                httpd.serve_forever()
-        except Exception as e:
-            logger.error(f"Failed to start HTTP server: {e}")
+            try:
+                print(f"\n[*] Starting HTTP server on http://localhost:{args.port}")
+                print(f"[*] Open http://localhost:{args.port}/index.html to view results")
+                print("[*] Press Ctrl+C to stop\n")
+                with socketserver.TCPServer(("", args.port), QuietHandler) as httpd:
+                    httpd.serve_forever()
+            except Exception as e:
+                logger.error("Failed to start HTTP server: %s", e)
 
 
 if __name__ == "__main__":
