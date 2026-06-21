@@ -1210,14 +1210,22 @@ async function loadData(isRefresh = false) {
     // API-first: try the API for consolidated product data
     let consSource = "api";
     let consOk = false;
-    const apiProducts = await loadFromAPI("/products?limit=200");
+    const apiProducts = await loadFromAPI("/products?limit=100");
     if (apiProducts && apiProducts.data) {
       const products = apiProducts.data;
+      // Fetch store colors from the API
+      const storesResp = await loadFromAPI("/stores");
+      const storeColors = {};
+      if (storesResp && storesResp.data) {
+        for (const s of storesResp.data) {
+          if (s.color) storeColors[s.name] = s.color;
+        }
+      }
       consolidatedData = {
         products: products.filter(p => p.stores && p.stores.length > 1),
         singles: products.filter(p => !p.stores || p.stores.length <= 1),
         stats: {},
-        display_hints: { stores: {}, store_colors: {}, currency: "IDR" },
+        display_hints: { stores: {}, store_colors: storeColors, currency: "IDR" },
         generated_at: new Date().toISOString(),
       };
       consOk = true;
@@ -1237,7 +1245,7 @@ async function loadData(isRefresh = false) {
     // API-first: try the API for price history
     let histSource = "api";
     let histOk = false;
-    const apiPrices = await loadFromAPI("/prices?limit=200");
+    const apiPrices = await loadFromAPI("/prices?limit=100");
     if (apiPrices && apiPrices.data) {
       priceHistoryData = { snapshots: apiPrices.data };
       histOk = true;
