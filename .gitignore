@@ -28,3 +28,4 @@ web/.wrangler/
 web/dist/
 web/_worker.bundle
 web/_worker.js/
+web/.dev.vars
