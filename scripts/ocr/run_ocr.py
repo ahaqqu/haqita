@@ -162,11 +162,13 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
         print(f"    {len(validated)} products, {len(rejected)} rejected ({ocr_time:.0f}s)")
 
         for p in validated:
-            brand = p.get("brand") or ""
+            brand = p.get("brand")
             tag = f"[{brand}] " if brand else ""
-            unit = p.get("unit", "") or ""
-            unit_str = f" {unit}" if unit else ""
-            print(f"    - {tag}{p['name']}: Rp {p['price']:,}{unit_str}")
+            unit = p.get("unit") or "-"
+            promo = p.get("promo")
+            promo_str = "; ".join(promo) if promo else "-"
+            period = p.get("period") or "-"
+            print(f"    - {tag}{p['name']} | Rp {p['price']:,} | {unit} | Promo: {promo_str} | Period: {period}")
 
         all_products.extend(validated)
         all_rejected.extend(rejected)
