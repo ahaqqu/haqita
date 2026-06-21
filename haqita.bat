@@ -21,9 +21,10 @@ echo.
  echo  [4] Stage 3: Consolidation
  echo  [5] Stage 4: Publish HTML
  echo  [6] Stage 5: Sync to Cloudflare
- echo  [7] Start HTTP server
- echo  [8] Tests
- echo  [9] Health check
+ echo  [7] Stage 6: Deploy
+ echo  [8] Start HTTP server
+ echo  [9] Tests
+ echo  [10] Health check
  echo  [0] Exit
 echo.
 
@@ -35,9 +36,10 @@ if "%choice%"=="3" goto STAGE_OCR
 if "%choice%"=="4" goto STAGE_CONSOLIDATION
 if "%choice%"=="5" goto STAGE_PUBLISH_HTML
 if "%choice%"=="6" goto STAGE_CLOUDFLARE_SYNC
-if "%choice%"=="7" goto HTTP_SERVER
-if "%choice%"=="8" goto STAGE_TESTS
-if "%choice%"=="9" goto HEALTH_CHECK
+if "%choice%"=="7" goto STAGE_DEPLOY
+if "%choice%"=="8" goto HTTP_SERVER
+if "%choice%"=="9" goto STAGE_TESTS
+if "%choice%"=="10" goto HEALTH_CHECK
 if "%choice%"=="0" goto END
 
 echo Invalid choice. Press any key to try again...
@@ -79,17 +81,19 @@ echo ========================================
 echo  Running Full Pipeline
 echo ========================================
 echo.
-echo  Stage 1: Scrape all stores
-echo  Stage 2: OCR all scraped images
-echo  Stage 3: Consolidate (update database)
-echo  Stage 4: Publish HTML
-echo  Stage 5: Sync to Cloudflare
+ echo  Stage 1: Scrape all stores
+ echo  Stage 2: OCR all scraped images
+ echo  Stage 3: Consolidate (update database)
+ echo  Stage 4: Publish HTML
+ echo  Stage 5: Sync to Cloudflare
+ echo  Stage 6: Deploy
+
 echo.
 echo  Press any key to start, or Ctrl+C to cancel...
 pause >nul
 echo.
 
-python scripts/orchestrator.py --full --serve
+python scripts/orchestrator.py --full
 
 echo ========================================
 echo  Pipeline complete.
@@ -590,6 +594,79 @@ goto STAGE_CONSOLIDATION
  echo.
  pause
  goto STAGE_CLOUDFLARE_SYNC
+
+ :: ============================================================
+ :: Stage 6: Deploy
+ :: ============================================================
+
+ :STAGE_DEPLOY
+ cls
+ echo ========================================
+ echo  Stage 6: Deploy
+ echo ========================================
+ echo.
+ echo  [1] Run deploy
+ echo  [2] Dry-run (preview)
+ echo  [3] Verbose deploy
+ echo  [4] Verbose + Dry-run
+ echo  [0] Back
+ echo.
+
+ set /p deploy_choice="Your choice: "
+
+ if "%deploy_choice%"=="1" goto DEPLOY_RUN
+ if "%deploy_choice%"=="2" goto DEPLOY_DRYRUN
+ if "%deploy_choice%"=="3" goto DEPLOY_VERBOSE
+ if "%deploy_choice%"=="4" goto DEPLOY_VERBOSE_DRYRUN
+ if "%deploy_choice%"=="0" goto MENU
+
+ echo Invalid choice. Press any key to try again...
+ pause >nul
+ goto STAGE_DEPLOY
+
+ :DEPLOY_RUN
+ cls
+ echo ========================================
+ echo  Deploy
+ echo ========================================
+ echo.
+ python scripts/deploy.py
+ echo.
+ pause
+ goto STAGE_DEPLOY
+
+ :DEPLOY_DRYRUN
+ cls
+ echo ========================================
+ echo  Deploy - Dry-run
+ echo ========================================
+ echo.
+ python scripts/deploy.py --dry-run
+ echo.
+ pause
+ goto STAGE_DEPLOY
+
+ :DEPLOY_VERBOSE
+ cls
+ echo ========================================
+ echo  Deploy - Verbose
+ echo ========================================
+ echo.
+ python scripts/deploy.py --verbose
+ echo.
+ pause
+ goto STAGE_DEPLOY
+
+ :DEPLOY_VERBOSE_DRYRUN
+ cls
+ echo ========================================
+ echo  Deploy - Verbose + Dry-run
+ echo ========================================
+ echo.
+ python scripts/deploy.py --verbose --dry-run
+ echo.
+ pause
+ goto STAGE_DEPLOY
 
  :: ============================================================
  :: Tests
