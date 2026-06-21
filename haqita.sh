@@ -213,9 +213,10 @@ menu() {
         echo "  [3] Stage 2: OCR"
         echo "  [4] Stage 3: Consolidation"
         echo "  [5] Stage 4: Publish HTML"
-        echo "  [6] Start HTTP server"
-        echo "  [7] Tests"
-        echo "  [8] Health check"
+        echo "  [6] Stage 5: Sync to Cloudflare"
+        echo "  [7] Start HTTP server"
+        echo "  [8] Tests"
+        echo "  [9] Health check"
         echo "  [0] Exit"
         echo
         read -rp "Your choice: " choice
@@ -225,9 +226,10 @@ menu() {
             3) stage_ocr ;;
             4) stage_consolidation ;;
             5) stage_publish_html ;;
-            6) http_server ;;
-            7) stage_tests ;;
-            8) health_check ;;
+            6) stage_cloudflare_sync ;;
+            7) http_server ;;
+            8) stage_tests ;;
+            9) health_check ;;
             0) end_script ;;
             *) echo "Invalid choice. Press any key to try again..."; pause ;;
         esac
@@ -268,6 +270,8 @@ full_pipeline() {
     echo "  Stage 1: Scrape all stores"
     echo "  Stage 2: OCR all scraped images"
     echo "  Stage 3: Consolidate (update database)"
+    echo "  Stage 4: Publish HTML"
+    echo "  Stage 5: Sync to Cloudflare"
     echo
     read -n1 -rsp "Press any key to start, or Ctrl+C to cancel..."
     echo
@@ -684,6 +688,62 @@ publish_html_verbose_dryrun() {
     echo "========================================"
     echo
     $PYTHON scripts/publish_html.py --verbose --dry-run
+    echo
+    pause
+}
+
+stage_cloudflare_sync() {
+    while true; do
+        clear
+        echo "========================================"
+        echo "  Stage 5: Sync to Cloudflare"
+        echo "========================================"
+        echo
+        echo "  [1] Run sync"
+        echo "  [2] Dry-run (preview)"
+        echo "  [3] Verbose sync"
+        echo "  [0] Back"
+        echo
+        read -rp "Your choice: " cf_choice
+        case "$cf_choice" in
+            1) cloudflare_sync_run; break ;;
+            2) cloudflare_sync_dryrun; break ;;
+            3) cloudflare_sync_verbose; break ;;
+            0) break ;;
+            *) echo "Invalid choice. Press any key to try again..."; pause ;;
+        esac
+    done
+}
+
+cloudflare_sync_run() {
+    clear
+    echo "========================================"
+    echo "  Sync to Cloudflare"
+    echo "========================================"
+    echo
+    $PYTHON scripts/sync_cloudflare.py
+    echo
+    pause
+}
+
+cloudflare_sync_dryrun() {
+    clear
+    echo "========================================"
+    echo "  Sync to Cloudflare - Dry-run"
+    echo "========================================"
+    echo
+    $PYTHON scripts/sync_cloudflare.py --dry-run
+    echo
+    pause
+}
+
+cloudflare_sync_verbose() {
+    clear
+    echo "========================================"
+    echo "  Sync to Cloudflare - Verbose"
+    echo "========================================"
+    echo
+    $PYTHON scripts/sync_cloudflare.py --verbose
     echo
     pause
 }

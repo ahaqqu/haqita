@@ -275,10 +275,41 @@ def run_publish_html(dry_run: bool, logger: logging.Logger) -> dict:
     return status
 
 
+def run_cloudflare_sync(dry_run: bool, logger: logging.Logger) -> dict:
+    """Run Stage 5: Sync to Cloudflare."""
+    logger.info("=== Stage 5: Sync to Cloudflare ===")
+    sync_script = SCRIPTS / "sync_cloudflare.py"
+
+    if not sync_script.exists():
+        logger.error("sync_cloudflare.py not found at %s", sync_script)
+        return {"status": "error", "error": "sync script not found"}
+
+    cmd = [sys.executable, str(sync_script)]
+    if dry_run:
+        cmd.append("--dry-run")
+
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+
+    if result.returncode != 0:
+        logger.error("Stage 5 failed: %s", result.stderr.strip()[:200])
+        return {"status": "error", "error": result.stderr.strip()[:200]}
+
+    if result.stdout.strip():
+        for line in result.stdout.splitlines():
+            print(f"  {line}")
+
+    status = {"status": "complete"}
+    if dry_run:
+        status["status"] = "dry_run"
+
+    write_stage_status("cloudflare_sync", status, logger)
+    return status
+
+
 def main():
     parser = argparse.ArgumentParser(description="Haqita Pipeline Orchestrator")
-    parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate, publish-html")
-    parser.add_argument("--stage", choices=["scrape", "ocr", "consolidate", "publish-html"], help="Run a single stage")
+    parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate, publish-html, cloudflare-sync")
+    parser.add_argument("--stage", choices=["scrape", "ocr", "consolidate", "publish-html", "cloudflare-sync"], help="Run a single stage")
     parser.add_argument("--stores", default="lotte,superindo", help="Comma-separated store names (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Preview what would run without making changes")
     parser.add_argument("--verbose", action="store_true", help="Detailed logging to file")
@@ -317,6 +348,7 @@ def main():
         ocr_status = read_stage_status("ocr")
         cons_status = read_stage_status("consolidate")
         publish_status = read_stage_status("publish_html")
+        cf_sync_status = read_stage_status("cloudflare_sync")
 
         scrape_done = scrape_status and scrape_status.get("stores") and all(
             info.get("status") in ("new_images", "no_new", "dry_run")
@@ -328,6 +360,7 @@ def main():
         )
         cons_done = cons_status and cons_status.get("status") in ("complete", "dry_run")
         publish_done = publish_status and publish_status.get("status") in ("complete", "dry_run")
+        cf_sync_done = cf_sync_status and cf_sync_status.get("status") in ("complete", "dry_run")
 
         if scrape_done:
             logger.info("Scrape already complete, skipping")
@@ -365,6 +398,15 @@ def main():
 
         print()
 
+        if cf_sync_done:
+            logger.info("Cloudflare sync already complete, skipping")
+            print("  [SKIP] Cloudflare sync — already complete")
+        else:
+            print("  [RUN] Cloudflare sync")
+            cf_sync_result = run_cloudflare_sync(args.dry_run, logger)
+
+        print()
+
     elif args.full:
         # Stage 1: Scrape all stores
         run_scrape(stores, args.dry_run, logger)
@@ -382,6 +424,13 @@ def main():
         publish_result = run_publish_html(args.dry_run, logger)
         print()
 
+        # Stage 5: Sync to Cloudflare
+        cf_sync_result = run_cloudflare_sync(args.dry_run, logger)
+        if cf_sync_result.get("status") == "error":
+            logger.error("Stage 5 failed. Use --resume to continue from here.")
+            sys.exit(1)
+        print()
+
     elif args.stage == "scrape":
         run_scrape(stores, args.dry_run, logger)
 
@@ -393,6 +442,9 @@ def main():
 
     elif args.stage == "publish-html":
         publish_result = run_publish_html(args.dry_run, logger)
+
+    elif args.stage == "cloudflare-sync":
+        cf_sync_result = run_cloudflare_sync(args.dry_run, logger)
 
     elapsed = time.time() - t_start
 

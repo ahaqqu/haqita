@@ -20,22 +20,24 @@ echo.
  echo  [3] Stage 2: OCR
  echo  [4] Stage 3: Consolidation
  echo  [5] Stage 4: Publish HTML
- echo  [6] Start HTTP server
- echo  [7] Tests
- echo  [8] Health check
+ echo  [6] Stage 5: Sync to Cloudflare
+ echo  [7] Start HTTP server
+ echo  [8] Tests
+ echo  [9] Health check
  echo  [0] Exit
 echo.
 
 set /p choice="Your choice: "
 
 if "%choice%"=="1" goto FULL_PIPELINE_MENU
-if "%choice%"=="6" goto HTTP_SERVER
 if "%choice%"=="2" goto STAGE_SCRAPE
 if "%choice%"=="3" goto STAGE_OCR
 if "%choice%"=="4" goto STAGE_CONSOLIDATION
 if "%choice%"=="5" goto STAGE_PUBLISH_HTML
-if "%choice%"=="6" goto STAGE_TESTS
-if "%choice%"=="7" goto HEALTH_CHECK
+if "%choice%"=="6" goto STAGE_CLOUDFLARE_SYNC
+if "%choice%"=="7" goto HTTP_SERVER
+if "%choice%"=="8" goto STAGE_TESTS
+if "%choice%"=="9" goto HEALTH_CHECK
 if "%choice%"=="0" goto END
 
 echo Invalid choice. Press any key to try again...
@@ -80,6 +82,8 @@ echo.
 echo  Stage 1: Scrape all stores
 echo  Stage 2: OCR all scraped images
 echo  Stage 3: Consolidate (update database)
+echo  Stage 4: Publish HTML
+echo  Stage 5: Sync to Cloudflare
 echo.
 echo  Press any key to start, or Ctrl+C to cancel...
 pause >nul
@@ -526,6 +530,66 @@ goto STAGE_CONSOLIDATION
  echo.
  pause
  goto STAGE_PUBLISH_HTML
+
+ :: ============================================================
+ :: Stage 5: Sync to Cloudflare
+ :: ============================================================
+
+ :STAGE_CLOUDFLARE_SYNC
+ cls
+ echo ========================================
+ echo  Stage 5: Sync to Cloudflare
+ echo ========================================
+ echo.
+ echo  [1] Run sync
+ echo  [2] Dry-run (preview)
+ echo  [3] Verbose sync
+ echo  [0] Back
+ echo.
+
+ set /p cf_choice="Your choice: "
+
+ if "%cf_choice%"=="1" goto CLOUDFLARE_SYNC_RUN
+ if "%cf_choice%"=="2" goto CLOUDFLARE_SYNC_DRYRUN
+ if "%cf_choice%"=="3" goto CLOUDFLARE_SYNC_VERBOSE
+ if "%cf_choice%"=="0" goto MENU
+
+ echo Invalid choice. Press any key to try again...
+ pause >nul
+ goto STAGE_CLOUDFLARE_SYNC
+
+ :CLOUDFLARE_SYNC_RUN
+ cls
+ echo ========================================
+ echo  Sync to Cloudflare
+ echo ========================================
+ echo.
+ python scripts/sync_cloudflare.py
+ echo.
+ pause
+ goto STAGE_CLOUDFLARE_SYNC
+
+ :CLOUDFLARE_SYNC_DRYRUN
+ cls
+ echo ========================================
+ echo  Sync to Cloudflare - Dry-run
+ echo ========================================
+ echo.
+ python scripts/sync_cloudflare.py --dry-run
+ echo.
+ pause
+ goto STAGE_CLOUDFLARE_SYNC
+
+ :CLOUDFLARE_SYNC_VERBOSE
+ cls
+ echo ========================================
+ echo  Sync to Cloudflare - Verbose
+ echo ========================================
+ echo.
+ python scripts/sync_cloudflare.py --verbose
+ echo.
+ pause
+ goto STAGE_CLOUDFLARE_SYNC
 
  :: ============================================================
  :: Tests
