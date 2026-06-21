@@ -47,10 +47,29 @@ logger = logging.getLogger(__name__)
 _background_procs: list[subprocess.Popen] = []
 
 
-def setup_logging(verbose: bool) -> None:
-    """Configure root logger level and format."""
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(level=level, format="%(message)s", force=True)
+def setup_logging(verbose: bool) -> logging.Logger:
+    """Configure the deploy logger with console and file handlers."""
+    LOG_DIR = ROOT / "output" / "logs"
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = LOG_DIR / f"deploy_{timestamp}.log"
+
+    deploy_logger = logging.getLogger(__name__)
+    deploy_logger.setLevel(logging.DEBUG)
+    deploy_logger.handlers = []
+
+    fh = logging.FileHandler(log_file, encoding="utf-8")
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    deploy_logger.addHandler(fh)
+
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG if verbose else logging.INFO)
+    ch.setFormatter(logging.Formatter("%(message)s"))
+    deploy_logger.addHandler(ch)
+
+    deploy_logger.info("Log file: %s", log_file)
+    return deploy_logger
 
 
 def load_json(path: Path, default=None):
