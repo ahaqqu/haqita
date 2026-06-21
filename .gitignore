@@ -21,3 +21,10 @@ database/price_history.json
 database/price_history.json.backup
 database/product_catalog.json
 database/review_queue.json
+
+# Cloudflare Pages project
+web/node_modules/
+web/.wrangler/
+web/dist/
+web/_worker.bundle
+web/_worker.js/

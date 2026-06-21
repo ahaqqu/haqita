@@ -1,0 +1,12 @@
+name = "haqita"
+compatibility_date = "2024-09-24"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "haqita-db"
+database_id = "29f84a9b-5666-40dc-a941-883c4f7976ad"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "haqita-images"
