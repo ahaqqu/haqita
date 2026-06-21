@@ -8,6 +8,7 @@
 export interface Bindings {
   DB: D1Database;
   IMAGES: R2Bucket;
+  R2_PUBLIC_URL: string;
   SCRAPER_SECRET: string;
 }
 
@@ -164,19 +165,32 @@ export interface SyncBatchTableCounts {
   skipped: number;
 }
 
+/** Single row-level error reported by the sync batch endpoint. */
+export interface SyncBatchError {
+  table: string;
+  key: string;
+  error: string;
+}
+
 /** Response body returned by POST /api/v1/sync/batch. */
 export interface SyncBatchResponse {
   sync_run_id: string;
-  counts: {
-    stores: SyncBatchTableCounts;
-    products: SyncBatchTableCounts;
-    prices: SyncBatchTableCounts;
-    promos: SyncBatchTableCounts;
-  };
+  stores: SyncBatchTableCounts;
+  products: SyncBatchTableCounts;
+  prices: SyncBatchTableCounts;
+  promos: SyncBatchTableCounts;
+  errors: SyncBatchError[];
+}
+
+/** Single image-level error reported by the sync images endpoint. */
+export interface SyncImagesError {
+  image_path: string;
+  error: string;
 }
 
 /** Response body returned by POST /api/v1/sync/images. */
 export interface SyncImagesResponse {
   updated: number;
   skipped: number;
+  errors: SyncImagesError[];
 }

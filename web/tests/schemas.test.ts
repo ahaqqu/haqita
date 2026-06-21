@@ -73,6 +73,8 @@ describe('cursor helpers', () => {
 
 describe('syncBatchSchema', () => {
   const validBody = {
+    source: 'test-source',
+    sync_run_id: 'test-run-1',
     stores: [{ name: 'Superindo', color: '#ff0000' }],
     products: [
       {
@@ -126,8 +128,20 @@ describe('syncBatchSchema', () => {
     expect(result.promos).toHaveLength(1);
   });
 
+  it('rejects missing source', () => {
+    const bodyWithoutSource = { ...validBody, source: undefined };
+    expect(() => schemas.syncBatchSchema.parse(bodyWithoutSource)).toThrow();
+  });
+
+  it('rejects missing sync_run_id', () => {
+    const bodyWithoutRunId = { ...validBody, sync_run_id: undefined };
+    expect(() => schemas.syncBatchSchema.parse(bodyWithoutRunId)).toThrow();
+  });
+
   it('accepts empty arrays', () => {
     const result = schemas.syncBatchSchema.parse({
+      source: 'test-source',
+      sync_run_id: 'test-run-2',
       stores: [],
       products: [],
       prices: [],
@@ -143,10 +157,10 @@ describe('syncBatchSchema', () => {
 describe('syncImagesSchema', () => {
   it('accepts valid manifest', () => {
     const result = schemas.syncImagesSchema.parse({
-      images: [{ image_path: 'images/1.jpg', image_r2_url: 'https://r2/1.jpg' }],
+      images: [{ local_path: 'images/1.jpg', r2_key: 'images/1.jpg', r2_url: 'https://r2/1.jpg' }],
     });
     expect(result.images).toHaveLength(1);
-    expect(result.images[0].image_path).toBe('images/1.jpg');
+    expect(result.images[0].local_path).toBe('images/1.jpg');
   });
 
   it('rejects empty images', () => {

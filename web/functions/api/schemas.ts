@@ -45,14 +45,14 @@ export const searchQuerySchema = z.object({
 
 /** Single store payload within a sync batch. */
 const syncStoreSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1),
   color: z.string().nullable().optional(),
 });
 
 /** Single product payload within a sync batch. */
 const syncProductSchema = z.object({
-  key: z.string(),
-  name: z.string(),
+  key: z.string().min(1),
+  name: z.string().min(1),
   brand: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
   unit: z.string(),
@@ -62,37 +62,46 @@ const syncProductSchema = z.object({
 
 /** Single price payload within a sync batch. */
 const syncPriceSchema = z.object({
-  product_key: z.string(),
-  store: z.string(),
-  price: z.number(),
-  effective_unit_price: z.number(),
-  bundle_size: z.number(),
-  promo: z.unknown().nullable().optional(),
+  product_key: z.string().min(1),
+  store: z.string().min(1),
+  price: z.number().int().positive(),
+  effective_unit_price: z.number().int().positive(),
+  bundle_size: z.number().int().min(1).default(1),
+  promo: z.array(z.string()).nullable().optional(),
   promo_type: z.string().nullable().optional(),
   valid_from: z.string().nullable().optional(),
   valid_until: z.string().nullable().optional(),
   image_path: z.string().nullable().optional(),
   scrape_time: z.string(),
-  date: z.string(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   match_method: z.string().nullable().optional(),
-  match_confidence: z.number().nullable().optional(),
-  standardized_promo: z.unknown().nullable().optional(),
+  match_confidence: z.number().min(0).max(1).nullable().optional(),
+  standardized_promo: z.object({
+    normalized: z.array(z.string()),
+    types: z.array(z.string()),
+    best_type: z.string(),
+    discount_pct: z.number().nullable().optional(),
+    max_qty: z.number().nullable().optional(),
+    display_summary: z.string(),
+  }).nullable().optional(),
 });
 
 /** Single promo catalog payload within a sync batch. */
 const syncPromoSchema = z.object({
-  key: z.string(),
-  display: z.string(),
+  key: z.string().min(1),
+  display: z.string().min(1),
   type: z.string().nullable().optional(),
   discount_pct: z.number().nullable().optional(),
   max_qty: z.number().nullable().optional(),
-  product_count: z.number(),
-  stores: z.record(z.number()),
-  example_products: z.array(z.string()),
+  product_count: z.number().int().min(0).default(0),
+  stores: z.record(z.string(), z.number()).optional(),
+  example_products: z.array(z.string()).optional(),
 });
 
 /** POST /api/v1/sync/batch request body. */
 export const syncBatchSchema = z.object({
+  source: z.string().min(1),
+  sync_run_id: z.string().min(1),
   stores: z.array(syncStoreSchema).default([]),
   products: z.array(syncProductSchema).default([]),
   prices: z.array(syncPriceSchema).default([]),
@@ -101,8 +110,9 @@ export const syncBatchSchema = z.object({
 
 /** Single image mapping payload within a sync images request. */
 const syncImageSchema = z.object({
-  image_path: z.string(),
-  image_r2_url: z.string(),
+  local_path: z.string().min(1),
+  r2_key: z.string().min(1),
+  r2_url: z.string().optional(),
 });
 
 /** POST /api/v1/sync/images request body. */
