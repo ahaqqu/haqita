@@ -33,5 +33,9 @@ consolidation:
 cloudflare_sync:
   api_url: https://haqita.pages.dev/api/v1   # Override with --api-url or CLOUDFLARE_API_URL env
 
+deploy:
+  local: true
+  cloudflare: false
+
 monitoring:
   review_queue_max: 100
