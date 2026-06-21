@@ -33,11 +33,19 @@ Run through this checklist before each deployment to production.
 
 ## Deployment
 
-- [ ] `./scripts/deploy_pages.sh` runs successfully
+- [ ] `./scripts/deploy_pages.sh` or `python scripts/deploy.py --target cloudflare` runs successfully
+- [ ] Stage 6 deploy status in `output/stage_results/deploy_status.json` is `complete`
 - [ ] `curl https://haqita.pages.dev/` returns 200
 - [ ] `curl https://haqita.pages.dev/api/v1/health` returns {"status":"ok"}
 - [ ] `curl https://haqita.pages.dev/api/v1/stores` returns store data
 - [ ] Browser: UI loads, all tabs work, search/filter/sort functional
+
+## E2E Pipeline
+
+- [ ] `./haqita.sh` → **[1] Run full pipeline** completes all 6 stages
+- [ ] Local UI at `http://localhost:8080` loads and shows products
+- [ ] Local API at `http://localhost:8787/api/v1/health` returns {"status":"ok"}
+- [ ] (Optional) With `deploy.cloudflare: true`, production UI at `https://haqita.pages.dev` loads
 
 ## Post-Deployment
 

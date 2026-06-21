@@ -4,7 +4,8 @@
 
 | Property | Value |
 |----------|-------|
-| Deploy script | `scripts/deploy_pages.sh` (Linux/Mac) / `scripts/deploy_pages.bat` (Windows) |
+| Deploy stage | **Stage 6: Deploy** (`scripts/deploy.py`) |
+| Legacy scripts | `scripts/deploy_pages.sh` (Linux/Mac) / `scripts/deploy_pages.bat` (Windows) |
 | URL | `https://haqita.pages.dev` |
 | Project name | `haqita` |
 | Production branch | `main` |
@@ -29,20 +30,42 @@ python scripts/publish_html.py
 
 This generates `output/html/active_promo.json` and copies other JSON files.
 
-### Step 2: Run deploy script
+### Step 2: Configure deploy targets (optional)
 
-```bash
-./scripts/deploy_pages.sh
+Edit `config.yaml`:
+
+```yaml
+deploy:
+  local: true       # Start local wrangler dev server + http.server 8080
+  cloudflare: false # Deploy to Cloudflare Pages
 ```
 
-This script:
+Set `deploy.cloudflare: true` to enable production deploys. `deploy.local: true` is
+recommended for development so the UI is available at `http://localhost:8080`
+immediately after the pipeline.
+
+### Step 3: Run Stage 6 deploy
+
+From the interactive menu: **[1] Run full pipeline** or **[7] Stage 6: Deploy**.
+
+Or run directly:
+
+```bash
+python scripts/deploy.py
+python scripts/deploy.py --dry-run
+python scripts/deploy.py --target cloudflare
+python scripts/deploy.py --target both
+```
+
+Stage 6:
 1. Verifies `web/package.json`, `index.html`, and `output/html/` exist
 2. Copies `index.html` and `output/html/*.json` into `web/public/`
 3. Installs npm dependencies if needed
 4. Runs `tsc --noEmit` (fails if type errors)
-5. Runs `wrangler pages deploy . --project-name haqita`
+5. For Cloudflare: runs `wrangler pages deploy . --project-name haqita`
+6. For local: starts `wrangler pages dev --local` (port 8787) and `python -m http.server 8080`
 
-### Step 3: Verify deployment
+### Step 4: Verify deployment
 
 ```bash
 # Check HTML page
@@ -107,6 +130,38 @@ npx wrangler pages deployment list --project-name haqita
 # Roll back to a specific deployment ID
 npx wrangler pages deployment rollback <deployment-id> --project-name haqita
 ```
+
+## E2E Verification
+
+After a full pipeline run with `deploy.local: true`:
+
+```bash
+# Local static UI
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/
+# Expected: 200
+
+# Local API (wrangler pages dev)
+curl -s http://localhost:8787/api/v1/health
+# Expected: {"status":"ok","timestamp":"..."}
+```
+
+After a full pipeline run with `deploy.cloudflare: true`:
+
+```bash
+# Production UI
+curl -s -o /dev/null -w "%{http_code}" https://haqita.pages.dev/
+# Expected: 200
+
+# Production API health
+curl -s https://haqita.pages.dev/api/v1/health
+# Expected: {"status":"ok","timestamp":"..."}
+
+# Production API products
+curl -s "https://haqita.pages.dev/api/v1/products?limit=5" | python3 -m json.tool
+# Expected: paginated product list
+```
+
+You can also run the E2E verification from the pipeline itself by selecting **[1] Run full pipeline**; Stage 6 will leave the local UI running at `http://localhost:8080` and deploy to `https://haqita.pages.dev` when Cloudflare is enabled.
 
 ## Troubleshooting
 
