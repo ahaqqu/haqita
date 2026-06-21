@@ -26,13 +26,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 ROOT = Path(__file__).resolve().parent.parent.parent
 API_URL = os.getenv("E2E_API_URL", "http://localhost:8787/api/v1")
 SCRAPER_SECRET = os.getenv("SCRAPER_SECRET", "dev-secret-for-local-testing")
+# Health endpoint is at /api/health (basePath /api + route /health), not under /v1
+HEALTH_URL = os.getenv("E2E_HEALTH_URL", "http://localhost:8787/api/health")
 
 
 @pytest.fixture(scope="module")
 def api_available():
     """Verify the API is running before tests."""
     try:
-        resp = requests.get(f"{API_URL}/health", timeout=5)
+        resp = requests.get(HEALTH_URL, timeout=5)
         if resp.status_code != 200:
             pytest.skip("API not running. Start with: cd web && npx wrangler pages dev --local")
     except requests.ConnectionError:
@@ -225,6 +227,32 @@ class TestE2EFullFlow:
             json={"source": "test", "sync_run_id": "x", "stores": [], "products": [], "prices": [], "promos": []}
         )
         assert resp.status_code == 401
+
+    def test_sync_batch_rejects_missing_source(self, api_available):
+        """POST /sync/batch without source field should return 400."""
+        batch = {
+            "sync_run_id": "e2e_no_source",
+            "stores": [],
+            "products": [],
+            "prices": [],
+            "promos": [],
+        }
+        headers = {"Authorization": f"Bearer {SCRAPER_SECRET}", "Content-Type": "application/json"}
+        resp = requests.post(f"{API_URL}/sync/batch", json=batch, headers=headers)
+        assert resp.status_code == 400
+
+    def test_sync_batch_rejects_missing_sync_run_id(self, api_available):
+        """POST /sync/batch without sync_run_id field should return 400."""
+        batch = {
+            "source": "test",
+            "stores": [],
+            "products": [],
+            "prices": [],
+            "promos": [],
+        }
+        headers = {"Authorization": f"Bearer {SCRAPER_SECRET}", "Content-Type": "application/json"}
+        resp = requests.post(f"{API_URL}/sync/batch", json=batch, headers=headers)
+        assert resp.status_code == 400
 
     def test_security_headers_present(self, api_available):
         """API responses should include security headers."""

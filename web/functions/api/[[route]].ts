@@ -41,6 +41,7 @@ import type {
   SearchResponse,
   SyncBatchResponse,
   SyncImagesResponse,
+  SyncImagesError,
 } from './types';
 
 const app = new Hono<{ Bindings: Bindings }>().basePath('/api');
@@ -370,14 +371,15 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
   }
 
   const batch = parseResult.data;
-  const syncRunId = crypto.randomUUID();
-  const counts: SyncBatchResponse['counts'] = {
+  const syncRunId = batch.sync_run_id;
+  const response: SyncBatchResponse = {
+    sync_run_id: syncRunId,
     stores: { inserted: 0, updated: 0, skipped: 0 },
     products: { inserted: 0, updated: 0, skipped: 0 },
     prices: { inserted: 0, updated: 0, skipped: 0 },
     promos: { inserted: 0, updated: 0, skipped: 0 },
+    errors: [],
   };
-  const errors: string[] = [];
   const db = c.env.DB;
 
   for (const store of batch.stores) {
@@ -386,10 +388,10 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
         .prepare('INSERT OR REPLACE INTO stores (name, color) VALUES (?, ?)')
         .bind(store.name, store.color ?? null)
         .run();
-      counts.stores.updated += 1;
+      response.stores.updated += 1;
     } catch (err) {
-      counts.stores.skipped += 1;
-      errors.push(`store ${store.name}: ${String(err)}`);
+      response.stores.skipped += 1;
+      response.errors.push({ table: 'stores', key: store.name, error: String(err) });
     }
   }
 
@@ -409,10 +411,10 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           product.unit_value_g ?? null
         )
         .run();
-      counts.products.updated += 1;
+      response.products.updated += 1;
     } catch (err) {
-      counts.products.skipped += 1;
-      errors.push(`product ${product.key}: ${String(err)}`);
+      response.products.skipped += 1;
+      response.errors.push({ table: 'products', key: product.key, error: String(err) });
     }
   }
 
@@ -442,10 +444,10 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
             : null
         )
         .run();
-      counts.prices.updated += 1;
+      response.prices.updated += 1;
     } catch (err) {
-      counts.prices.skipped += 1;
-      errors.push(`price ${price.product_key}/${price.store}: ${String(err)}`);
+      response.prices.skipped += 1;
+      response.errors.push({ table: 'prices', key: `${price.product_key}:${price.store}:${price.date}`, error: String(err) });
     }
   }
 
@@ -462,22 +464,19 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           promo.discount_pct ?? null,
           promo.max_qty ?? null,
           promo.product_count,
-          JSON.stringify(promo.stores),
-          JSON.stringify(promo.example_products)
+          promo.stores !== undefined ? JSON.stringify(promo.stores) : null,
+          promo.example_products !== undefined ? JSON.stringify(promo.example_products) : null
         )
         .run();
-      counts.promos.updated += 1;
+      response.promos.updated += 1;
     } catch (err) {
-      counts.promos.skipped += 1;
-      errors.push(`promo ${promo.key}: ${String(err)}`);
+      response.promos.skipped += 1;
+      response.errors.push({ table: 'promos', key: promo.key, error: String(err) });
     }
   }
 
-  const status = errors.length > 0 ? 207 : 200;
-  return c.json<SyncBatchResponse>(
-    { sync_run_id: syncRunId, counts },
-    status as ContentfulStatusCode
-  );
+  const status = response.errors.length > 0 ? 207 : 200;
+  return c.json<SyncBatchResponse>(response, status as ContentfulStatusCode);
 });
 
 app.post('/v1/sync/images', authMiddleware, async (c) => {
@@ -496,13 +495,15 @@ app.post('/v1/sync/images', authMiddleware, async (c) => {
   const { images } = parseResult.data;
   let updated = 0;
   let skipped = 0;
+  const errors: SyncImagesError[] = [];
   const db = c.env.DB;
 
   for (const image of images) {
     try {
+      const r2Url = image.r2_url ?? `${c.env.R2_PUBLIC_URL ?? ''}/${image.r2_key}`;
       const result = await db
         .prepare('UPDATE prices SET image_r2_url = ? WHERE image_path = ?')
-        .bind(image.image_r2_url, image.image_path)
+        .bind(r2Url, image.local_path)
         .run();
       const changes = (result.meta as { changes?: number }).changes ?? 0;
       if (changes > 0) {
@@ -510,12 +511,14 @@ app.post('/v1/sync/images', authMiddleware, async (c) => {
       } else {
         skipped += 1;
       }
-    } catch {
+    } catch (err) {
+      errors.push({ image_path: image.local_path, error: String(err) });
       skipped += 1;
     }
   }
 
-  return c.json<SyncImagesResponse>({ updated, skipped });
+  const status = errors.length > 0 ? 207 : 200;
+  return c.json<SyncImagesResponse>({ updated, skipped, errors }, status as ContentfulStatusCode);
 });
 
 // 404 catch-all for unmatched routes

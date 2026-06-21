@@ -198,7 +198,7 @@ export async function getProductByKey(
   key: string
 ): Promise<ProductRow | null> {
   const row = await db
-    .prepare('SELECT * FROM products WHERE key = ? LIMIT 1')
+    .prepare('SELECT key, name, brand, unit, unit_type, unit_value_g, category FROM products WHERE key = ? LIMIT 1')
     .bind(key)
     .first() as ProductRow | null;
   return row;
@@ -213,7 +213,9 @@ export async function getPriceHistory(
   opts: { from?: string; to?: string; store?: string }
 ): Promise<PriceRow[]> {
   const sql = `
-    SELECT *
+    SELECT product_key, store, price, effective_unit_price, bundle_size, promo, promo_type,
+           valid_from, valid_until, image_path, image_r2_url, scrape_time, date,
+           match_method, match_confidence, standardized_promo
     FROM prices
     WHERE product_key = ?
       AND (? IS NULL OR date >= ?)
@@ -259,7 +261,7 @@ export async function getCategories(db: D1Database): Promise<string[]> {
   return rows.map((row) => row.category);
 }
 
-/** Search products by name or brand. */
+/** Search products by name, brand, or unit. */
 export async function searchProducts(
   db: D1Database,
   query: string,
@@ -267,8 +269,8 @@ export async function searchProducts(
 ): Promise<ProductRow[]> {
   const pattern = `%${query}%`;
   const result = await db
-    .prepare('SELECT * FROM products WHERE name LIKE ? OR brand LIKE ? ORDER BY name LIMIT ?')
-    .bind(pattern, pattern, limit)
+    .prepare('SELECT key, name, brand, unit, unit_type, unit_value_g, category FROM products WHERE name LIKE ? OR brand LIKE ? OR unit LIKE ? ORDER BY name LIMIT ?')
+    .bind(pattern, pattern, pattern, limit)
     .all() as D1AllResult<ProductRow>;
 
   return result.results ?? [];
@@ -277,7 +279,7 @@ export async function searchProducts(
 /** Get the promo catalog with parsed JSON columns. */
 export async function getPromos(db: D1Database): Promise<PromoCatalogRow[]> {
   const result = await db
-    .prepare('SELECT * FROM promos ORDER BY product_count DESC')
+    .prepare('SELECT key, display, type, discount_pct, max_qty, product_count, stores, example_products FROM promos ORDER BY product_count DESC')
     .all() as D1AllResult<{
       key: string;
       display: string;
@@ -302,14 +304,14 @@ export async function getPromos(db: D1Database): Promise<PromoCatalogRow[]> {
   }));
 }
 
-/** Get brochure metadata grouped by image path. */
+/** Get brochure metadata grouped by image path, store, and date. */
 export async function getBrochures(db: D1Database): Promise<BrochureCatalogRow[]> {
   const result = await db
     .prepare(
       `SELECT image_path, store, date, COUNT(*) AS product_count, GROUP_CONCAT(product_key) AS product_keys
        FROM prices
        WHERE image_path IS NOT NULL
-       GROUP BY image_path
+       GROUP BY image_path, store, date
        ORDER BY store, date DESC`
     )
     .all() as D1AllResult<{
