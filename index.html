@@ -563,10 +563,11 @@ footer {
 <header>
   <div class="header-inner">
     <div class="logo">Haqita</div>
-    <div class="freshness-bar">
-      <span class="freshness-dot"></span>
-      <span id="freshness-text">Loading...</span>
-    </div>
+<div class="freshness-bar">
+  <span class="freshness-dot"></span>
+  <span id="freshness-text">Loading...</span>
+  <span id="data-source" style="font-size:0.75rem;color:var(--gray-500);margin-left:0.3rem"></span>
+</div>
   </div>
   <nav class="tab-bar">
     <button class="tab active" data-tab="products">Products</button>
@@ -1179,25 +1180,82 @@ function startAutoRefresh(intervalMs = 300000) {
   }, intervalMs);
 }
 
+// API-first loading helpers
+const API_BASE = "/api/v1";
+
+async function loadFromAPI(endpoint) {
+  try {
+    const resp = await retryFetch(`${API_BASE}${endpoint}`);
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (e) {
+    console.warn(`API ${endpoint} failed, falling back to static JSON`);
+    return null;
+  }
+}
+
+function setDataSource(source) {
+  const el = document.getElementById("data-source");
+  if (el) el.textContent = `(${source === "api" ? "API" : "static"})`;
+}
+
 async function loadData(isRefresh = false) {
   if (!isRefresh) renderLoading();
   document.getElementById("warning-banner").style.display = "none";
   document.getElementById("sample-banner").style.display = "none";
   try {
-    const OUTPUT_PATH = "output/html";
+    const STATIC_PATH = "output/html";
     const SAMPLE_PATH = "data/sample/html";
-    const consLoad = await tryLoadWithFallback(OUTPUT_PATH, SAMPLE_PATH, "active_promo.json");
-    const histLoad = await tryLoadWithFallback(OUTPUT_PATH, SAMPLE_PATH, "price_history.json");
-    let consOk = false, histOk = false;
-    if (consLoad.data) {
-      const v = validateData(consLoad.data, "consolidated");
-      if (v.valid) { consolidatedData = consLoad.data; consOk = true; }
-      else { renderError(v.error); return; }
+
+    // API-first: try the API for consolidated product data
+    let consSource = "api";
+    let consOk = false;
+    const apiProducts = await loadFromAPI("/products?limit=200");
+    if (apiProducts && apiProducts.data) {
+      const products = apiProducts.data;
+      consolidatedData = {
+        products: products.filter(p => p.stores && p.stores.length > 1),
+        singles: products.filter(p => !p.stores || p.stores.length <= 1),
+        stats: {},
+        display_hints: { stores: {}, store_colors: {}, currency: "IDR" },
+        generated_at: new Date().toISOString(),
+      };
+      consOk = true;
     }
-    if (histLoad.data) {
-      priceHistoryData = histLoad.data;
+
+    // Fallback to static JSON if API failed
+    if (!consOk) {
+      consSource = "static";
+      const consLoad = await tryLoadWithFallback(STATIC_PATH, SAMPLE_PATH, "active_promo.json");
+      if (consLoad.data) {
+        const v = validateData(consLoad.data, "consolidated");
+        if (v.valid) { consolidatedData = consLoad.data; consOk = true; }
+        else { renderError(v.error); return; }
+      }
+    }
+
+    // API-first: try the API for price history
+    let histSource = "api";
+    let histOk = false;
+    const apiPrices = await loadFromAPI("/prices?limit=200");
+    if (apiPrices && apiPrices.data) {
+      priceHistoryData = { snapshots: apiPrices.data };
       histOk = true;
     }
+
+    // Fallback to static JSON if API failed
+    if (!histOk) {
+      histSource = "static";
+      const histLoad = await tryLoadWithFallback(STATIC_PATH, SAMPLE_PATH, "price_history.json");
+      if (histLoad.data) {
+        priceHistoryData = histLoad.data;
+        histOk = true;
+      }
+    }
+
+    // Set data source indicator (prefer API)
+    setDataSource(consSource === "api" ? "api" : "static");
+
     if (!consOk && !histOk) {
       renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
       return;
@@ -1214,13 +1272,7 @@ async function loadData(isRefresh = false) {
     if (isSample) {
       const banner = document.getElementById("sample-banner");
       banner.style.display = "flex";
-      if (consLoad.from === SAMPLE_PATH && histLoad.from === SAMPLE_PATH) {
-        banner.innerHTML = "Displaying sample data. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
-      } else if (consLoad.from === SAMPLE_PATH) {
-        banner.innerHTML = "Displaying sample active_promo.json. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
-      } else {
-        banner.innerHTML = "Displaying sample price_history.json. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
-      }
+      banner.innerHTML = "Displaying sample data. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
     }
     displayHints = consolidatedData?.display_hints || getDefaultDisplayHints();
     if (displayHints.store_colors) {
