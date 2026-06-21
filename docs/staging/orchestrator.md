@@ -1,14 +1,17 @@
 # Pipeline Orchestrator
 
-Chains scrape → OCR → consolidation stages with JSON-based inter-stage communication.
+Chains scrape → OCR → consolidation → publish HTML → Cloudflare sync → deploy stages with JSON-based inter-stage communication.
 
 ## Overview
 
-The orchestrator (`scripts/orchestrator.py`) is invoked when you select **[1] Run full pipeline** from `haqita.bat`. It manages the full pipeline flow:
+The orchestrator (`scripts/orchestrator.py`) is invoked when you select **[1] Run full pipeline** from `haqita.bat` or `./haqita.sh`. It manages the full pipeline flow:
 
 1. **Stage 1** — Scrape all stores
 2. **Stage 2** — OCR only stores with new images (saves API quota)
 3. **Stage 3** — Consolidation (always runs)
+4. **Stage 4** — Publish HTML (generates `active_promo.json` and copies JSON files to `output/html/`)
+5. **Stage 5** — Sync to Cloudflare (pushes data to the Cloudflare API and uploads new brochure images to R2)
+6. **Stage 6** — Deploy (starts local dev server and/or deploys to Cloudflare Pages)
 
 ## Full Pipeline Submenu
 
@@ -26,15 +29,15 @@ Selecting **[1]** from the main menu opens a submenu:
 If a stage fails during a full pipeline run:
 
 1. Fix the issue (e.g., check API key)
-2. Select **[1] → [5] Resume** from the main menu
-3. The orchestrator reads `database/stage_results/` status files and skips already-completed stages
+2. Select **[1] → [4] Resume** from the main menu
+3. The orchestrator reads `output/stage_results/` status files and skips already-completed stages
 4. Pipeline continues from the first incomplete stage
 
 No need to rerun stages one by one manually.
 
 ## Stage Communication
 
-Each stage writes its result to `database/stage_results/` as JSON. The next stage reads this to decide what to do.
+Each stage writes its result to `output/stage_results/` as JSON. The next stage reads this to decide what to do, and the resume logic uses these files to skip completed work.
 
 ### scrape_status.json
 
@@ -74,6 +77,48 @@ Each stage writes its result to `database/stage_results/` as JSON. The next stag
 }
 ```
 
+### publish_html_status.json
+
+```json
+{
+  "stage": "publish_html",
+  "timestamp": "2026-05-16T10:55:00",
+  "status": "complete"
+}
+```
+
+### cloudflare_sync_status.json
+
+```json
+{
+  "stage": "cloudflare_sync",
+  "timestamp": "2026-05-16T11:00:00",
+  "status": "complete"
+}
+```
+
+### deploy_status.json
+
+```json
+{
+  "stage": "deploy",
+  "timestamp": "2026-05-16T11:05:00",
+  "status": "complete",
+  "target": "both",
+  "details": {
+    "target": "both",
+    "cloudflare": {
+      "status": "complete",
+      "url": "https://haqita.pages.dev"
+    },
+    "local": {
+      "status": "complete",
+      "ports": [8080, 8787]
+    }
+  }
+}
+```
+
 ## Smart OCR Skipping
 
 The orchestrator reads `scrape_status.json` after Stage 1 and records per-store status (`new_images` / `no_new` / `complete` / `skipped`) in `ocr_status.json`. Actual per-image skipping is handled by OCR's own state file (`database/ocr/<store>/state.json`), which tracks filenames already processed — so the orchestrator always invokes the OCR script for every requested store, and OCR itself decides what to re-process.
@@ -92,6 +137,8 @@ When running in verbose mode, detailed logs are written to:
 |---|---|
 | `output/logs/orchestrator_<timestamp>.log` | Orchestrator stage transitions, subprocess results |
 | `output/logs/consolidate_<timestamp>.log` | Detailed match results, gate rejections, review items |
+| `output/logs/sync_cloudflare_<timestamp>.log` | Cloudflare API batch sync and R2 image upload results |
+| `output/logs/deploy_<timestamp>.log` | Local dev server startup and Cloudflare Pages deploy output |
 
 ### Verbose Log Contents
 
@@ -115,5 +162,8 @@ You can also run single stages via the main menu:
 - **Option [2]** → Scrape submenu (all stores, single store, or dry-run)
 - **Option [3]** → OCR submenu (all stores, single store, specific image, or dry-run)
 - **Option [4]** → Consolidation submenu (run or dry-run)
+- **Option [5]** → Publish HTML submenu (run, dry-run, or verbose)
+- **Option [6]** → Sync to Cloudflare submenu (run, dry-run, or verbose)
+- **Option [7]** → Deploy submenu (run, dry-run, or verbose)
 
 When running OCR standalone (Option [3]), it checks `scrape_status.json` if available to skip stores with no new images. If no status file exists, it OCRs all requested stores (idempotent — state file prevents re-processing).
