@@ -214,9 +214,10 @@ menu() {
         echo "  [4] Stage 3: Consolidation"
         echo "  [5] Stage 4: Publish HTML"
         echo "  [6] Stage 5: Sync to Cloudflare"
-        echo "  [7] Start HTTP server"
-        echo "  [8] Tests"
-        echo "  [9] Health check"
+        echo "  [7] Stage 6: Deploy"
+        echo "  [8] Start HTTP server"
+        echo "  [9] Tests"
+        echo "  [10] Health check"
         echo "  [0] Exit"
         echo
         read -rp "Your choice: " choice
@@ -227,9 +228,10 @@ menu() {
             4) stage_consolidation ;;
             5) stage_publish_html ;;
             6) stage_cloudflare_sync ;;
-            7) http_server ;;
-            8) stage_tests ;;
-            9) health_check ;;
+            7) stage_deploy ;;
+            8) http_server ;;
+            9) stage_tests ;;
+            10) health_check ;;
             0) end_script ;;
             *) echo "Invalid choice. Press any key to try again..."; pause ;;
         esac
@@ -272,10 +274,11 @@ full_pipeline() {
     echo "  Stage 3: Consolidate (update database)"
     echo "  Stage 4: Publish HTML"
     echo "  Stage 5: Sync to Cloudflare"
+    echo "  Stage 6: Deploy"
     echo
     read -n1 -rsp "Press any key to start, or Ctrl+C to cancel..."
     echo
-    $PYTHON scripts/orchestrator.py --full --serve
+    $PYTHON scripts/orchestrator.py --full
     echo "========================================"
     echo "  Pipeline complete."
     echo "========================================"
@@ -744,6 +747,75 @@ cloudflare_sync_verbose() {
     echo "========================================"
     echo
     $PYTHON scripts/sync_cloudflare.py --verbose
+    echo
+    pause
+}
+
+stage_deploy() {
+    while true; do
+        clear
+        echo "========================================"
+        echo "  Stage 6: Deploy"
+        echo "========================================"
+        echo
+        echo "  [1] Run deploy"
+        echo "  [2] Dry-run (preview)"
+        echo "  [3] Verbose deploy"
+        echo "  [4] Verbose + Dry-run"
+        echo "  [0] Back"
+        echo
+        read -rp "Your choice: " deploy_choice
+        case "$deploy_choice" in
+            1) deploy_run; break ;;
+            2) deploy_dryrun; break ;;
+            3) deploy_verbose; break ;;
+            4) deploy_verbose_dryrun; break ;;
+            0) break ;;
+            *) echo "Invalid choice. Press any key to try again..."; pause ;;
+        esac
+    done
+}
+
+deploy_run() {
+    clear
+    echo "========================================"
+    echo "  Deploy"
+    echo "========================================"
+    echo
+    $PYTHON scripts/deploy.py
+    echo
+    pause
+}
+
+deploy_dryrun() {
+    clear
+    echo "========================================"
+    echo "  Deploy - Dry-run"
+    echo "========================================"
+    echo
+    $PYTHON scripts/deploy.py --dry-run
+    echo
+    pause
+}
+
+deploy_verbose() {
+    clear
+    echo "========================================"
+    echo "  Deploy - Verbose"
+    echo "========================================"
+    echo
+    $PYTHON scripts/deploy.py --verbose
+    echo
+    pause
+}
+
+deploy_verbose_dryrun() {
+    clear
+    echo "========================================"
+    echo "  Deploy - Verbose + Dry-run"
+    echo "========================================"
+    echo
+    $PYTHON scripts/deploy.py --verbose --dry-run
     echo
     pause
 }
