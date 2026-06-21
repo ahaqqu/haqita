@@ -6,6 +6,7 @@ detects new promos via content hashing, and downloads images for later OCR proce
 """
 
 import argparse
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -30,8 +31,8 @@ class SuperindoScraper(BaseScraper):
     def __init__(self, urls: list[str] = None):
         super().__init__()
         self.urls = urls or [
-            "https://www.superindo.co.id/promosi/katalog-super-hemat/",
-            "https://www.superindo.co.id/promosi/promo-koran/",
+            os.environ.get("SUPERINDO_KATALOG_URL", "https://www.superindo.co.id/promosi/katalog-super-hemat/"),
+            os.environ.get("SUPERINDO_KORAN_URL", "https://www.superindo.co.id/promosi/promo-koran/"),
         ]
 
     def collect_image_refs(self) -> list[tuple[str, str]]:

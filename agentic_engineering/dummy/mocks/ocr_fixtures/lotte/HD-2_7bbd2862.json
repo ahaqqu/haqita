@@ -1,0 +1,10 @@
+{
+  "scraped_at": "2026-06-21T00:00:00",
+  "store": "Lotte",
+  "products": [
+    {"name": "Indomie Goreng", "brand": "Indomie", "price": 11500, "unit": "85 g", "promo": "DAPAT 3 pcs Rp 30.000", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.94},
+    {"name": "Mie Sedap Ayam Bawang", "brand": "Mie Sedap", "price": 10500, "unit": "75 g", "promo": "BELI 2 GRATIS 1", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.91},
+    {"name": "Ultra Milk Full Cream", "brand": "Ultra Milk", "price": 18000, "unit": "1 L", "promo": "Harga Spesial", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.89},
+    {"name": "Tango Wafer", "brand": "Tango", "price": 9500, "unit": "130 g", "promo": "BUY 2 GET 1", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.86}
+  ]
+}

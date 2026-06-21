@@ -1,0 +1,10 @@
+{
+  "scraped_at": "2026-06-21T00:00:00",
+  "store": "Superindo",
+  "products": [
+    {"name": "Indomie Goreng", "brand": "Indomie", "price": 11200, "unit": "85 g", "promo": "DAPAT 5 pcs", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.94},
+    {"name": "Beng Beng", "brand": "Beng Beng", "price": 8000, "unit": "20 g x 10", "promo": "DISKON 25%", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.91},
+    {"name": "Aqua Botol", "brand": "Aqua", "price": 5000, "unit": "600 ml", "promo": "BELI 3 Rp 13.000", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.89},
+    {"name": "Kopiko 78C", "brand": "Kopiko", "price": 13000, "unit": "10 sachet", "promo": "PROMO SPESIAL", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.86}
+  ]
+}

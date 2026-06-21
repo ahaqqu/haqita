@@ -1,0 +1,10 @@
+{
+  "scraped_at": "2026-06-21T00:00:00",
+  "store": "Lotte",
+  "products": [
+    {"name": "Indomie Goreng", "brand": "Indomie", "price": 12500, "unit": "85 g", "promo": "PAKET 5 pcs", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.93},
+    {"name": "Beng Beng", "brand": "Beng Beng", "price": 8500, "unit": "20 g x 10", "promo": "DISKON 20%", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.90},
+    {"name": "Aqua Botol", "brand": "Aqua", "price": 5500, "unit": "600 ml", "promo": "BELI 2 Rp 10.000", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.88},
+    {"name": "Kopiko 78C", "brand": "Kopiko", "price": 13500, "unit": "10 sachet", "promo": "DAPAT 12 pcs", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.85}
+  ]
+}

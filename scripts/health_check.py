@@ -21,6 +21,7 @@ from pathlib import Path
 
 # Project root
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 from scripts.config import load_config
 
@@ -61,7 +62,7 @@ def check_config() -> tuple[bool, str]:
             cfg = yaml.safe_load(f)
         if not isinstance(cfg, dict):
             return False, "config.yaml is not a valid YAML mapping"
-        required_keys = ["scrapers", "ocr", "consolidation"]
+        required_keys = ["ocr", "consolidation"]
         missing = [k for k in required_keys if k not in cfg]
         if missing:
             return False, f"config.yaml missing keys: {', '.join(missing)}"

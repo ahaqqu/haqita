@@ -15,11 +15,16 @@ QuotaExhaustedError  # re-exported for backward compatibility with run_ocr.py
 
 def call_gemini_ocr(image_path: str, cfg: dict, max_retries: int = 3) -> list[dict]:
     load_dotenv()
+
+    if os.getenv("MOCK_OCR") == "1":
+        from agentic_engineering.dummy.mocks.mock_ocr import mock_ocr
+        return mock_ocr(image_path)
+
     gemini_cfg = cfg['ocr'].get('gemini', {})
     store = cfg.get('store', 'superindo')
     prompt = get_prompt(store)
 
-    api_key = gemini_cfg.get('api_key') or os.getenv('GEMINI_API_KEY')
+    api_key = gemini_cfg.get('api_key') or os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set in .env")
 

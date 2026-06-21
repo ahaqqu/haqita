@@ -6,6 +6,7 @@ content hashing, and downloads images for later OCR processing.
 """
 
 import argparse
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -16,7 +17,7 @@ from scripts.scrapers.base_scraper import BaseScraper, DEFAULT_HEADERS, deduplic
 
 # --- Store-specific configuration ---
 STORE_NAME = "Lotte"
-LOTTE_URL = "https://www.lottemart.co.id/all-promo-mart"
+LOTTE_URL = os.environ.get("LOTTE_URL", "https://www.lottemart.co.id/all-promo-mart")
 
 HEADERS = {
     **DEFAULT_HEADERS,

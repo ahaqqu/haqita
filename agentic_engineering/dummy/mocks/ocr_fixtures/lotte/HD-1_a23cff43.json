@@ -1,0 +1,11 @@
+{
+  "scraped_at": "2026-06-21T00:00:00",
+  "store": "Lotte",
+  "products": [
+    {"name": "Indomie Goreng", "brand": "Indomie", "price": 12000, "unit": "85 g", "promo": "BUY 2 GET 1", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.95},
+    {"name": "SilverQueen Cashew", "brand": "SilverQueen", "price": 29000, "unit": "3x52 g", "promo": "BUY 2 GET 1 FREE", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.92},
+    {"name": "Lay's Seaweed", "brand": "Lay's", "price": 20500, "unit": "105 g", "promo": "BUY 2 GET 1", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.90},
+    {"name": "Coca Cola 1L", "brand": "Coca Cola", "price": 15000, "unit": "1 L", "promo": "DAPAT 2 pcs", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.88},
+    {"name": "Piattos Semua Varian", "brand": "Piattos", "price": 11000, "unit": "68 g", "promo": "PAKET 2 pcs Rp 13.900", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.87}
+  ]
+}

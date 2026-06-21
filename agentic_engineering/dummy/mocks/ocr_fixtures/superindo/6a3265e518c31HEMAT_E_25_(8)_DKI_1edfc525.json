@@ -1,0 +1,11 @@
+{
+  "scraped_at": "2026-06-21T00:00:00",
+  "store": "Superindo",
+  "products": [
+    {"name": "Indomie Goreng", "brand": "Indomie", "price": 11000, "unit": "85 g", "promo": "PROMO 3 Rp 30.000", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.96},
+    {"name": "SilverQueen Cashew", "brand": "SilverQueen", "price": 28500, "unit": "3x52 g", "promo": "DISKON Rp 2.000", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.93},
+    {"name": "Sunlight Jeruk Nipis", "brand": "Sunlight", "price": 22000, "unit": "800 ml", "promo": "BELI 2 GRATIS 1", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.91},
+    {"name": "Rinso Cair", "brand": "Rinso", "price": 35000, "unit": "1.8 L", "promo": "Harga Hemat", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.89},
+    {"name": "Coca Cola 1L", "brand": "Coca Cola", "price": 14500, "unit": "1 L", "promo": "DAPAT 2 pcs", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.87}
+  ]
+}

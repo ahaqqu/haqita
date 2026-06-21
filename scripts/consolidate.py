@@ -38,6 +38,15 @@ from scripts.matching.consolidation import (
 )
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+
+def _strip_private_keys(obj):
+    """Recursively remove keys starting with '_' so product dicts are JSON-serializable."""
+    if isinstance(obj, dict):
+        return {k: _strip_private_keys(v) for k, v in obj.items() if not k.startswith('_')}
+    if isinstance(obj, list):
+        return [_strip_private_keys(v) for v in obj]
+    return obj
 logger = logging.getLogger(__name__)
 
 
@@ -511,12 +520,12 @@ def consolidate(cfg: dict, lotte_dir: Path | None, superindo_dir: Path | None, d
 
         max_review = cfg.get('monitoring', {}).get('review_queue_max', 100)
         for item in review_items:
-            review_data.append({
+            review_data.append(_strip_private_keys({
                 'detected_at': datetime.now().isoformat(),
                 'reason': item.get('reason', 'unknown'),
                 'product_a': item.get('product_a', {}),
                 'product_b': item.get('product_b', {}),
-            })
+            }))
         review_data = review_data[-max_review:]
 
         print(f"[*] Review queue: {len(review_data)} items")

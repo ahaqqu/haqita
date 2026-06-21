@@ -1,0 +1,10 @@
+{
+  "scraped_at": "2026-06-21T00:00:00",
+  "store": "Superindo",
+  "products": [
+    {"name": "Indomie Goreng", "brand": "Indomie", "price": 10800, "unit": "85 g", "promo": "BUY 2 GET 1", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.95},
+    {"name": "Mie Sedap Ayam Bawang", "brand": "Mie Sedap", "price": 10000, "unit": "75 g", "promo": "PROMO 5 pcs", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.92},
+    {"name": "Ultra Milk Full Cream", "brand": "Ultra Milk", "price": 17500, "unit": "1 L", "promo": "CASHBACK Rp 2.000", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.90},
+    {"name": "Tango Wafer", "brand": "Tango", "price": 9000, "unit": "130 g", "promo": "BELI 2 Rp 16.000", "period": "18 Juni - 1 Juli 2026", "ocr_confidence": 0.88}
+  ]
+}
