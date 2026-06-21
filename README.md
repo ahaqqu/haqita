@@ -19,7 +19,22 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
   database/scrape/        database/ocr/           database/                 output/html/
                                                   (price_history,            active_promo.json
                                                    catalog, review,          price_history.json
-                                                   consolidated_*)           index.html
+                                                   consolidated_*)           promo_catalog.json
+                                                                                review_queue.json
+                                                                                index.html
+                                                                            │
+                                                                            ▼
+                                                                      ┌──────────────────┐
+                                                                      │  Stage 5         │
+                                                                      │  Sync to         │
+                                                                      │  Cloudflare      │
+                                                                      └──────────────────┘
+                                                                            │
+                                                                            ▼
+                                                                      ┌──────────────────┐
+                                                                      │  Stage 6         │
+                                                                      │  Deploy          │
+                                                                      └──────────────────┘
 ```
 
 Each stage runs independently. If a stage fails, select **[1] → [4] Resume** to continue from where it left off — completed stages are skipped automatically.
@@ -46,11 +61,11 @@ On the first run, `haqita.sh` automatically creates a Python virtual environment
 ./haqita.sh --setup
 ```
 
-Launches an interactive menu. Select **[1]** for the full pipeline, or run individual stages ([2]–[4]). Each stage has a dry-run mode.
+Launches an interactive menu. Select **[1]** for the full pipeline, or run individual stages ([2]–[7]). Each stage has a dry-run mode.
 
 ## Viewing the HTML UI
 
-After running the pipeline, open the browser UI:
+After a full pipeline run, the local UI is served automatically by **Stage 6: Deploy** at `http://localhost:8080` (when `deploy.local: true` in `config.yaml`). You can also start the server manually:
 
 ```cmd
 python -m http.server 8080
@@ -68,7 +83,7 @@ Then open `http://localhost:8080` in a browser. Features:
 
 ## Menu
 
-Run `haqita.bat` (Windows) or `./haqita.sh` (Ubuntu/WSL) to access the interactive menu. Options [2]-[5] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
+Run `haqita.bat` (Windows) or `./haqita.sh` (Ubuntu/WSL) to access the interactive menu. Options [2]-[7] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
 
 ```
  [1] Run full pipeline        → submenu: Normal, Dry-run, Verbose, Verbose+Dry-run, Resume
@@ -76,8 +91,11 @@ Run `haqita.bat` (Windows) or `./haqita.sh` (Ubuntu/WSL) to access the interacti
  [3] Stage 2: OCR             → OCR only (submenu: All, Lotte, Superindo, Specific, Dry-run)
  [4] Stage 3: Consolidation   → consolidate only (submenu: Run, Dry-run, Custom dir)
  [5] Stage 4: Publish HTML    → generate active_promo.json + copy for browser (Run, Dry-run, Verbose)
- [6] Tests                    → submenu: Integration tests, Matching tests
- [7] Health check             → pre-flight verification
+ [6] Stage 5: Sync to Cloudflare → sync data to Cloudflare API (Run, Dry-run, Verbose)
+ [7] Stage 6: Deploy          → deploy local dev server and/or Cloudflare Pages (Run, Dry-run, Verbose)
+ [8] Start HTTP server        → start python -m http.server 8080
+ [9] Tests                    → submenu: Integration tests, Matching tests
+ [10] Health check            → pre-flight verification
  [0] Exit
 ```
 
@@ -104,12 +122,19 @@ sudo apt install python3.12 python3.12-venv python3-pip
 
 ## Testing
 
-Via `haqita.bat`/`./haqita.sh` → Option [5]:
+Via `haqita.bat`/`./haqita.sh` → Option [9]:
 
 | Choice | Action |
 |---|---|
 | **1** | Integration tests (OCR on real images) |
 | **2** | Matching pipeline tests (124 unit tests) |
+
+For end-to-end verification after a full pipeline run:
+
+- Local UI: `curl -s http://localhost:8080/` returns the HTML page
+- Local API: `curl -s http://localhost:8787/api/v1/health` returns `{"status":"ok",...}`
+- Production UI: `curl -s https://haqita.pages.dev/` returns the HTML page (when `deploy.cloudflare: true`)
+- Production API: `curl -s https://haqita.pages.dev/api/v1/health` returns `{"status":"ok",...}`
 
 ## Documentation
 
@@ -119,10 +144,14 @@ Via `haqita.bat`/`./haqita.sh` → Option [5]:
 | [staging/ocr.md](docs/staging/ocr.md) | Stage 2: OCR — provider config, output schema, validation |
 | [staging/consolidation.md](docs/staging/consolidation.md) | Stage 3: Consolidation — matching pipeline, schemas, gate details |
 | [staging/publish-html.md](docs/staging/publish-html.md) | Stage 4: Publish HTML — active_promo.json generation, HTML UI |
+| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md) | Stage 5: Sync to Cloudflare — API batch sync, R2 image upload |
+| [staging/deploy-pages.md](docs/staging/deploy-pages.md) | Stage 6: Deploy — local dev server and Cloudflare Pages deploy |
+| [staging/orchestrator.md](docs/staging/orchestrator.md) | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
+| [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md) | Cloudflare API sync endpoints and schemas |
+| [staging/security-configuration.md](docs/staging/security-configuration.md) | Security headers, secrets, and WAF configuration |
 | [database/price_history.md](docs/database/price_history.md) | `price_history.json` — append-only price snapshots (schema v1.2) |
 | [database/product_catalog.md](docs/database/product_catalog.md) | `product_catalog.json` — auto-built product registry |
 | [database/review_queue.md](docs/database/review_queue.md) | `review_queue.json` — flagged matches for manual review |
-| [staging/orchestrator.md](docs/staging/orchestrator.md) | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
 
 ## Project Structure
 
@@ -140,6 +169,8 @@ haqita/
 │   ├── ocr/                          ← Stage 2: OCR processors
 │   ├── consolidate.py                ← Stage 3: Merge + match, write to database/
 │   ├── publish_html.py               ← Stage 4: Generate active_promo.json + copy
+│   ├── sync_cloudflare.py            ← Stage 5: Sync data to Cloudflare API/R2
+│   ├── deploy.py                     ← Stage 6: Deploy local dev server / Cloudflare Pages
 │   ├── orchestrator.py               ← Pipeline orchestrator
 │   ├── health_check.py               ← Pre-flight verification
 │   └── matching/                     ← Matching pipeline (7 gates)
