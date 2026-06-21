@@ -161,21 +161,31 @@ def run_ocr(stores: list[str], dry_run: bool, logger: logging.Logger) -> dict:
             store_results[store] = {"status": "error", "error": "ocr_script_not_found"}
             continue
 
-        cmd = [sys.executable, str(ocr_script), "--store", store]
+        cmd = [sys.executable, "-u", str(ocr_script), "--store", store]
         if dry_run:
             cmd.append("--dry-run")
 
         logger.debug("Running: %s", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, cwd=ROOT,
+        )
+        stdout_lines = []
+        for line in proc.stdout:
+            line = line.rstrip()
+            print(f"  {line}", flush=True)
+            stdout_lines.append(line)
+        proc.wait()
+        stderr_output = proc.stderr.read()
 
-        if result.returncode != 0:
-            logger.error("OCR %s failed (exit %d): %s", store, result.returncode, result.stderr.strip())
-            store_results[store] = {"status": "error", "error": result.stderr.strip()[:200]}
+        if proc.returncode != 0:
+            logger.error("OCR %s failed (exit %d): %s", store, proc.returncode, stderr_output.strip())
+            store_results[store] = {"status": "error", "error": stderr_output.strip()[:200]}
             continue
 
         # Parse stdout for product count
         products_extracted = 0
-        for line in result.stdout.splitlines():
+        for line in stdout_lines:
             if "products extracted" in line.lower() or "total products" in line.lower():
                 try:
                     # e.g., "Total products extracted: 45"
@@ -190,11 +200,6 @@ def run_ocr(stores: list[str], dry_run: bool, logger: logging.Logger) -> dict:
             store_results[store] = {"status": "complete", "products_extracted": products_extracted}
             total_products += products_extracted
             logger.info("  %s: %d product(s) extracted", store, products_extracted)
-
-        # Print OCR output to console
-        if result.stdout.strip():
-            for line in result.stdout.splitlines():
-                print(f"  {line}")
 
     # Mark stores that were skipped (no new images)
     for store in stores:
