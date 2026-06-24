@@ -202,13 +202,18 @@ pause() {
 }
 
 # Batch mode — run the full pipeline non-interactively, then exit
+# Additional arguments (e.g. --dry-run) are forwarded to the orchestrator.
 if [[ "${HAQITA_BATCH:-0}" == "1" ]] || [[ "${1:-}" == "--batch" ]]; then
+    # Collect extra args: if invoked via --batch, shift it off; if via env var, $@ is already the extras
+    if [[ "${1:-}" == "--batch" ]]; then
+        shift
+    fi
     clear
     echo "========================================"
     echo "  Running Full Pipeline (batch mode)"
     echo "========================================"
     echo
-    $PYTHON scripts/orchestrator.py --full --verbose
+    $PYTHON scripts/orchestrator.py --full --verbose "$@"
     echo "========================================"
     echo "  Pipeline complete (batch mode)."
     echo "========================================"
