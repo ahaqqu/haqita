@@ -9,10 +9,10 @@
 # 5. Optionally asserts against the Cloudflare-deployed app (set CLOUDFLARE_VERIFY=1).
 #
 # Usage:
-#   agentic_engineering/dummy/verify.sh
-#   RUN_PIPELINE=1 agentic_engineering/dummy/verify.sh
-#   MOCK_OCR=1 MOCK_AI_VERIFIER=1 RUN_PIPELINE=1 agentic_engineering/dummy/verify.sh
-#   RUN_PIPELINE=1 CLOUDFLARE_VERIFY=1 agentic_engineering/dummy/verify.sh
+#   bash agentic_engineering/verify.sh
+#   RUN_PIPELINE=1 bash agentic_engineering/verify.sh
+#   MOCK_OCR=1 MOCK_AI_VERIFIER=1 RUN_PIPELINE=1 bash agentic_engineering/verify.sh
+#   RUN_PIPELINE=1 CLOUDFLARE_VERIFY=1 bash agentic_engineering/verify.sh
 
 set -euo pipefail
 
@@ -38,7 +38,7 @@ fail() { echo "  [FAIL] $1"; FAILED=1; }
 # 1. Start dummy server
 # ---------------------------------------------------------------------------
 echo "=== 1. Start dummy server ==="
-"$PYTHON" agentic_engineering/dummy/dummy_server.py > /tmp/dummy_server.log 2>&1 &
+"$PYTHON" agentic_engineering/dummy_server.py > /tmp/dummy_server.log 2>&1 &
 SERVER_PID=$!
 sleep 2
 

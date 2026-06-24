@@ -11,7 +11,7 @@
 #
 # Usage:
 #   agentic_engineering/dummy/run_agentic.sh
-#   agentic_engineering/dummy/run_agentic.sh --keep    # do not delete temp workspace
+#   bash agentic_engineering/run_agentic.sh --keep    # do not delete temp workspace
 
 set -euo pipefail
 
@@ -64,7 +64,7 @@ export SUPERINDO_KATALOG_URL=http://localhost:18080/superindo/promosi/katalog-su
 export SUPERINDO_KORAN_URL=http://localhost:18080/superindo/promosi/promo-koran/
 
 echo "[*] Starting dummy server..."
-"$PYTHON" agentic_engineering/dummy/dummy_server.py > /tmp/dummy_server.log 2>&1 &
+"$PYTHON" agentic_engineering/dummy_server.py > /tmp/dummy_server.log 2>&1 &
 SERVER_PID=$!
 sleep 2
 

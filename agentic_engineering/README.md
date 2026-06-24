@@ -41,10 +41,10 @@ python scripts/scrapers/superindo.py --dry-run
 
 ## Image fixtures
 
-All brochure images are copied into `agentic_engineering/dummy/images/` so the dummy server is completely self-contained. Deleting `database/scrape/` does not break the dummy sites.
+All brochure images are copied into `agentic_engineering/images/` so the dummy server is completely self-contained. Deleting `database/scrape/` does not break the dummy sites.
 
 ```
-agentic_engineering/dummy/images/
+agentic_engineering/images/
 ├── lotte/
 │   ├── HD-1_a23cff43.jpeg
 │   ├── HD-2_7bbd2862.jpeg
@@ -82,7 +82,12 @@ To clean a remote D1 database:
 | `GET /lotte/all-promo-mart` | Dummy Lotte promo page |
 | `GET /superindo/promosi/katalog-super-hemat/` | Dummy Superindo katalog page |
 | `GET /superindo/promosi/promo-koran/` | Dummy Superindo promo koran page |
-| `GET /lotte/promo/<filename>` | Lotte brochure image from `agentic_engineering/dummy/images/lotte/` |
-| `GET /superindo/promo/<filename>` | Superindo brochure image from `agentic_engineering/dummy/images/superindo/` |
+| `GET /lotte/promo/<filename>` | Lotte brochure image from `agentic_engineering/images/lotte/` |
+| `GET /superindo/promo/<filename>` | Superindo brochure image from `agentic_engineering/images/superindo/` |
 
 All responses include permissive CORS headers (`Access-Control-Allow-Origin: *`).
+ *`).
+*`).
+
+*`).
+*`).

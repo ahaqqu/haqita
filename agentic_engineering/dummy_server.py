@@ -9,8 +9,8 @@ HOST = "0.0.0.0"
 PORT = 18080
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-PAGES_DIR = PROJECT_ROOT / "agentic_engineering" / "dummy" / "pages"
-IMAGES_DIR = PROJECT_ROOT / "agentic_engineering" / "dummy" / "images"
+PAGES_DIR = PROJECT_ROOT / "agentic_engineering" / "pages"
+IMAGES_DIR = PROJECT_ROOT / "agentic_engineering" / "images"
 LOTTE_IMAGES_DIR = IMAGES_DIR / "lotte"
 SUPERINDO_IMAGES_DIR = IMAGES_DIR / "superindo"
 
