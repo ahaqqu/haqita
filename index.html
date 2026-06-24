@@ -116,6 +116,17 @@ header {
 }
 .tab-view { display: none; }
 .tab-view.active { display: block; }
+.dummy-badge {
+  display: none;
+  background: var(--amber);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  letter-spacing: 0.03em;
+  margin-left: 0.5rem;
+}
 .promo-type-group { margin-bottom: 1.5rem; }
 .promo-type-header { font-size: 0.9rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 2px solid var(--gray-100); }
 .promo-card { background: white; border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm); }
@@ -562,7 +573,10 @@ footer {
 
 <header>
   <div class="header-inner">
-    <div class="logo">Haqita</div>
+    <div style="display:flex;align-items:center">
+      <div class="logo">Haqita</div>
+      <span class="dummy-badge" id="dummy-badge">DUMMY DATA</span>
+    </div>
 <div class="freshness-bar">
   <span class="freshness-dot"></span>
   <span id="freshness-text">Loading...</span>
@@ -675,6 +689,16 @@ let currentPage = 1;
 const PAGE_SIZE = 20;
 let expandedKey = null;
 let isLoadingMore = false;
+let showDummy = false;
+
+// Parse URL for show_dummy=true
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  showDummy = params.get("show_dummy") === "true";
+  if (showDummy) {
+    document.getElementById("dummy-badge").style.display = "inline";
+  }
+})();
 
 function getDefaultDisplayHints() {
   return {
@@ -1183,9 +1207,12 @@ function startAutoRefresh(intervalMs = 300000) {
 // API-first loading helpers
 const API_BASE = "/api/v1";
 
-async function loadFromAPI(endpoint) {
+async function loadFromAPI(endpoint, forceShowDummy) {
   try {
-    const resp = await retryFetch(`${API_BASE}${endpoint}`);
+    const suffix = (forceShowDummy !== undefined ? forceShowDummy : showDummy) && !endpoint.includes("show_dummy")
+      ? (endpoint.includes("?") ? "&show_dummy=true" : "?show_dummy=true")
+      : "";
+    const resp = await retryFetch(`${API_BASE}${endpoint}${suffix}`);
     if (!resp.ok) return null;
     return await resp.json();
   } catch (e) {
