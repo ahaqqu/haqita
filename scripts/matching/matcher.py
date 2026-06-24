@@ -223,7 +223,7 @@ def gate6_ai_verifier(pairs: list[dict], cfg: dict) -> list[str | None]:
         return [None] * len(pairs)
 
     if os.getenv("MOCK_AI_VERIFIER") == "1":
-        from agentic_engineering.dummy.mocks.mock_ai_verifier import mock_verify
+        from agentic_engineering.mocks.mock_ai_verifier import mock_verify
         return mock_verify(pairs)
 
     return _gemini_verify(pairs, cfg)
