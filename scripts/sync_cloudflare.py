@@ -223,6 +223,7 @@ def build_sync_batch(
     return {
         "source": "haqita-pipeline-v1",
         "sync_run_id": sync_run_id,
+        "dummy_data": os.getenv("DUMMY_DATA") == "1",
         "stores": stores,
         "products": products,
         "prices": prices,
@@ -238,12 +239,14 @@ def send_batch_sync(api_url: str, secret: str, batch: dict, dry_run: bool) -> di
     non-retryable error (401/400) occurs.
     """
     if dry_run:
+        dummy_flag = batch.get("dummy_data", False)
         logger.info(
-            "  [DRY-RUN] Would sync: %d stores, %d products, %d prices, %d promos",
+            "  [DRY-RUN] Would sync: %d stores, %d products, %d prices, %d promos (dummy_data=%s)",
             len(batch["stores"]),
             len(batch["products"]),
             len(batch["prices"]),
             len(batch["promos"]),
+            dummy_flag,
         )
         return {
             "dry_run": True,
@@ -377,6 +380,9 @@ def get_images_to_upload(history: dict, sync_state: dict) -> list[dict]:
             continue
 
         r2_key = local_path_str.replace("database/scrape/", "", 1)
+        # Prefix with dummy/ when DUMMY_DATA is set
+        if os.getenv("DUMMY_DATA") == "1":
+            r2_key = f"dummy/{r2_key}"
         to_upload.append(
             {
                 "local_path": local_path_str,
