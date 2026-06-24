@@ -201,6 +201,20 @@ pause() {
     echo
 }
 
+# Batch mode — run the full pipeline non-interactively, then exit
+if [[ "${HAQITA_BATCH:-0}" == "1" ]] || [[ "${1:-}" == "--batch" ]]; then
+    clear
+    echo "========================================"
+    echo "  Running Full Pipeline (batch mode)"
+    echo "========================================"
+    echo
+    $PYTHON scripts/orchestrator.py --full --verbose
+    echo "========================================"
+    echo "  Pipeline complete (batch mode)."
+    echo "========================================"
+    exit 0
+fi
+
 menu() {
     while true; do
         clear
