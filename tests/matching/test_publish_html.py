@@ -206,7 +206,7 @@ class TestPublishHtml:
             self._run_with_root(root)
 
             out = capsys.readouterr().out
-            assert "3 file(s) written" in out
+            assert "4 file(s) written" in out
             assert "0 warning(s)" in out
 
     def test_dry_run_summary(self, capsys):
@@ -224,7 +224,7 @@ class TestPublishHtml:
             self._run_with_root(root, extra_args=["--dry-run"])
 
             out = capsys.readouterr().out
-            assert "3 file(s) would be written" in out
+            assert "4 file(s) would be written" in out
 
     def test_expired_products_excluded(self):
         with tempfile.TemporaryDirectory() as td:
