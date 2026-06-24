@@ -16,7 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-PYTHON="${PYTHON:-.venv/bin/python}"
+PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
 KEEP=0
 SKIP_SYNC=0
 SKIP_TABS=0
@@ -167,9 +167,10 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Run unit tests
+# 5. Run unit tests (unset mock vars so they don't affect test behavior)
 # ---------------------------------------------------------------------------
 echo "=== 5. Matching unit tests ==="
+unset MOCK_OCR MOCK_AI_VERIFIER
 if "$PYTHON" -m pytest tests/matching/ -v; then
     pass "All matching unit tests passed"
 else
