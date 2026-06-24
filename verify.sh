@@ -137,9 +137,19 @@ else
     fail "Scrape stage not healthy"
 fi
 
-for stage_file in output/stage_results/ocr_status.json output/stage_results/consolidation_status.json output/stage_results/publish_html_status.json; do
+for stage_file in output/stage_results/ocr_status.json output/stage_results/consolidate_status.json output/stage_results/publish_html_status.json; do
     if [[ -f "$stage_file" ]]; then
-        status=$("$PYTHON" -c "import json; print(json.load(open('$stage_file')).get('status','missing'))")
+        status=$("$PYTHON" -c "
+import json
+d = json.load(open('$stage_file'))
+# Handle nested 'stores' status (ocr) — all stores must be complete
+stores = d.get('stores')
+if stores:
+    store_statuses = [s.get('status') for s in stores.values()]
+    print('complete' if all(s == 'complete' for s in store_statuses) else ','.join(store_statuses))
+else:
+    print(d.get('status', 'missing'))
+")
         if [[ "$status" == "complete" ]]; then
             pass "$(basename $stage_file _status.json) stage complete"
         else
