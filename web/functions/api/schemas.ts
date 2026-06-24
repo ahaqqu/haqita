@@ -20,6 +20,7 @@ export const productsQuerySchema = z.object({
   category: z.string().optional(),
   has_promo: z.enum(['true', 'false']).optional(),
   sort: z.enum(['name', 'cheapest', 'savings', 'expiry']).default('name'),
+  show_dummy: z.enum(['true', 'false']).optional(),
 });
 
 /** GET /api/v1/products/:key/history query parameters. */
@@ -102,6 +103,7 @@ const syncPromoSchema = z.object({
 export const syncBatchSchema = z.object({
   source: z.string().min(1),
   sync_run_id: z.string().min(1),
+  dummy_data: z.boolean().optional().default(false),
   stores: z.array(syncStoreSchema).default([]),
   products: z.array(syncProductSchema).default([]),
   prices: z.array(syncPriceSchema).default([]),

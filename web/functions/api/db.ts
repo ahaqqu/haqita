@@ -7,6 +7,16 @@
 
 import type { StatsResponse } from './types';
 
+/**
+ * Build the WHERE clause fragment for dummy_data filtering.
+ * When showDummy is false/undefined, return only real data (dummy_data=0).
+ * When showDummy is true, return only dummy data (dummy_data=1).
+ */
+function dummyDataClause(showDummy: boolean | undefined, tableAlias: string): string {
+  if (showDummy === true) return `${tableAlias}.dummy_data = 1`;
+  return `${tableAlias}.dummy_data = 0`;
+}
+
 /** Raw price row as stored in the `prices` table. */
 export interface PriceRow {
   product_key: string;
@@ -92,6 +102,7 @@ export async function getProducts(
     store?: string;
     category?: string;
     has_promo?: boolean;
+    showDummy?: boolean;
   }
 ): Promise<{ products: ProductRow[]; total: number }> {
   const params: (string | number | boolean)[] = [];
@@ -115,14 +126,18 @@ export async function getProducts(
   }
 
   if (opts.has_promo === true) {
-    const clause = 'EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND promo IS NOT NULL)';
+    const clause = `EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND promo IS NOT NULL${opts.showDummy !== undefined ? ` AND ${dummyDataClause(opts.showDummy, '')}` : ''})`;
     conditions.push(clause);
     countConditions.push(clause);
   } else if (opts.has_promo === false) {
-    const clause = 'NOT EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND promo IS NOT NULL)';
+    const clause = `NOT EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND promo IS NOT NULL${opts.showDummy !== undefined ? ` AND ${dummyDataClause(opts.showDummy, '')}` : ''})`;
     conditions.push(clause);
     countConditions.push(clause);
   }
+
+  // Filter by dummy_data
+  conditions.push(dummyDataClause(opts.showDummy, 'p'));
+  countConditions.push(dummyDataClause(opts.showDummy, 'p'));
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const countWhere = countConditions.length > 0 ? `WHERE ${countConditions.join(' AND ')}` : '';
@@ -182,6 +197,7 @@ export async function getLatestPricesForProducts(
         FROM prices
         WHERE product_key = pr.product_key AND store = pr.store
       )
+      AND ${dummyDataClause(showDummy, 'pr')}
   `;
 
   const result = await db
@@ -333,23 +349,25 @@ export async function getBrochures(db: D1Database): Promise<BrochureCatalogRow[]
 }
 
 /** Get summary statistics across products and prices. */
-export async function getStats(db: D1Database): Promise<StatsResponse> {
+export async function getStats(db: D1Database, showDummy?: boolean): Promise<StatsResponse> {
   const sql = `
     SELECT
-      (SELECT COUNT(DISTINCT product_key) FROM prices WHERE store = 'Lotte') AS total_products_lotte,
-      (SELECT COUNT(DISTINCT product_key) FROM prices WHERE store = 'Superindo') AS total_products_superindo,
+      (SELECT COUNT(DISTINCT product_key) FROM prices WHERE store = 'Lotte' AND ${dummyDataClause(showDummy, '')}) AS total_products_lotte,
+      (SELECT COUNT(DISTINCT product_key) FROM prices WHERE store = 'Superindo' AND ${dummyDataClause(showDummy, '')}) AS total_products_superindo,
       (SELECT COUNT(*) FROM (
-        SELECT product_key FROM prices GROUP BY product_key HAVING COUNT(DISTINCT store) >= 2
+        SELECT product_key FROM prices WHERE ${dummyDataClause(showDummy, '')} GROUP BY product_key HAVING COUNT(DISTINCT store) >= 2
       )) AS matched_across_stores,
       (SELECT COUNT(*) FROM products p
-       WHERE EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = 'Lotte')
-         AND NOT EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = 'Superindo')
+       WHERE ${dummyDataClause(showDummy, 'p')}
+         AND EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = 'Lotte' AND ${dummyDataClause(showDummy, '')})
+         AND NOT EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = 'Superindo' AND ${dummyDataClause(showDummy, '')})
       ) AS lotte_only,
       (SELECT COUNT(*) FROM products p
-       WHERE EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = 'Superindo')
-         AND NOT EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = 'Lotte')
+       WHERE ${dummyDataClause(showDummy, 'p')}
+         AND EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = 'Superindo' AND ${dummyDataClause(showDummy, '')})
+         AND NOT EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = 'Lotte' AND ${dummyDataClause(showDummy, '')})
       ) AS superindo_only,
-      (SELECT COUNT(*) FROM products) AS total_products
+      (SELECT COUNT(*) FROM products WHERE ${dummyDataClause(showDummy, '')}) AS total_products
   `;
 
   const row = await db.prepare(sql).first() as {
@@ -368,5 +386,8 @@ export async function getStats(db: D1Database): Promise<StatsResponse> {
     lotte_only: row?.lotte_only ?? 0,
     superindo_only: row?.superindo_only ?? 0,
     total_products: row?.total_products ?? 0,
+  };
+}
+l_products ?? 0,
   };
 }

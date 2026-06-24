@@ -181,7 +181,8 @@ app.get('/health', (c) => {
 // Read endpoints (Phase 3)
 
 app.get('/v1/stores', async (c) => {
-  const stores = await getStores(c.env.DB);
+  const showDummy = c.req.query('show_dummy') === 'true';
+  const stores = await getStores(c.env.DB, showDummy);
   return c.json({ data: stores });
 });
 
@@ -191,7 +192,8 @@ app.get('/v1/categories', async (c) => {
 });
 
 app.get('/v1/stats', async (c) => {
-  const stats = await getStats(c.env.DB);
+  const showDummy = c.req.query('show_dummy') === 'true';
+  const stats = await getStats(c.env.DB, showDummy);
   return c.json(stats);
 });
 
@@ -205,6 +207,7 @@ app.get('/v1/products', async (c) => {
   const offset = decodeCursor(query.cursor ?? '');
   const hasPromo =
     query.has_promo === 'true' ? true : query.has_promo === 'false' ? false : undefined;
+  const showDummy = query.show_dummy === 'true' ? true : undefined;
 
   const { products, total } = await getProducts(c.env.DB, {
     limit: query.limit,
@@ -213,10 +216,11 @@ app.get('/v1/products', async (c) => {
     store: query.store,
     category: query.category,
     has_promo: hasPromo,
+    showDummy,
   });
 
   const productKeys = products.map((product) => product.key);
-  const priceRows = await getLatestPricesForProducts(c.env.DB, productKeys);
+  const priceRows = await getLatestPricesForProducts(c.env.DB, productKeys, showDummy);
   const priceMap = groupPricesByProductKey(priceRows);
 
   const data = products.map((product) =>
@@ -408,7 +412,8 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           product.category ?? null,
           product.unit,
           product.unit_type ?? null,
-          product.unit_value_g ?? null
+          product.unit_value_g ?? null,
+          batch.dummy_data ? 1 : 0
         )
         .run();
       response.products.updated += 1;
@@ -441,7 +446,8 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           price.match_confidence ?? null,
           price.standardized_promo !== undefined && price.standardized_promo !== null
             ? JSON.stringify(price.standardized_promo)
-            : null
+            : null,
+          batch.dummy_data ? 1 : 0
         )
         .run();
       response.prices.updated += 1;
@@ -465,7 +471,8 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           promo.max_qty ?? null,
           promo.product_count,
           promo.stores !== undefined ? JSON.stringify(promo.stores) : null,
-          promo.example_products !== undefined ? JSON.stringify(promo.example_products) : null
+          promo.example_products !== undefined ? JSON.stringify(promo.example_products) : null,
+          batch.dummy_data ? 1 : 0
         )
         .run();
       response.promos.updated += 1;
@@ -532,3 +539,4 @@ app.all('*', (c) => {
 });
 
 export const onRequest = handle(app);
+pp);
