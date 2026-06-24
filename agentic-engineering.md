@@ -1,125 +1,65 @@
 # Agentic Engineering: Haqita Dummy Pipeline
 
-Run the full haqita pipeline against local dummy supermarket websites in an isolated workspace. The real `database/` and `output/` directories are never modified.
+Run the full haqita pipeline against isolated dummy fixtures in a temp workspace, with production-safe dummy writes to D1/R2.
 
 ## Objectives
 
-1. **Auto self-fix end-to-end scenarios** — Run the dummy pipeline, detect failures, fix them, and rerun until the end results are valid.
-2. **Auto self-update docs** — When the dummy run reveals a new failure mode or fix, update this document and the scripts under `agentic_engineering/`.
-3. **Auto self-suggest agentic-engineering improvements** — After each run, propose simpler or more robust ways to run, verify, or isolate the dummy pipeline.
+1. **Auto self-fix end-to-end scenarios** — Run the dummy pipeline, detect failures via script assertions, fix them, and rerun until all checks pass.
+2. **Auto self-update README.md** — After a successful dummy run, update `README.md` with any new setup instructions or failure patterns discovered.
+3. **Auto self-suggest agentic-engineering improvements** — Propose simpler or more robust ways to run, verify, or isolate the dummy pipeline.
+4. **self-improve troubleshoot** — Detect new failure modes, log them, and incorporate fixes into the scripts automatically.
 
-## One-command run
-
-From the repo root:
-
-```bash
-agentic_engineering/dummy/run_agentic.sh
-```
-
-This creates a temp workspace, starts the dummy server, runs the full pipeline, and prints the workspace path.
-
-## What it does
-
-1. Copies the repo into `/tmp/haqita_dummy_<id>/` (excluding `.git`, `.venv`, `database`, `output`).
-2. Creates fresh `database/` and `output/` dirs inside the temp workspace.
-3. Serves dummy Lotte and Superindo promo pages from `http://localhost:18080`.
-4. Runs health check, then `scripts/orchestrator.py --full --verbose`.
-5. Prints stage statuses and end-result file sizes.
-
-## Mock external APIs to avoid rate limits
-
-Dummy runs can avoid Gemini quota issues by enabling mocks:
+## 3-step flow
 
 ```bash
-MOCK_OCR=1 MOCK_AI_VERIFIER=1 agentic_engineering/dummy/run_agentic.sh
+# Step 1 — Install deps, verify .env, gate on unit tests
+bash prepare.sh
+
+# Step 2 — Run the full pipeline (interactive or batch)
+./haqita.sh                # interactive menu
+HAQITA_BATCH=1 ./haqita.sh # non-interactive batch mode
+
+# Step 3 — Verify end results in an isolated workspace, sync dummy data,
+#          assert Cloudflare tabs, capture screenshots
+bash verify.sh
 ```
 
-- `MOCK_OCR=1` — Returns pre-recorded OCR fixtures instead of calling Gemini.
-- `MOCK_AI_VERIFIER=1` — Returns deterministic YES for ambiguous pairs instead of calling Gemini.
+- `prepare.sh` creates the venv, installs `requirements.txt`, checks `GEMINI_API_KEY`, and runs `pytest tests/matching/ -v` as a gate.
+- `verify.sh` creates `/tmp/haqita_verify_*`, starts `agentic_engineering/dummy_server.py`, invokes `haqita.sh` in batch mode, runs Stage 5 with `DUMMY_DATA=1`, runs matching tests, verifies tab content via `?show_dummy=true`, and captures screenshots.
 
-Fixtures live in `agentic_engineering/dummy/mocks/ocr_fixtures/`.
+## Isolation strategy
 
-## Verify end results
+- **Temp workspace**: `/tmp/haqita_verify_*` with a copy of the repo (excludes `.git`, `.venv`, `database`, `output`).
+- **Dummy server**: Local HTTP server (`agentic_engineering/dummy_server.py`) served on `:18080` with dummy Lotte/Superindo promo pages.
+- **Production D1/R2 writes**: Gated by `dummy_data=true`. Normal users never see dummy data; append `?show_dummy=true` to see only dummy data.
+- **Mocks**: `MOCK_OCR=1` and `MOCK_AI_VERIFIER=1` avoid Gemini quota issues, using real-captured fixtures from `agentic_engineering/mocks/ocr_fixtures/`.
 
-After the run, the workspace path is printed. Check the outputs:
+## Mock external APIs
 
 ```bash
-WORKSPACE=/tmp/haqita_dummy_<id>
-test -s $WORKSPACE/output/html/active_promo.json && echo "active_promo.json OK"
-test -s $WORKSPACE/output/html/promo_catalog.json && echo "promo_catalog.json OK"
-test -s $WORKSPACE/output/html/price_history.json && echo "price_history.json OK"
-test -s $WORKSPACE/output/html/review_queue.json && echo "review_queue.json OK"
+MOCK_OCR=1 MOCK_AI_VERIFIER=1 bash prepare.sh && HAQITA_BATCH=1 ./haqita.sh && bash verify.sh
 ```
 
-A successful run produces Stage 4 (`publish_html`) with `complete` status and non-empty files in `$WORKSPACE/output/html/`.
+## Fixture regeneration
 
-## Expected stage statuses
-
-| Stage | Expected status | Notes |
-|---|---|---|
-| Scrape | `new_images` | Discovers 3 Lotte + 3 Superindo dummy brochures. |
-| OCR | `complete` | Extracts products from all 6 dummy images. |
-| Consolidation | `complete` | Builds `price_history.json` and `product_catalog.json`. |
-| Publish HTML | `complete` | Generates `output/html/*.json`. |
-| Sync Cloudflare | `complete` or `error` | Requires `SCRAPER_SECRET` and a configured API endpoint. Failure here does not invalidate the local end results. |
-| Deploy | `complete` or `error` | Requires Cloudflare Pages setup. Failure here does not invalidate the local end results. |
-
-## Cloudflare end-to-end verification
-
-If you deploy the dummy run to Cloudflare, assert against the live app:
+To regenerate OCR and AI verifier fixtures from real Gemini calls:
 
 ```bash
-CF_BASE=https://haqita.pages.dev
-curl -sf $CF_BASE/ > /dev/null && echo "Pages root OK"
-curl -sf $CF_BASE/api/v1/health | grep -q '"status":"ok"' && echo "API health OK"
-curl -sf $CF_BASE/api/v1/stats | grep -q "total_products_lotte" && echo "API stats OK"
-curl -sf "$CF_BASE/api/v1/products?limit=1" | grep -q '"data":' && echo "API products OK"
-curl -sf "$CF_BASE/api/v1/promos" | grep -q '"data":' && echo "API promos OK"
-curl -sf "$CF_BASE/api/v1/brochures" | grep -q '"data":' && echo "API brochures OK"
+CAPTURE_FIXTURES=1 .venv/bin/python agentic_engineering/capture_fixtures.py
 ```
 
-Enable Cloudflare verification in the bundled script:
-
-```bash
-RUN_PIPELINE=1 CLOUDFLARE_VERIFY=1 agentic_engineering/dummy/verify.sh
-```
-
-## Isolating dummy data in Cloudflare
-
-Never sync dummy data to the production Cloudflare database. Use one of these isolation strategies:
-
-1. **Separate staging project** — Point `cloudflare_sync.api_url` in `config.yaml` to a staging Worker, e.g. `https://haqita-staging.pages.dev/api/v1`.
-2. **Separate D1 database** — Create a `haqita-dummy` D1 database and bind it to the staging Worker.
-3. **Wipe before sync** — If using a dedicated dummy D1, truncate it before each run:
-   ```bash
-   wrangler d1 execute haqita-dummy --file=agentic_engineering/dummy/clean_d1.sql
-   ```
-
-The local dummy workspace never touches production credentials unless you explicitly configure them.
-
-## Self-fix loop
-
-If any required end result is missing or invalid:
-
-1. Inspect the orchestrator output and stage status files in `$WORKSPACE/output/stage_results/`.
-2. Identify the failing stage.
-3. Fix the root cause.
-4. Re-run `agentic_engineering/dummy/run_agentic.sh`.
-5. Repeat up to 5 times. Escalate if unresolved.
-
-Do not modify the real `database/` or `output/` in the repo root. All fixes should target the temp workspace, the dummy server files (`agentic_engineering/dummy/`), or the pipeline scripts.
+This runs real OCR on `agentic_engineering/images/` and captures AI verifier responses for ambiguous pairs.
 
 ## Cleanup
 
-Temp workspaces are deleted automatically when `run_agentic.sh` exits. To clean a specific workspace manually:
-
 ```bash
-cd /tmp/haqita_dummy_<id>
-.venv/bin/python agentic_engineering/dummy/clean_dummy_data.py
+rm -rf /tmp/haqita_verify_*
 ```
 
-To remove all temp workspaces:
+## Self-fix loop
 
-```bash
-rm -rf /tmp/haqita_dummy_*
-```
+1. Run `bash verify.sh` and note which assertion failed.
+2. Inspect the stage status files in the workspace `output/stage_results/`.
+3. Fix the root cause (pipeline script, dummy server, or fixture).
+4. Re-run `bash verify.sh`.
+5. Repeat up to 5 times. Escalate if unresolved.
