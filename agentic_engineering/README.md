@@ -7,7 +7,7 @@ This directory contains a lightweight, self-contained HTTP server that serves st
 From the repository root:
 
 ```bash
-python agentic_engineering/dummy/dummy_server.py
+python agentic_engineering/dummy_server.py
 ```
 
 The server binds to `0.0.0.0:18080` and prints:
@@ -21,7 +21,7 @@ Dummy supermarket server running at http://localhost:18080
 Run the included verification script to confirm the server and scraper URL overrides work:
 
 ```bash
-agentic_engineering/dummy/verify.sh
+bash verify.sh
 ```
 
 This starts the server, runs both scrapers in dry-run mode, and asserts that Lotte and Superindo each discover the expected brochure images.
@@ -60,19 +60,19 @@ agentic_engineering/images/
 After a pipeline run, reset all generated state so the next run starts fresh:
 
 ```bash
-.venv/bin/python agentic_engineering/dummy/clean_dummy_data.py
+.venv/bin/python agentic_engineering/clean_dummy_data.py
 ```
 
 This removes local stage results, scraper/OCR state, OCR outputs, `database/*.json`, and `output/html/*`. To also clean a local wrangler D1 SQLite file:
 
 ```bash
-.venv/bin/python agentic_engineering/dummy/clean_dummy_data.py --d1-local
+.venv/bin/python agentic_engineering/clean_dummy_data.py --d1-local
 ```
 
 To clean a remote D1 database:
 
 ```bash
-.venv/bin/python agentic_engineering/dummy/clean_dummy_data.py --d1-db-name haqita-db
+.venv/bin/python agentic_engineering/clean_dummy_data.py --d1-db-name haqita-db
 ```
 
 ## Served URLs
