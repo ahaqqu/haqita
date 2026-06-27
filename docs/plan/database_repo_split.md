@@ -390,6 +390,22 @@ Detailed logic:
 
 ## 6. Implementation Steps
 
+> **⚠️ CRITICAL: Data preservation warning**
+> 
+> Steps 7 and 8 below involve deleting the real `database/` directory and replacing it with a symlink.
+> **All data inside `database/` (pipeline JSON files, images, OCR results) will be permanently lost
+> if the seed step (Step 7) is not completed correctly first.**
+> 
+> **Safeguard procedure before Step 7:**
+> 1. Verify `../haqita-database` exists and is a valid git repo: `ls ../haqita-database/.git`
+> 2. Verify the seed copy was successful: `ls ../haqita-database/price_history.json`
+> 3. Verify the data looks correct: `python -c "import json; d=json.load(open('../haqita-database/price_history.json')); print(len(d.get('snapshots',[])), 'snapshots')"`
+> 4. Only then proceed to delete the real `database/` directory.
+> 
+> **After Step 8 (symlink created):**
+> - Immediately verify data is accessible through the symlink: `ls database/price_history.json`
+> - If the symlink is broken or the directory is empty, **do NOT commit**. Restore from backup: `rm database/ && git checkout HEAD -- database/` to recover the real directory.
+
 The implementation should be done in this exact order:
 
 ### Step 1: Verify prerequisites
@@ -426,6 +442,8 @@ Add database repo convention.
 
 ### Step 7: Seed `haqita-database` with current data
 
+> **⚠️ DATA BACKUP — do this before deleting the real directory**
+
 ```bash
 # 1. Ensure haqita-database is cloned
 git clone git@github.com:ahaqqu/haqita-database.git ../haqita-database
@@ -440,14 +458,34 @@ cat > ../haqita-database/.gitignore << 'EOF'
 *.tmp
 EOF
 
-# 4. Commit and push
+# 4. Verify the seed — do NOT proceed if this fails
+ls ../haqita-database/price_history.json  || { echo "MISSING price_history.json"; exit 1; }
+ls ../haqita-database/product_catalog.json || { echo "MISSING product_catalog.json"; exit 1; }
+ls ../haqita-database/scrape/lotte/state.json || echo "WARNING: scrape dir not fully seeded"
+ls ../haqita-database/ocr/lotte/state.json || echo "WARNING: ocr dir not fully seeded"
+
+# 5. Commit and push
 cd ../haqita-database
 git add -A
 git commit -m "initial seed from pipeline"
 git push
 ```
 
+> **Before proceeding to Step 8:** verify the push was successful by checking the remote repo
+> at https://github.com/ahaqqu/haqita-database. All data files should be visible there.
+
 ### Step 8: Swap symlink in main repo
+
+> **⚠️ This is the destructive step. Data preservation checklist BEFORE running:**
+> 
+> - [ ] `../haqita-database/price_history.json` exists and has data
+> - [ ] `../haqita-database/product_catalog.json` exists and has data
+> - [ ] `../haqita-database/scrape/` has the image directories
+> - [ ] `../haqita-database/ocr/` has the OCR result files
+> - [ ] The seed commit was pushed to GitHub successfully
+> - [ ] `cd ../haqita-database && git log --oneline -1` shows the seed commit
+> - [ ] `git -C ../haqita-database status --porcelain` is clean (no uncommitted changes)
+> - [ ] Make a full backup: `cp -a database /tmp/database-backup-$(date +%Y%m%d)`
 
 ```bash
 # 1. Remove database/ from git index (keeps files on disk)
@@ -460,12 +498,23 @@ rm -rf database/
 # 3. Create the symlink
 ln -s ../haqita-database database
 
-# 4. Track the symlink in git
+# 4. IMMEDIATELY verify the symlink works — data should be accessible
+ls database/price_history.json         # must show the file
+ls database/scrape/lotte/              # must show image dirs or state.json
+
+# 5. If verification fails, RESTORE IMMEDIATELY:
+#    rm database/ && git checkout HEAD -- database/
+
+# 6. Track the symlink in git
 git add database
 
-# 5. Commit
+# 7. Commit
 git commit -m "replace database/ dir with symlink to haqita-database repo"
 ```
+
+> After the commit, run `git log --oneline -1` to confirm the commit exists.
+> If anything went wrong, use `git reset --soft HEAD~1` to undo the commit
+> and restore the real directory from `/tmp/database-backup-*`.
 
 ### Step 9: Final verification
 
