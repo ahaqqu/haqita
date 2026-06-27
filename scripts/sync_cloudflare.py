@@ -1,9 +1,12 @@
 """
-Haqita Stage 5: Sync to Cloudflare.
+Sync pipeline data to the Cloudflare API.
 
 Reads the latest pipeline output and pushes data to the Cloudflare API.
 Uploads new/changed brochure images to R2. Records R2 URLs in D1 via the API.
 Does NOT modify any local files in database/ or output/.
+
+Can be run standalone or called programmatically via ``run_sync()`` from
+``deploy.py`` (Stage 5: Deploy + Sync runs sync after deploying).
 
 Usage:
     python scripts/sync_cloudflare.py                          # Sync to default API
@@ -592,8 +595,8 @@ def run_sync(
 
 
 def main() -> None:
-    """Parse CLI flags and run the Stage 5 Cloudflare sync."""
-    parser = argparse.ArgumentParser(description="Haqita Stage 5: Sync to Cloudflare")
+    """Parse CLI flags and run sync standalone (also callable from deploy.py via ``run_sync()``)."""
+    parser = argparse.ArgumentParser(description="Sync pipeline data to the Cloudflare API (also callable from deploy.py via run_sync())")
     parser.add_argument(
         "--dry-run", action="store_true", help="Preview without uploading"
     )

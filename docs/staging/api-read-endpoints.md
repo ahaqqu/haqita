@@ -12,6 +12,38 @@
 
 ## Endpoints
 
+### GET /api/v1/version
+
+Returns the deployed commit SHA. Used by `deploy.py` to check whether the deployed API is current before deciding to redeploy.
+
+**Auth:** None (public)
+
+**Query Parameters:** None
+
+**Example Request:**
+
+```bash
+curl https://haqita.pages.dev/api/v1/version
+```
+
+**Example Response:**
+
+```json
+{
+  "version": "abc1234def5678...",
+  "deployed_at": "2026-06-27T11:40:24.000Z"
+}
+```
+
+**Error Responses:** None (returns `"unknown"` version if COMMIT_SHA is not set).
+
+**Notes:**
+- `version` is the git commit SHA from `COMMIT_SHA` environment variable (set by deploy.py as a Cloudflare Pages secret)
+- Falls back to `CF_PAGES_COMMIT_SHA` (set by Cloudflare Pages during build), then `"unknown"`
+- `deployed_at` is the current server timestamp
+
+---
+
 ### GET /api/v1/stores
 
 Returns all stores.

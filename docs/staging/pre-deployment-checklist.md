@@ -33,23 +33,23 @@ Run through this checklist before each deployment to production.
 
 ## Deployment
 
-- [ ] `./scripts/deploy_pages.sh` or `python scripts/deploy.py --target cloudflare` runs successfully
-- [ ] Stage 6 deploy status in `output/stage_results/deploy_status.json` is `complete`
+- [ ] `python scripts/deploy.py --target cloudflare` runs successfully (deploys + syncs)
+- [ ] Stage 5 deploy status in `output/stage_results/deploy_status.json` is `complete` (includes sync results)
 - [ ] `curl https://haqita.pages.dev/` returns 200
 - [ ] `curl https://haqita.pages.dev/api/v1/health` returns {"status":"ok"}
+- [ ] `curl https://haqita.pages.dev/api/v1/version` returns the expected commit SHA
 - [ ] `curl https://haqita.pages.dev/api/v1/stores` returns store data
 - [ ] Browser: UI loads, all tabs work, search/filter/sort functional
 
 ## E2E Pipeline
 
-- [ ] `./haqita.sh` → **[1] Run full pipeline** completes all 6 stages
+- [ ] `./haqita.sh` → **[1] Run full pipeline** completes all 5 stages
 - [ ] Local UI at `http://localhost:8080` loads and shows products
 - [ ] Local API at `http://localhost:8787/api/v1/health` returns {"status":"ok"}
 - [ ] (Optional) With `deploy.cloudflare: true`, production UI at `https://haqita.pages.dev` loads
 
 ## Post-Deployment
 
-- [ ] `python scripts/sync_cloudflare.py --api-url https://haqita.pages.dev/api/v1` succeeds
 - [ ] `curl https://haqita.pages.dev/api/v1/products?limit=5` returns 5 products
 - [ ] Security headers present in production responses
 - [ ] No console errors in browser

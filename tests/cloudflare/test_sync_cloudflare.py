@@ -1,4 +1,4 @@
-"""Unit tests for scripts/sync_cloudflare.py (Stage 5: Cloudflare sync)."""
+"""Unit tests for scripts/sync_cloudflare.py (sync pipeline data to Cloudflare API)."""
 
 import json
 import sys

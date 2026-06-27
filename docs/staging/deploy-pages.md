@@ -4,8 +4,7 @@
 
 | Property | Value |
 |----------|-------|
-| Deploy stage | **Stage 6: Deploy** (`scripts/deploy.py`) |
-| Legacy scripts | `scripts/deploy_pages.sh` (Linux/Mac) / `scripts/deploy_pages.bat` (Windows) |
+| Deploy stage | **Stage 5: Deploy + Sync** (`scripts/deploy.py`) |
 | URL | `https://haqita.pages.dev` |
 | Project name | `haqita` |
 | Production branch | `main` |
@@ -13,12 +12,13 @@
 
 ## Prerequisites
 
-- Phases 1-5 complete
+- Stages 1-4 complete (scrape → OCR → consolidation → publish HTML)
 - Pipeline has been run (`python scripts/publish_html.py`)
 - Local D1 seeded (`python scripts/seed_d1.py --apply`)
 - `cd web && npx tsc --noEmit` passes
 - `cd web && npx vitest run` passes
 - `python -m pytest tests/cloudflare/ -v` passes
+- Environment variables: `CLOUDFLARE_API_TOKEN` (for deploy), `SCRAPER_SECRET` (for sync)
 
 ## Deploy Process
 
@@ -44,9 +44,9 @@ Set `deploy.cloudflare: true` to enable production deploys. `deploy.local: true`
 recommended for development so the UI is available at `http://localhost:8080`
 immediately after the pipeline.
 
-### Step 3: Run Stage 6 deploy
+### Step 3: Run deploy
 
-From the interactive menu: **[1] Run full pipeline** or **[7] Stage 6: Deploy**.
+From the interactive menu: **[1] Run full pipeline** or **[7] Deploy + Sync**.
 
 Or run directly:
 
@@ -57,13 +57,20 @@ python scripts/deploy.py --target cloudflare
 python scripts/deploy.py --target both
 ```
 
-Stage 6:
+Stage 5 (Deploy + Sync):
 1. Verifies `web/package.json`, `index.html`, and `output/html/` exist
-2. Copies `index.html` and `output/html/*.json` into `web/public/`
-3. Installs npm dependencies if needed
-4. Runs `tsc --noEmit` (fails if type errors)
-5. For Cloudflare: runs `wrangler pages deploy . --project-name haqita`
-6. For local: starts `wrangler pages dev --local` (port 8787) and `python -m http.server 8080`
+2. Determines API URL from env `CLOUDFLARE_API_URL` or `config.yaml`
+3. Reads local HEAD SHA via `git rev-parse HEAD`
+4. Calls `GET {api_url}/version` on the deployed API
+5. If SHA differs or endpoint unreachable:
+   a. Sets `COMMIT_SHA` as a Cloudflare Pages secret
+   b. Copies `index.html` and `output/html/*.json` into `web/public/`
+   c. Installs npm dependencies if needed
+   d. Runs `tsc --noEmit` (fails if type errors)
+   e. Runs `wrangler pages deploy . --project-name haqita`
+6. If SHA matches, skips deploy (API is current)
+7. Syncs data to the (now current) API via `run_sync()` from `sync_cloudflare.py`
+8. For local: starts `wrangler pages dev --local` (port 8787) and `python -m http.server 8080`
 
 ### Step 4: Verify deployment
 
@@ -76,6 +83,10 @@ curl -s -o /dev/null -w "%{http_code}" https://haqita.pages.dev/
 curl -s https://haqita.pages.dev/api/v1/health
 # Expected: {"status":"ok","timestamp":"..."}
 
+# Check deployed version (commit SHA)
+curl -s https://haqita.pages.dev/api/v1/version | python3 -m json.tool
+# Expected: {"version":"abc1234...","deployed_at":"..."}
+
 # Check API products
 curl -s "https://haqita.pages.dev/api/v1/products?limit=5" | python3 -m json.tool
 # Expected: paginated product list
@@ -85,7 +96,7 @@ curl -s https://haqita.pages.dev/api/v1/stores | python3 -m json.tool
 # Expected: {"data": [{"name": "Lotte", ...}, {"name": "Superindo", ...}]}
 ```
 
-### Step 4: Browser verification
+### Step 5: Browser verification
 
 Open `https://haqita.pages.dev` and verify:
 
@@ -156,19 +167,24 @@ curl -s -o /dev/null -w "%{http_code}" https://haqita.pages.dev/
 curl -s https://haqita.pages.dev/api/v1/health
 # Expected: {"status":"ok","timestamp":"..."}
 
+# Production API version
+curl -s https://haqita.pages.dev/api/v1/version | python3 -m json.tool
+# Expected: {"version":"<git-sha>","deployed_at":"..."}
+
 # Production API products
 curl -s "https://haqita.pages.dev/api/v1/products?limit=5" | python3 -m json.tool
 # Expected: paginated product list
 ```
 
-You can also run the E2E verification from the pipeline itself by selecting **[1] Run full pipeline**; Stage 6 will leave the local UI running at `http://localhost:8080` and deploy to `https://haqita.pages.dev` when Cloudflare is enabled.
+You can also run the E2E verification from the pipeline itself by selecting **[1] Run full pipeline**; Stage 5 will leave the local UI running at `http://localhost:8080` and deploy to `https://haqita.pages.dev` when Cloudflare is enabled.
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Blank page | Static files not copied | Re-run `./scripts/deploy_pages.sh` |
+| Blank page | Static files not copied | Re-run `python scripts/deploy.py` |
 | API returns 404 | Pages Functions not deployed | Check `web/functions/api/` exists, re-deploy |
 | Static JSON 404 | Pipeline not run | Run `python scripts/publish_html.py` first |
 | Deployment failed | Authentication or project issue | Check `wrangler whoami`, check project name |
 | CORS errors | Same-origin violation | Verify page and API are on same domain |
+| Sync 404 | Deployed API missing routes | Deploy first (deploy.py now version-checks and deploys before syncing) |

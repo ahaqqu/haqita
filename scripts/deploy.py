@@ -1,5 +1,5 @@
 """
-Haqita Stage 6: Deploy + Sync.
+Haqita Stage 5: Deploy + Sync.
 
 Deploys the browser UI to Cloudflare Pages (if the deployed API version is
 stale), then syncs data to the deployed API. Also supports local dev server.
@@ -480,7 +480,7 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Haqita Stage 6: Deploy")
+    parser = argparse.ArgumentParser(description="Haqita Stage 5: Deploy + Sync")
     parser.add_argument("--dry-run", action="store_true", help="Preview without executing")
     parser.add_argument("--verbose", action="store_true", help="Show detailed output")
     parser.add_argument(

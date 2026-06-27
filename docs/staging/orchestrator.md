@@ -1,6 +1,6 @@
 # Pipeline Orchestrator
 
-Chains scrape → OCR → consolidation → publish HTML → Cloudflare sync → deploy stages with JSON-based inter-stage communication.
+Chains scrape → OCR → consolidation → publish HTML → deploy+sync stages with JSON-based inter-stage communication.
 
 ## Overview
 
@@ -10,8 +10,9 @@ The orchestrator (`scripts/orchestrator.py`) is invoked when you select **[1] Ru
 2. **Stage 2** — OCR only stores with new images (saves API quota)
 3. **Stage 3** — Consolidation (always runs)
 4. **Stage 4** — Publish HTML (generates `active_promo.json` and copies JSON files to `output/html/`)
-5. **Stage 5** — Sync to Cloudflare (pushes data to the Cloudflare API and uploads new brochure images to R2)
-6. **Stage 6** — Deploy (starts local dev server and/or deploys to Cloudflare Pages)
+5. **Stage 5** — Deploy + Sync (version-aware Cloudflare Pages deploy, then syncs data to the deployed API; also supports local dev server)
+
+The old Stage 5 (cloudflare-sync) has been merged into Stage 5 (deploy). The separate `--stage cloudflare-sync` flag is kept for backward compatibility but emits a deprecation warning and delegates to deploy.
 
 ## Full Pipeline Submenu
 
@@ -87,37 +88,20 @@ Each stage writes its result to `output/stage_results/` as JSON. The next stage 
 }
 ```
 
-### cloudflare_sync_status.json
+### deploy_status.json (includes sync results)
 
-```json
-{
-  "stage": "cloudflare_sync",
-  "timestamp": "2026-05-16T11:00:00",
-  "status": "complete"
-}
-```
-
-### deploy_status.json
+The deploy stage now runs sync internally; status is written as part of the deploy result.
 
 ```json
 {
   "stage": "deploy",
   "timestamp": "2026-05-16T11:05:00",
   "status": "complete",
-  "target": "both",
-  "details": {
-    "target": "both",
-    "cloudflare": {
-      "status": "complete",
-      "url": "https://haqita.pages.dev"
-    },
-    "local": {
-      "status": "complete",
-      "ports": [8080, 8787]
-    }
-  }
+  "deploy_needed": true
 }
 ```
+
+The old `cloudflare_sync_status.json` is no longer written by the orchestrator — sync status is reflected inside `deploy_status.json`.
 
 ## Smart OCR Skipping
 
@@ -137,8 +121,7 @@ When running in verbose mode, detailed logs are written to:
 |---|---|
 | `output/logs/orchestrator_<timestamp>.log` | Orchestrator stage transitions, subprocess results |
 | `output/logs/consolidate_<timestamp>.log` | Detailed match results, gate rejections, review items |
-| `output/logs/sync_cloudflare_<timestamp>.log` | Cloudflare API batch sync and R2 image upload results |
-| `output/logs/deploy_<timestamp>.log` | Local dev server startup and Cloudflare Pages deploy output |
+| `output/logs/deploy_<timestamp>.log` | Local dev server startup, Cloudflare Pages deploy output, and Cloudflare API batch sync / R2 image upload results |
 
 ### Verbose Log Contents
 
@@ -163,7 +146,7 @@ You can also run single stages via the main menu:
 - **Option [3]** → OCR submenu (all stores, single store, specific image, or dry-run)
 - **Option [4]** → Consolidation submenu (run or dry-run)
 - **Option [5]** → Publish HTML submenu (run, dry-run, or verbose)
-- **Option [6]** → Sync to Cloudflare submenu (run, dry-run, or verbose)
-- **Option [7]** → Deploy submenu (run, dry-run, or verbose)
+- **Option [6]** → Sync to Cloudflare submenu (run, dry-run, or verbose; standalone sync, also runs as part of deploy)
+- **Option [7]** → Deploy + Sync submenu (run, dry-run, or verbose; version-aware deploy + sync)
 
 When running OCR standalone (Option [3]), it checks `scrape_status.json` if available to skip stores with no new images. If no status file exists, it OCRs all requested stores (idempotent — state file prevents re-processing).

@@ -1,10 +1,12 @@
-# Stage 5: Sync to Cloudflare
+# Sync to Cloudflare
 
 ## Overview
 
-Stage 5 reads the latest pipeline output and pushes data to the Cloudflare API. It is the bridge between the proven local pipeline and the new Cloudflare backend.
+Reads the latest pipeline output and pushes data to the Cloudflare API. It is the bridge between the proven local pipeline and the new Cloudflare backend.
 
-**Script:** `scripts/sync_cloudflare.py`
+Sync is now part of Stage 5 (Deploy + Sync) — `deploy.py` imports and calls the `run_sync()` function after deploying. It can also be run standalone via `scripts/sync_cloudflare.py`.
+
+**Script:** `scripts/sync_cloudflare.py` (also callable as `run_sync()` from `scripts/deploy.py`)
 
 ## What It Does
 
@@ -98,8 +100,5 @@ The sync state file at `database/sync_state.json` tracks:
 
 ## Menu Integration
 
-The sync script is available from the main menu:
-
-- `haqita.sh`: `[6] Stage 5: Sync to Cloudflare`
-- `haqita.bat`: `[6] Stage 5: Sync to Cloudflare`
-- `orchestrator.py`: `--stage cloudflare-sync` or `--full` (runs after Stage 4)
+- `haqita.sh` / `haqita.bat`: `[6] Sync to Cloudflare` (standalone; sync also runs as part of `[7] Deploy + Sync`)
+- `orchestrator.py`: `--stage deploy` or `--full` (sync runs as part of deploy). The old `--stage cloudflare-sync` flag is kept for backward compatibility but delegates to deploy with a deprecation warning.

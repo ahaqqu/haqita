@@ -5,8 +5,8 @@ Chains scrape -> OCR -> consolidation -> publish HTML -> deploy+sync
 stages with JSON-based inter-stage communication. Each stage writes its status to
 output/stage_results/ for the next stage to consume and for resume support.
 
-Stage 5 (cloudflare-sync) has been merged into Stage 6 (deploy): the deploy
-stage now deploys to Cloudflare Pages and then syncs data to the deployed API.
+The old cloudflare-sync stage has been merged into the deploy stage: deploy
+now deploys to Cloudflare Pages and then syncs data to the deployed API.
 The separate ``--stage cloudflare-sync`` flag is kept for backward compatibility
 but emits a deprecation warning and delegates to deploy.
 
@@ -283,40 +283,9 @@ def run_publish_html(dry_run: bool, logger: logging.Logger) -> dict:
     return status
 
 
-def run_cloudflare_sync(dry_run: bool, logger: logging.Logger) -> dict:
-    """Run Stage 5: Sync to Cloudflare."""
-    logger.info("=== Stage 5: Sync to Cloudflare ===")
-    sync_script = SCRIPTS / "sync_cloudflare.py"
-
-    if not sync_script.exists():
-        logger.error("sync_cloudflare.py not found at %s", sync_script)
-        return {"status": "error", "error": "sync script not found"}
-
-    cmd = [sys.executable, str(sync_script)]
-    if dry_run:
-        cmd.append("--dry-run")
-
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
-
-    if result.returncode != 0:
-        logger.error("Stage 5 failed: %s", result.stderr.strip()[:200])
-        return {"status": "error", "error": result.stderr.strip()[:200]}
-
-    if result.stdout.strip():
-        for line in result.stdout.splitlines():
-            print(f"  {line}")
-
-    status = {"status": "complete"}
-    if dry_run:
-        status["status"] = "dry_run"
-
-    write_stage_status("cloudflare_sync", status, logger)
-    return status
-
-
 def run_deploy(dry_run: bool, logger: logging.Logger) -> dict:
-    """Run Stage 6: Deploy."""
-    logger.info("=== Stage 6: Deploy ===")
+    """Run Stage 5: Deploy + Sync."""
+    logger.info("=== Stage 5: Deploy + Sync ===")
     deploy_script = SCRIPTS / "deploy.py"
 
     if not deploy_script.exists():
@@ -335,7 +304,7 @@ def run_deploy(dry_run: bool, logger: logging.Logger) -> dict:
             print(f"  {line}")
 
     if result.returncode != 0:
-        logger.error("Stage 6 failed: %s", result.stderr.strip()[:200])
+        logger.error("Stage 5 (deploy+sync) failed: %s", result.stderr.strip()[:200])
         return {"status": "error", "error": result.stderr.strip()[:200]}
 
     status = {"status": "complete"}
@@ -354,7 +323,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Preview what would run without making changes")
     parser.add_argument("--verbose", action="store_true", help="Detailed logging to file")
     parser.add_argument("--resume", action="store_true", help="Resume from last failed stage")
-    parser.add_argument("--serve", action="store_true", help="[DEPRECATED] Stage 6 deploy now handles local serving; this flag is kept for compatibility")
+    parser.add_argument("--serve", action="store_true", help="[DEPRECATED] Stage 5 deploy now handles local serving; this flag is kept for compatibility")
     parser.add_argument("--port", type=int, default=8080, help="HTTP server port when using --serve (default: 8080)")
     args = parser.parse_args()
 
@@ -500,10 +469,10 @@ def main():
     print(f"  Time: {elapsed:.1f}s")
     print("=" * 60)
 
-    # --serve is deprecated: Stage 6 deploy now handles local serving.
+    # --serve is deprecated: Stage 5 deploy now handles local serving.
     # Keep the flag accepted so existing commands do not break.
     if args.serve:
-        logger.warning("--serve is deprecated. Stage 6 deploy starts the local HTTP server when deploy.local is true.")
+        logger.warning("--serve is deprecated. Stage 5 deploy starts the local HTTP server when deploy.local is true.")
         if not args.full:
             class QuietHandler(http.server.SimpleHTTPRequestHandler):
                 def log_message(self, format, *args):
