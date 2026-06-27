@@ -72,6 +72,7 @@ python -m http.server 8080
 ```
 
 Then open `http://localhost:8080` in a browser. Features:
+
 - **Search** products by name, brand, or unit
 - **Filter** by store (All / Lotte / Superindo)
 - **Sort** by cheapest, name, savings, or expiry
@@ -124,10 +125,10 @@ sudo apt install python3.12 python3.12-venv python3-pip
 
 Via `haqita.bat`/`./haqita.sh` → Option [9]:
 
-| Choice | Action |
-|---|---|
-| **1** | Integration tests (OCR on real images) |
-| **2** | Matching pipeline tests (124 unit tests) |
+| Choice | Action                                   |
+| ------ | ---------------------------------------- |
+| **1**  | Integration tests (OCR on real images)   |
+| **2**  | Matching pipeline tests (124 unit tests) |
 
 ### Agentic-engineering verification
 
@@ -151,21 +152,21 @@ For end-to-end verification after a full pipeline run:
 
 ## Documentation
 
-| Doc | Description |
-|---|---|
-| [staging/scrape.md](docs/staging/scrape.md) | Stage 1: Scrape — inputs, outputs, state, configuration |
-| [staging/ocr.md](docs/staging/ocr.md) | Stage 2: OCR — provider config, output schema, validation |
-| [staging/consolidation.md](docs/staging/consolidation.md) | Stage 3: Consolidation — matching pipeline, schemas, gate details |
-| [staging/publish-html.md](docs/staging/publish-html.md) | Stage 4: Publish HTML — active_promo.json generation, HTML UI |
-| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md) | Stage 5: Sync to Cloudflare — API batch sync, R2 image upload |
-| [staging/deploy-pages.md](docs/staging/deploy-pages.md) | Stage 6: Deploy — local dev server and Cloudflare Pages deploy |
-| [staging/orchestrator.md](docs/staging/orchestrator.md) | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
-| [agentic-engineering.md](agentic-engineering.md) | Agentic pipeline verification with dummy data isolation |
-| [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md) | Cloudflare API sync endpoints and schemas |
-| [staging/security-configuration.md](docs/staging/security-configuration.md) | Security headers, secrets, and WAF configuration |
-| [database/price_history.md](docs/database/price_history.md) | `price_history.json` — append-only price snapshots (schema v1.2) |
-| [database/product_catalog.md](docs/database/product_catalog.md) | `product_catalog.json` — auto-built product registry |
-| [database/review_queue.md](docs/database/review_queue.md) | `review_queue.json` — flagged matches for manual review |
+| Doc                                                                         | Description                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [staging/scrape.md](docs/staging/scrape.md)                                 | Stage 1: Scrape — inputs, outputs, state, configuration                  |
+| [staging/ocr.md](docs/staging/ocr.md)                                       | Stage 2: OCR — provider config, output schema, validation                |
+| [staging/consolidation.md](docs/staging/consolidation.md)                   | Stage 3: Consolidation — matching pipeline, schemas, gate details        |
+| [staging/publish-html.md](docs/staging/publish-html.md)                     | Stage 4: Publish HTML — active_promo.json generation, HTML UI            |
+| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md)               | Stage 5: Sync to Cloudflare — API batch sync, R2 image upload            |
+| [staging/deploy-pages.md](docs/staging/deploy-pages.md)                     | Stage 6: Deploy — local dev server and Cloudflare Pages deploy           |
+| [staging/orchestrator.md](docs/staging/orchestrator.md)                     | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
+| [agentic-engineering.md](agentic-engineering.md)                            | Agentic pipeline verification with dummy data isolation                  |
+| [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md)         | Cloudflare API sync endpoints and schemas                                |
+| [staging/security-configuration.md](docs/staging/security-configuration.md) | Security headers, secrets, and WAF configuration                         |
+| [database/price_history.md](docs/database/price_history.md)                 | `price_history.json` — append-only price snapshots (schema v1.2)         |
+| [database/product_catalog.md](docs/database/product_catalog.md)             | `product_catalog.json` — auto-built product registry                     |
+| [database/review_queue.md](docs/database/review_queue.md)                   | `review_queue.json` — flagged matches for manual review                  |
 
 ## Project Structure
 

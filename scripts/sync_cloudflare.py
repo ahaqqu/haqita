@@ -97,7 +97,9 @@ def save_sync_state(state: dict) -> None:
         raise
 
 
-def update_sync_state(state: dict, uploaded_images: list[dict], sync_run_id: str) -> None:
+def update_sync_state(
+    state: dict, uploaded_images: list[dict], sync_run_id: str
+) -> None:
     """Update sync state after a successful sync.
 
     Args:
@@ -358,9 +360,7 @@ def get_images_to_upload(history: dict, sync_state: dict) -> list[dict]:
     and ``abs_path``.
     """
     image_paths = {
-        s["image_path"]
-        for s in history.get("snapshots", [])
-        if s.get("image_path")
+        s["image_path"] for s in history.get("snapshots", []) if s.get("image_path")
     }
     uploaded_images = sync_state.get("uploaded_images", {})
     to_upload = []
@@ -396,7 +396,10 @@ def get_images_to_upload(history: dict, sync_state: dict) -> list[dict]:
 
 
 def upload_images_to_r2(
-    images: list[dict], r2_client: boto3.client, bucket_name: str, dry_run: bool  # type: ignore[name-defined]
+    images: list[dict],
+    r2_client: boto3.client,
+    bucket_name: str,
+    dry_run: bool,  # type: ignore[name-defined]
 ) -> dict:
     """Upload images to R2 and return a mapping of local path to public R2 URL.
 

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Shared Zod schemas for query parameter validation.
@@ -18,17 +18,23 @@ export const productsQuerySchema = z.object({
   cursor: z.string().optional(),
   store: z.string().optional(),
   category: z.string().optional(),
-  has_promo: z.enum(['true', 'false']).optional(),
-  sort: z.enum(['name', 'cheapest', 'savings', 'expiry']).default('name'),
-  show_dummy: z.enum(['true', 'false']).optional(),
+  has_promo: z.enum(["true", "false"]).optional(),
+  sort: z.enum(["name", "cheapest", "savings", "expiry"]).default("name"),
+  show_dummy: z.enum(["true", "false"]).optional(),
 });
 
 /** GET /api/v1/products/:key/history query parameters. */
 export const historyQuerySchema = z.object({
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   store: z.string().optional(),
-  show_dummy: z.enum(['true', 'false']).optional(),
+  show_dummy: z.enum(["true", "false"]).optional(),
 });
 
 /** GET /api/v1/prices query parameters. */
@@ -37,7 +43,7 @@ export const pricesQuerySchema = z.object({
   cursor: z.string().optional(),
   product_key: z.string().optional(),
   store: z.string().optional(),
-  show_dummy: z.enum(['true', 'false']).optional(),
+  show_dummy: z.enum(["true", "false"]).optional(),
 });
 
 /** GET /api/v1/search query parameters. */
@@ -79,14 +85,17 @@ const syncPriceSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   match_method: z.string().nullable().optional(),
   match_confidence: z.number().min(0).max(1).nullable().optional(),
-  standardized_promo: z.object({
-    normalized: z.array(z.string()),
-    types: z.array(z.string()),
-    best_type: z.string(),
-    discount_pct: z.number().nullable().optional(),
-    max_qty: z.number().nullable().optional(),
-    display_summary: z.string(),
-  }).nullable().optional(),
+  standardized_promo: z
+    .object({
+      normalized: z.array(z.string()),
+      types: z.array(z.string()),
+      best_type: z.string(),
+      discount_pct: z.number().nullable().optional(),
+      max_qty: z.number().nullable().optional(),
+      display_summary: z.string(),
+    })
+    .nullable()
+    .optional(),
 });
 
 /** Single promo catalog payload within a sync batch. */
@@ -132,7 +141,7 @@ export function decodeCursor(cursor: string): number {
   try {
     const decoded = atob(cursor);
     const parsed = JSON.parse(decoded) as { offset?: unknown };
-    if (typeof parsed.offset === 'number') return parsed.offset;
+    if (typeof parsed.offset === "number") return parsed.offset;
     return 0;
   } catch {
     return 0;

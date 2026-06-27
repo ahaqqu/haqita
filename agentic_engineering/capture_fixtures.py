@@ -22,8 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from scripts.config import load_config
-from dotenv import load_dotenv
+from scripts.config import load_config  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv()
 
@@ -35,7 +35,11 @@ CAPTURE = os.getenv("CAPTURE_FIXTURES") == "1"
 def _base_name(stem: str) -> str:
     """Strip the MD5 suffix that base_scraper.filename_from_url appends."""
     parts = stem.rsplit("_", 1)
-    if len(parts) == 2 and len(parts[1]) == 8 and all(c in "0123456789abcdef" for c in parts[1]):
+    if (
+        len(parts) == 2
+        and len(parts[1]) == 8
+        and all(c in "0123456789abcdef" for c in parts[1])
+    ):
         return parts[0]
     return stem
 

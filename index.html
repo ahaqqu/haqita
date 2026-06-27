@@ -1,894 +1,1151 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Haqita — Grocery Price Tracker</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root {
-  --green: #2d7a4f;
-  --green-light: #e8f5ee;
-  --green-mid: #4a9e6a;
-  --red: #c0392b;
-  --red-light: #fdf0ee;
-  --amber: #b45309;
-  --amber-light: #fef3cd;
-  --gray-50: #f4f4f2;
-  --gray-100: #e8e8e4;
-  --gray-300: #c0bfb8;
-  --gray-500: #8a8880;
-  --gray-700: #4a4945;
-  --gray-900: #1a1916;
-  --off-white: #f9f9f7;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow: 0 4px 16px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
-  --lotte: #0057A8;
-  --superindo: #E8211D;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--off-white);
-  color: var(--gray-900);
-  line-height: 1.5;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-header {
-  background: white;
-  border-bottom: 1px solid var(--gray-100);
-  padding: 1rem 1.5rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.logo {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--green);
-  letter-spacing: -0.02em;
-}
-
-.freshness-bar {
-  font-size: 0.8rem;
-  color: var(--gray-500);
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.freshness-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.tab-bar {
-  max-width: 1200px;
-  margin: 0.75rem auto 0;
-  padding: 0 1.5rem;
-  display: flex;
-  gap: 0.4rem;
-}
-.tab {
-  padding: 0.45rem 1.1rem;
-  border-radius: 20px;
-  border: 1px solid var(--gray-100);
-  background: white;
-  font-size: 0.85rem;
-  font-family: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  color: var(--gray-700);
-}
-.tab:hover { border-color: var(--gray-300); }
-.tab.active {
-  background: var(--green);
-  color: white;
-  border-color: var(--green);
-}
-.tab-view { display: none; }
-.tab-view.active { display: block; }
-.dummy-badge {
-  display: none;
-  background: var(--amber);
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  letter-spacing: 0.03em;
-  margin-left: 0.5rem;
-}
-.promo-type-group { margin-bottom: 1.5rem; }
-.promo-type-header { font-size: 0.9rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 2px solid var(--gray-100); }
-.promo-card { background: white; border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 0.5rem; box-shadow: var(--shadow-sm); }
-.promo-card-header { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
-.promo-count-badge { background: var(--green-light); color: var(--green); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-.promo-card-meta { display: flex; gap: 0.4rem; margin-top: 0.3rem; }
-.promo-store-badge { display: inline-block; }
-.brochure-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
-.brochure-card { background: white; border-radius: var(--radius-sm); padding: 0.75rem; box-shadow: var(--shadow-sm); }
-
-#search-bar {
-  max-width: 1200px;
-  margin: 1rem auto 0;
-  padding: 0 1.5rem;
-  width: 100%;
-}
-
-#search-bar input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius);
-  font-size: 0.95rem;
-  font-family: inherit;
-  background: white;
-  box-shadow: var(--shadow-sm);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-#search-bar input:focus {
-  outline: none;
-  border-color: var(--green-mid);
-  box-shadow: 0 0 0 3px var(--green-light);
-}
-
-#controls {
-  max-width: 1200px;
-  margin: 1rem auto;
-  padding: 0 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.filter-chips {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.4rem 0.9rem;
-  border-radius: 20px;
-  border: 1px solid var(--gray-100);
-  background: white;
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.15s;
-  color: var(--gray-700);
-}
-
-.chip:hover { border-color: var(--gray-300); }
-.chip.active {
-  background: var(--green);
-  color: white;
-  border-color: var(--green);
-}
-
-.sort-select {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--gray-100);
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  font-family: inherit;
-  background: white;
-  cursor: pointer;
-  color: var(--gray-700);
-}
-
-main#product-grid {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0.5rem 1.5rem 2rem;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  flex: 1;
-  align-content: start;
-  align-items: start;
-}
-
-@media (max-width: 1200px) { #product-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px) { #product-grid { grid-template-columns: 1fr; } }
-
-.product-card {
-  background: white;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  padding: 1rem;
-  cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.15s;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 180px;
-  max-height: 200px;
-  min-width: 320px;
-}
-
-.product-card:hover {
-  box-shadow: var(--shadow);
-  transform: translateY(-2px);
-}
-
-.product-card.expanded {
-  grid-column: 1 / -1;
-  box-shadow: var(--shadow-lg);
-}
-
-.card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.product-name {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--gray-900);
-  line-height: 1.35;
-}
-
-.product-unit {
-  font-size: 0.8rem;
-  color: var(--gray-500);
-  margin-top: 0.2rem;
-}
-
-.card-footer {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--gray-100);
-}
-
-.price-tag {
-  font-family: 'DM Mono', monospace;
-  font-weight: 500;
-  font-size: 1rem;
-  color: var(--green);
-  white-space: nowrap;
-}
-
-.price-label {
-  font-size: 0.68rem;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 400;
-  color: var(--gray-500);
-  display: block;
-  margin-bottom: 2px;
-  letter-spacing: 0.02em;
-  display: none;
-}
-
-.store-meta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.78rem;
-  color: var(--gray-500);
-  text-align: right;
-}
-
-.store-rows { margin-top: 0.6rem; }
-
-.store-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0;
-  font-size: 0.85rem;
-}
-
-.store-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.store-name { flex: 1; color: var(--gray-700); }
-.store-price { font-family: 'DM Mono', monospace; font-size: 0.85rem; }
-.original-price { text-decoration: line-through; color: var(--gray-400); font-size: 0.8rem; margin-right: 4px; }
-
-.promo-top-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  margin-top: auto;
-  padding-top: 8px;
-  letter-spacing: 0.01em;
-  align-self: flex-start;
-}
-.promo-top-badge.promo-green { background: #e8f5ee; color: #2d7a4f; }
-.promo-top-badge.promo-red { background: #fdf0ee; color: #c0392b; }
-.promo-top-badge.promo-amber { background: var(--amber-light); color: var(--amber); }
-
-.promo-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: #e8f5e9; color: #2e7d32; font-size: 0.65rem; font-weight: 600; border-radius: 3px; vertical-align: middle; }
-.promo-badge.promo-red { background: #fdf0ee; color: #c0392b; }
-.promo-badge.promo-green { background: #e8f5ee; color: #2d7a4f; }
-.promo-badge.promo-amber { background: var(--amber-light); color: var(--amber); }
-.filter-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 4px;
-}
-
-.low-conf-badge {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  background: var(--amber-light);
-  color: var(--amber);
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-weight: 500;
-  margin-top: 0.4rem;
-}
-
-.detail-panel {
-  display: none;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--gray-100);
-}
-
-.product-card.expanded .detail-panel { display: block; }
-
-.detail-section { margin-bottom: 1rem; }
-.detail-section h4 {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--gray-700);
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.detail-store-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border-radius: var(--radius-sm);
-  margin-bottom: 0.35rem;
-}
-
-.detail-store-row.cheapest {
-  background: var(--green-light);
-  border: 1px solid var(--green-mid);
-}
-
-.detail-store-row .brochure-link {
-  font-size: 0.78rem;
-  color: var(--green);
-  text-decoration: none;
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-.detail-store-row .brochure-link:hover { text-decoration: underline; }
-
-.chart-container {
-  width: 100%;
-  height: 120px;
-  position: relative;
-}
-
-.chart-container canvas {
-  width: 100%;
-  height: 100%;
-}
-
-.no-history {
-  font-size: 0.85rem;
-  color: var(--gray-500);
-  text-align: center;
-  padding: 1.5rem;
-}
-
-footer {
-  background: white;
-  border-top: 1px solid var(--gray-100);
-  padding: 1rem 1.5rem;
-  font-size: 0.82rem;
-  color: var(--gray-500);
-}
-
-.footer-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.review-warning {
-  color: var(--amber);
-  font-weight: 500;
-}
-
-#loading, #error-state, #empty-state, #no-results {
-  display: none;
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1.5rem;
-  width: 100%;
-}
-
-.skeleton-card {
-  background: white;
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.skeleton-line {
-  height: 14px;
-  background: var(--gray-100);
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
-}
-
-.skeleton-line.short { width: 60%; }
-.skeleton-line.medium { width: 80%; }
-
-@keyframes shimmer {
-  0% { background-position: -200px 0; }
-  100% { background-position: 200px 0; }
-}
-
-.skeleton-line {
-  background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-50) 50%, var(--gray-100) 75%);
-  background-size: 400px 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-#error-state .error-box, #empty-state .empty-box, #no-results .no-results-box {
-  background: white;
-  border-radius: var(--radius);
-  padding: 2rem;
-  text-align: center;
-  box-shadow: var(--shadow-sm);
-}
-
-#error-state h3 { color: var(--red); margin-bottom: 0.5rem; }
-#empty-state h3 { color: var(--gray-700); margin-bottom: 0.5rem; }
-#no-results h3 { color: var(--gray-700); margin-bottom: 0.5rem; }
-
-#error-state p, #empty-state p, #no-results p {
-  color: var(--gray-500);
-  margin-bottom: 1rem;
-}
-
-.retry-btn {
-  padding: 0.5rem 1.2rem;
-  background: var(--green);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-family: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.retry-btn:hover { background: var(--green-mid); }
-
-.warning-banner {
-  background: var(--amber-light);
-  color: var(--amber);
-  padding: 0.6rem 1rem;
-  border-radius: var(--radius-sm);
-  margin: 0.5rem 1.5rem;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.85rem;
-}
-
-.warning-banner button {
-  background: none;
-  border: 1px solid var(--amber);
-  color: var(--amber);
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.sample-banner {
-  background: var(--amber-light);
-  color: var(--amber);
-  padding: 0.6rem 1rem;
-  border-radius: var(--radius-sm);
-  margin: 0.5rem 1.5rem;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  display: none;
-  align-items: center;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.sample-banner::before {
-  content: "⚠";
-  margin-right: 0.5rem;
-}
-
-@media print {
-  #search-bar, #controls, #load-more-sentinel, .freshness-bar { display: none !important; }
-  #product-grid { display: block !important; }
-  .product-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
-  .product-card:nth-child(10n) { page-break-after: always; }
-  body { background: white; color: black; }
-  footer::after { content: "Printed: " attr(data-timestamp); }
-}
-</style>
-</head>
-<body>
-
-<header>
-  <div class="header-inner">
-    <div style="display:flex;align-items:center">
-      <div class="logo">Haqita</div>
-      <span class="dummy-badge" id="dummy-badge">DUMMY DATA</span>
-    </div>
-<div class="freshness-bar">
-  <span class="freshness-dot"></span>
-  <span id="freshness-text">Loading...</span>
-  <span id="data-source" style="font-size:0.75rem;color:var(--gray-500);margin-left:0.3rem"></span>
-</div>
-  </div>
-  <nav class="tab-bar">
-    <button class="tab active" data-tab="products">Products</button>
-    <button class="tab" data-tab="promos">Promos</button>
-    <button class="tab" data-tab="brochures">Brochures</button>
-  </nav>
-</header>
-
-<section id="view-products" class="tab-view active">
-
-<div id="search-bar">
-  <input type="text" id="search-input" placeholder="Search products..." autocomplete="off">
-</div>
-
-<div id="controls">
-  <div style="display:flex;align-items:center;gap:0.6rem;">
-    <span style="font-size:0.78rem;color:var(--gray-500);">Store</span>
-    <div class="filter-chips">
-      <button class="chip active" data-filter="all">All</button>
-      <button class="chip" data-filter="lotte"><span class="filter-dot" style="background:#0057A8"></span> Lotte</button>
-      <button class="chip" data-filter="superindo"><span class="filter-dot" style="background:#E8211D"></span> Superindo</button>
-    </div>
-  </div>
-  <div style="display:flex;align-items:center;gap:0.6rem;">
-    <span style="font-size:0.78rem;color:var(--gray-500);">Sort by</span>
-    <select class="sort-select" id="sort-select">
-      <option value="name" selected>Name</option>
-      <option value="cheapest">Cheapest</option>
-      <option value="savings">Savings</option>
-      <option value="expiry">Expiry</option>
-    </select>
-  </div>
-</div>
-
-<div class="warning-banner" id="warning-banner">
-  <span id="warning-text"></span>
-  <button id="warning-retry">Retry</button>
-</div>
-
-<div class="sample-banner" id="sample-banner">
-  Displaying sample data for development/testing. <a href="#" onclick="location.reload()" style="color:var(--amber);margin-left:0.5rem">Refresh to load real data</a>
-</div>
-
-<main id="product-grid"></main>
-
-<div id="loading">
-  <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
-  <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
-  <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
-</div>
-
-<div id="error-state">
-  <div class="error-box">
-    <h3>Failed to load data</h3>
-    <p id="error-message">Could not fetch product data.</p>
-    <button class="retry-btn" onclick="loadData()">Retry</button>
-  </div>
-</div>
-
-<div id="empty-state">
-  <div class="empty-box">
-    <h3>No data yet</h3>
-    <p>Run the pipeline to scrape and consolidate product prices.</p>
-  </div>
-</div>
-
-<div id="no-results">
-  <div class="no-results-box">
-    <h3>No products match "<span id="no-results-query"></span>"</h3>
-    <p>Try a different search term.</p>
-  </div>
-</div>
-
-<div id="load-more-sentinel" style="height: 1px;"></div>
-
-</section>
-
-<section id="view-promos" class="tab-view">
-  <div id="promos-content" style="max-width:1200px;margin:1rem auto;padding:0 1.5rem;">
-    <p style="color:var(--gray-500);">Loading promos...</p>
-  </div>
-</section>
-
-<section id="view-brochures" class="tab-view">
-  <div id="brochures-content" style="max-width:1200px;margin:1rem auto;padding:0 1.5rem;">
-    <p style="color:var(--gray-500);">Loading brochures...</p>
-  </div>
-</section>
-
-<footer>
-  <div class="footer-inner">
-    <span id="footer-stats"></span>
-    <span id="footer-review"></span>
-  </div>
-</footer>
-
-<script>
-let consolidatedData = null;
-let priceHistoryData = null;
-let displayHints = null;
-let currentFilter = 'all';
-let currentSort = 'name';
-let currentSearch = '';
-let currentPage = 1;
-const PAGE_SIZE = 20;
-let expandedKey = null;
-let isLoadingMore = false;
-let showDummy = false;
-
-// Parse URL for show_dummy=true
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  showDummy = params.get("show_dummy") === "true";
-  if (showDummy) {
-    document.getElementById("dummy-badge").style.display = "inline";
-  }
-})();
-
-function getDefaultDisplayHints() {
-  return {
-    currency: "Rp",
-    stores: { lotte: "Lotte", superindo: "Superindo" },
-    store_colors: { lotte: "#0057A8", superindo: "#E8211D" }
-  };
-}
-
-function formatIDR(n) {
-  if (n == null) return "-";
-  return displayHints.currency + " " + n.toLocaleString("id-ID");
-}
-
-function getShortDateText(isoDate) {
-  if (!isoDate) return "";
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(isoDate);
-  target.setHours(0, 0, 0, 0);
-  const diffTime = target - now;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return "Expired";
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "1d";
-  return `${diffDays}d`;
-}
-
-function retryFetch(url, retries = 3, delay = 1000) {
-  return fetch(url).catch(err => {
-    if (retries <= 0) throw err;
-    return new Promise(resolve => setTimeout(resolve, delay)).then(() => retryFetch(url, retries - 1, delay * 2));
-  });
-}
-
-async function tryLoadWithFallback(basePath, fallbackPath, filename) {
-  const tryPath = (path) => retryFetch(`${path}/${filename}`);
-  try {
-    const resp = await tryPath(basePath);
-    if (resp.ok) return { data: await resp.json(), from: basePath };
-  } catch (e) {}
-  try {
-    const resp = await tryPath(fallbackPath);
-    if (resp.ok) return { data: await resp.json(), from: fallbackPath };
-  } catch (e) {}
-  return { data: null, from: null };
-}
-
-function validateData(data, type) {
-  if (!data) return { valid: false, error: "No data received" };
-  if (type === "consolidated") {
-    if (!data.products && !data.singles) return { valid: false, error: "Missing products/singles in consolidated data" };
-  }
-  return { valid: true };
-}
-
-function renderLoading() {
-  document.getElementById("loading").style.display = "block";
-  document.getElementById("product-grid").style.display = "none";
-  document.getElementById("error-state").style.display = "none";
-  document.getElementById("empty-state").style.display = "none";
-  document.getElementById("no-results").style.display = "none";
-}
-
-function renderError(msg) {
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("product-grid").style.display = "none";
-  document.getElementById("error-state").style.display = "block";
-  document.getElementById("error-message").textContent = msg;
-}
-
-function renderWarning(msg) {
-  const banner = document.getElementById("warning-banner");
-  banner.style.display = "flex";
-  document.getElementById("warning-text").textContent = msg;
-}
-
-function normalizeProduct(product) {
-  const key = product.key || product.product_key || "";
-  if (product.stores && Array.isArray(product.stores)) {
-    return { ...product, product_key: key, stores: product.stores };
-  }
-  if (product.store) {
-    return { ...product, product_key: key, stores: [{ store: product.store, price: product.price, effective_unit_price: product.effective_unit_price, promo: product.promo, valid_until: product.valid_until, image_path: product.image_path }] };
-  }
-  return { ...product, product_key: key, stores: [] };
-}
-
-function isProductInStore(product, store) {
-  const normalized = normalizeProduct(product);
-  return normalized.stores.some(s => (s.store || "").toLowerCase().includes(store.toLowerCase()));
-}
-
-function searchProducts(query) {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  return (product) => {
-    const name = (product.name || "").toLowerCase();
-    const brand = (product.brand || "").toLowerCase();
-    const unit = (product.unit || "").toLowerCase();
-    return name.includes(q) || brand.includes(q) || unit.includes(q);
-  };
-}
-
-function getAllProducts() {
-  if (!consolidatedData) return [];
-  const products = consolidatedData.products || [];
-  const singles = consolidatedData.singles || [];
-  return [...products, ...singles];
-}
-
-function getFilteredSortedProducts() {
-  let all = getAllProducts();
-  if (currentFilter !== "all") {
-    all = all.filter(p => isProductInStore(p, currentFilter));
-  }
-  if (currentSearch) {
-    const fn = searchProducts(currentSearch);
-    all = all.filter(fn);
-  }
-  all = [...all].sort((a, b) => {
-    if (currentSort === "name") return (a.name || "").localeCompare(b.name || "");
-    if (currentSort === "cheapest") return (a.price_min || 0) - (b.price_min || 0);
-    if (currentSort === "savings") {
-      const aGap = a.price_gap || 0;
-      const bGap = b.price_gap || 0;
-      if (aGap === 0 && bGap === 0) return 0;
-      if (aGap === 0) return 1;
-      if (bGap === 0) return -1;
-      return bGap - aGap;
-    }
-    if (currentSort === "expiry") {
-      const aDate = a.valid_until || "9999-12-31";
-      const bDate = b.valid_until || "9999-12-31";
-      return aDate.localeCompare(bDate);
-    }
-    return 0;
-  });
-  return all;
-}
-
-function filterPromos(promos) {
-  if (!promos || !Array.isArray(promos)) return [];
-  return promos.filter(p => p && !p.startsWith("*Harga"));
-}
-
-function getPromoColorClass(promo) {
-  if (!promo) return "promo-green";
-  const lower = promo.toLowerCase();
-  if (lower.includes("diskon")) return "promo-red";
-  if (lower.includes("gratis")) return "promo-green";
-  if (lower.includes("dapat")) return "promo-amber";
-  return "promo-green";
-}
-
-function buildPromoBadges(promos) {
-  const filtered = filterPromos(promos);
-  if (!filtered.length) return "";
-  return filtered.map(p => `<span class="promo-badge ${getPromoColorClass(p)}">${p}</span>`).join(" ");
-}
-
-function buildStoreRows(product) {
-  const normalized = normalizeProduct(product);
-  return normalized.stores.map(s => {
-    const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
-    const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "#c0bfb8";
-    const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
-    const promoBadges = buildPromoBadges(s.promo);
-    const displayPrice = s.effective_unit_price && s.effective_unit_price < s.price
-      ? s.effective_unit_price
-      : s.price;
-    return `<div class="store-row">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Haqita — Grocery Price Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --green: #2d7a4f;
+        --green-light: #e8f5ee;
+        --green-mid: #4a9e6a;
+        --red: #c0392b;
+        --red-light: #fdf0ee;
+        --amber: #b45309;
+        --amber-light: #fef3cd;
+        --gray-50: #f4f4f2;
+        --gray-100: #e8e8e4;
+        --gray-300: #c0bfb8;
+        --gray-500: #8a8880;
+        --gray-700: #4a4945;
+        --gray-900: #1a1916;
+        --off-white: #f9f9f7;
+        --radius: 12px;
+        --radius-sm: 8px;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+        --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+        --lotte: #0057a8;
+        --superindo: #e8211d;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Plus Jakarta Sans",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--off-white);
+        color: var(--gray-900);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        background: white;
+        border-bottom: 1px solid var(--gray-100);
+        padding: 1rem 1.5rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--green);
+        letter-spacing: -0.02em;
+      }
+
+      .freshness-bar {
+        font-size: 0.8rem;
+        color: var(--gray-500);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .freshness-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .tab-bar {
+        max-width: 1200px;
+        margin: 0.75rem auto 0;
+        padding: 0 1.5rem;
+        display: flex;
+        gap: 0.4rem;
+      }
+      .tab {
+        padding: 0.45rem 1.1rem;
+        border-radius: 20px;
+        border: 1px solid var(--gray-100);
+        background: white;
+        font-size: 0.85rem;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: var(--gray-700);
+      }
+      .tab:hover {
+        border-color: var(--gray-300);
+      }
+      .tab.active {
+        background: var(--green);
+        color: white;
+        border-color: var(--green);
+      }
+      .tab-view {
+        display: none;
+      }
+      .tab-view.active {
+        display: block;
+      }
+      .dummy-badge {
+        display: none;
+        background: var(--amber);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        letter-spacing: 0.03em;
+        margin-left: 0.5rem;
+      }
+      .promo-type-group {
+        margin-bottom: 1.5rem;
+      }
+      .promo-type-header {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.3rem;
+        border-bottom: 2px solid var(--gray-100);
+      }
+      .promo-card {
+        background: white;
+        border-radius: var(--radius-sm);
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        box-shadow: var(--shadow-sm);
+      }
+      .promo-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+      .promo-count-badge {
+        background: var(--green-light);
+        color: var(--green);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .promo-card-meta {
+        display: flex;
+        gap: 0.4rem;
+        margin-top: 0.3rem;
+      }
+      .promo-store-badge {
+        display: inline-block;
+      }
+      .brochure-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+      }
+      .brochure-card {
+        background: white;
+        border-radius: var(--radius-sm);
+        padding: 0.75rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      #search-bar {
+        max-width: 1200px;
+        margin: 1rem auto 0;
+        padding: 0 1.5rem;
+        width: 100%;
+      }
+
+      #search-bar input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--gray-100);
+        border-radius: var(--radius);
+        font-size: 0.95rem;
+        font-family: inherit;
+        background: white;
+        box-shadow: var(--shadow-sm);
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+
+      #search-bar input:focus {
+        outline: none;
+        border-color: var(--green-mid);
+        box-shadow: 0 0 0 3px var(--green-light);
+      }
+
+      #controls {
+        max-width: 1200px;
+        margin: 1rem auto;
+        padding: 0 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .filter-chips {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.4rem 0.9rem;
+        border-radius: 20px;
+        border: 1px solid var(--gray-100);
+        background: white;
+        font-size: 0.85rem;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: var(--gray-700);
+      }
+
+      .chip:hover {
+        border-color: var(--gray-300);
+      }
+      .chip.active {
+        background: var(--green);
+        color: white;
+        border-color: var(--green);
+      }
+
+      .sort-select {
+        padding: 0.4rem 0.75rem;
+        border: 1px solid var(--gray-100);
+        border-radius: var(--radius-sm);
+        font-size: 0.85rem;
+        font-family: inherit;
+        background: white;
+        cursor: pointer;
+        color: var(--gray-700);
+      }
+
+      main#product-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0.5rem 1.5rem 2rem;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        flex: 1;
+        align-content: start;
+        align-items: start;
+      }
+
+      @media (max-width: 1200px) {
+        #product-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 768px) {
+        #product-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .product-card {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: 1rem;
+        cursor: pointer;
+        transition:
+          box-shadow 0.2s,
+          transform 0.15s;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-height: 180px;
+        max-height: 200px;
+        min-width: 320px;
+      }
+
+      .product-card:hover {
+        box-shadow: var(--shadow);
+        transform: translateY(-2px);
+      }
+
+      .product-card.expanded {
+        grid-column: 1 / -1;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .product-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--gray-900);
+        line-height: 1.35;
+      }
+
+      .product-unit {
+        font-size: 0.8rem;
+        color: var(--gray-500);
+        margin-top: 0.2rem;
+      }
+
+      .card-footer {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-top: 8px;
+        padding-top: 10px;
+        border-top: 1px solid var(--gray-100);
+      }
+
+      .price-tag {
+        font-family: "DM Mono", monospace;
+        font-weight: 500;
+        font-size: 1rem;
+        color: var(--green);
+        white-space: nowrap;
+      }
+
+      .price-label {
+        font-size: 0.68rem;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-weight: 400;
+        color: var(--gray-500);
+        display: block;
+        margin-bottom: 2px;
+        letter-spacing: 0.02em;
+        display: none;
+      }
+
+      .store-meta {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.78rem;
+        color: var(--gray-500);
+        text-align: right;
+      }
+
+      .store-rows {
+        margin-top: 0.6rem;
+      }
+
+      .store-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.3rem 0;
+        font-size: 0.85rem;
+      }
+
+      .store-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .store-name {
+        flex: 1;
+        color: var(--gray-700);
+      }
+      .store-price {
+        font-family: "DM Mono", monospace;
+        font-size: 0.85rem;
+      }
+      .original-price {
+        text-decoration: line-through;
+        color: var(--gray-400);
+        font-size: 0.8rem;
+        margin-right: 4px;
+      }
+
+      .promo-top-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        margin-top: auto;
+        padding-top: 8px;
+        letter-spacing: 0.01em;
+        align-self: flex-start;
+      }
+      .promo-top-badge.promo-green {
+        background: #e8f5ee;
+        color: #2d7a4f;
+      }
+      .promo-top-badge.promo-red {
+        background: #fdf0ee;
+        color: #c0392b;
+      }
+      .promo-top-badge.promo-amber {
+        background: var(--amber-light);
+        color: var(--amber);
+      }
+
+      .promo-badge {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 1px 6px;
+        background: #e8f5e9;
+        color: #2e7d32;
+        font-size: 0.65rem;
+        font-weight: 600;
+        border-radius: 3px;
+        vertical-align: middle;
+      }
+      .promo-badge.promo-red {
+        background: #fdf0ee;
+        color: #c0392b;
+      }
+      .promo-badge.promo-green {
+        background: #e8f5ee;
+        color: #2d7a4f;
+      }
+      .promo-badge.promo-amber {
+        background: var(--amber-light);
+        color: var(--amber);
+      }
+      .filter-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 4px;
+      }
+
+      .low-conf-badge {
+        display: inline-block;
+        padding: 0.15rem 0.5rem;
+        background: var(--amber-light);
+        color: var(--amber);
+        border-radius: 8px;
+        font-size: 0.72rem;
+        font-weight: 500;
+        margin-top: 0.4rem;
+      }
+
+      .detail-panel {
+        display: none;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--gray-100);
+      }
+
+      .product-card.expanded .detail-panel {
+        display: block;
+      }
+
+      .detail-section {
+        margin-bottom: 1rem;
+      }
+      .detail-section h4 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .detail-store-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border-radius: var(--radius-sm);
+        margin-bottom: 0.35rem;
+      }
+
+      .detail-store-row.cheapest {
+        background: var(--green-light);
+        border: 1px solid var(--green-mid);
+      }
+
+      .detail-store-row .brochure-link {
+        font-size: 0.78rem;
+        color: var(--green);
+        text-decoration: none;
+        margin-left: auto;
+        white-space: nowrap;
+      }
+
+      .detail-store-row .brochure-link:hover {
+        text-decoration: underline;
+      }
+
+      .chart-container {
+        width: 100%;
+        height: 120px;
+        position: relative;
+      }
+
+      .chart-container canvas {
+        width: 100%;
+        height: 100%;
+      }
+
+      .no-history {
+        font-size: 0.85rem;
+        color: var(--gray-500);
+        text-align: center;
+        padding: 1.5rem;
+      }
+
+      footer {
+        background: white;
+        border-top: 1px solid var(--gray-100);
+        padding: 1rem 1.5rem;
+        font-size: 0.82rem;
+        color: var(--gray-500);
+      }
+
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .review-warning {
+        color: var(--amber);
+        font-weight: 500;
+      }
+
+      #loading,
+      #error-state,
+      #empty-state,
+      #no-results {
+        display: none;
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+        width: 100%;
+      }
+
+      .skeleton-card {
+        background: white;
+        border-radius: var(--radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .skeleton-line {
+        height: 14px;
+        background: var(--gray-100);
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+      }
+
+      .skeleton-line.short {
+        width: 60%;
+      }
+      .skeleton-line.medium {
+        width: 80%;
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: -200px 0;
+        }
+        100% {
+          background-position: 200px 0;
+        }
+      }
+
+      .skeleton-line {
+        background: linear-gradient(
+          90deg,
+          var(--gray-100) 25%,
+          var(--gray-50) 50%,
+          var(--gray-100) 75%
+        );
+        background-size: 400px 100%;
+        animation: shimmer 1.5s infinite;
+      }
+
+      #error-state .error-box,
+      #empty-state .empty-box,
+      #no-results .no-results-box {
+        background: white;
+        border-radius: var(--radius);
+        padding: 2rem;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+      }
+
+      #error-state h3 {
+        color: var(--red);
+        margin-bottom: 0.5rem;
+      }
+      #empty-state h3 {
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+      }
+      #no-results h3 {
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+      }
+
+      #error-state p,
+      #empty-state p,
+      #no-results p {
+        color: var(--gray-500);
+        margin-bottom: 1rem;
+      }
+
+      .retry-btn {
+        padding: 0.5rem 1.2rem;
+        background: var(--green);
+        color: white;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-family: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .retry-btn:hover {
+        background: var(--green-mid);
+      }
+
+      .warning-banner {
+        background: var(--amber-light);
+        color: var(--amber);
+        padding: 0.6rem 1rem;
+        border-radius: var(--radius-sm);
+        margin: 0.5rem 1.5rem;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.85rem;
+      }
+
+      .warning-banner button {
+        background: none;
+        border: 1px solid var(--amber);
+        color: var(--amber);
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+
+      .sample-banner {
+        background: var(--amber-light);
+        color: var(--amber);
+        padding: 0.6rem 1rem;
+        border-radius: var(--radius-sm);
+        margin: 0.5rem 1.5rem;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+        display: none;
+        align-items: center;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+
+      .sample-banner::before {
+        content: "⚠";
+        margin-right: 0.5rem;
+      }
+
+      @media print {
+        #search-bar,
+        #controls,
+        #load-more-sentinel,
+        .freshness-bar {
+          display: none !important;
+        }
+        #product-grid {
+          display: block !important;
+        }
+        .product-card {
+          break-inside: avoid;
+          page-break-inside: avoid;
+          box-shadow: none;
+          border: 1px solid #ccc;
+        }
+        .product-card:nth-child(10n) {
+          page-break-after: always;
+        }
+        body {
+          background: white;
+          color: black;
+        }
+        footer::after {
+          content: "Printed: " attr(data-timestamp);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <div style="display: flex; align-items: center">
+          <div class="logo">Haqita</div>
+          <span class="dummy-badge" id="dummy-badge">DUMMY DATA</span>
+        </div>
+        <div class="freshness-bar">
+          <span class="freshness-dot"></span>
+          <span id="freshness-text">Loading...</span>
+          <span
+            id="data-source"
+            style="
+              font-size: 0.75rem;
+              color: var(--gray-500);
+              margin-left: 0.3rem;
+            "
+          ></span>
+        </div>
+      </div>
+      <nav class="tab-bar">
+        <button class="tab active" data-tab="products">Products</button>
+        <button class="tab" data-tab="promos">Promos</button>
+        <button class="tab" data-tab="brochures">Brochures</button>
+      </nav>
+    </header>
+
+    <section id="view-products" class="tab-view active">
+      <div id="search-bar">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search products..."
+          autocomplete="off"
+        />
+      </div>
+
+      <div id="controls">
+        <div style="display: flex; align-items: center; gap: 0.6rem">
+          <span style="font-size: 0.78rem; color: var(--gray-500)">Store</span>
+          <div class="filter-chips">
+            <button class="chip active" data-filter="all">All</button>
+            <button class="chip" data-filter="lotte">
+              <span class="filter-dot" style="background: #0057a8"></span> Lotte
+            </button>
+            <button class="chip" data-filter="superindo">
+              <span class="filter-dot" style="background: #e8211d"></span>
+              Superindo
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.6rem">
+          <span style="font-size: 0.78rem; color: var(--gray-500)"
+            >Sort by</span
+          >
+          <select class="sort-select" id="sort-select">
+            <option value="name" selected>Name</option>
+            <option value="cheapest">Cheapest</option>
+            <option value="savings">Savings</option>
+            <option value="expiry">Expiry</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="warning-banner" id="warning-banner">
+        <span id="warning-text"></span>
+        <button id="warning-retry">Retry</button>
+      </div>
+
+      <div class="sample-banner" id="sample-banner">
+        Displaying sample data for development/testing.
+        <a
+          href="#"
+          onclick="location.reload()"
+          style="color: var(--amber); margin-left: 0.5rem"
+          >Refresh to load real data</a
+        >
+      </div>
+
+      <main id="product-grid"></main>
+
+      <div id="loading">
+        <div class="skeleton-card">
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      </div>
+
+      <div id="error-state">
+        <div class="error-box">
+          <h3>Failed to load data</h3>
+          <p id="error-message">Could not fetch product data.</p>
+          <button class="retry-btn" onclick="loadData()">Retry</button>
+        </div>
+      </div>
+
+      <div id="empty-state">
+        <div class="empty-box">
+          <h3>No data yet</h3>
+          <p>Run the pipeline to scrape and consolidate product prices.</p>
+        </div>
+      </div>
+
+      <div id="no-results">
+        <div class="no-results-box">
+          <h3>No products match "<span id="no-results-query"></span>"</h3>
+          <p>Try a different search term.</p>
+        </div>
+      </div>
+
+      <div id="load-more-sentinel" style="height: 1px"></div>
+    </section>
+
+    <section id="view-promos" class="tab-view">
+      <div
+        id="promos-content"
+        style="max-width: 1200px; margin: 1rem auto; padding: 0 1.5rem"
+      >
+        <p style="color: var(--gray-500)">Loading promos...</p>
+      </div>
+    </section>
+
+    <section id="view-brochures" class="tab-view">
+      <div
+        id="brochures-content"
+        style="max-width: 1200px; margin: 1rem auto; padding: 0 1.5rem"
+      >
+        <p style="color: var(--gray-500)">Loading brochures...</p>
+      </div>
+    </section>
+
+    <footer>
+      <div class="footer-inner">
+        <span id="footer-stats"></span>
+        <span id="footer-review"></span>
+      </div>
+    </footer>
+
+    <script>
+      let consolidatedData = null;
+      let priceHistoryData = null;
+      let displayHints = null;
+      let currentFilter = "all";
+      let currentSort = "name";
+      let currentSearch = "";
+      let currentPage = 1;
+      const PAGE_SIZE = 20;
+      let expandedKey = null;
+      let isLoadingMore = false;
+      let showDummy = false;
+
+      // Parse URL for show_dummy=true
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        showDummy = params.get("show_dummy") === "true";
+        if (showDummy) {
+          document.getElementById("dummy-badge").style.display = "inline";
+        }
+      })();
+
+      function getDefaultDisplayHints() {
+        return {
+          currency: "Rp",
+          stores: { lotte: "Lotte", superindo: "Superindo" },
+          store_colors: { lotte: "#0057A8", superindo: "#E8211D" },
+        };
+      }
+
+      function formatIDR(n) {
+        if (n == null) return "-";
+        return displayHints.currency + " " + n.toLocaleString("id-ID");
+      }
+
+      function getShortDateText(isoDate) {
+        if (!isoDate) return "";
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const target = new Date(isoDate);
+        target.setHours(0, 0, 0, 0);
+        const diffTime = target - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) return "Expired";
+        if (diffDays === 0) return "Today";
+        if (diffDays === 1) return "1d";
+        return `${diffDays}d`;
+      }
+
+      function retryFetch(url, retries = 3, delay = 1000) {
+        return fetch(url).catch((err) => {
+          if (retries <= 0) throw err;
+          return new Promise((resolve) => setTimeout(resolve, delay)).then(() =>
+            retryFetch(url, retries - 1, delay * 2),
+          );
+        });
+      }
+
+      async function tryLoadWithFallback(basePath, fallbackPath, filename) {
+        const tryPath = (path) => retryFetch(`${path}/${filename}`);
+        try {
+          const resp = await tryPath(basePath);
+          if (resp.ok) return { data: await resp.json(), from: basePath };
+        } catch (e) {}
+        try {
+          const resp = await tryPath(fallbackPath);
+          if (resp.ok) return { data: await resp.json(), from: fallbackPath };
+        } catch (e) {}
+        return { data: null, from: null };
+      }
+
+      function validateData(data, type) {
+        if (!data) return { valid: false, error: "No data received" };
+        if (type === "consolidated") {
+          if (!data.products && !data.singles)
+            return {
+              valid: false,
+              error: "Missing products/singles in consolidated data",
+            };
+        }
+        return { valid: true };
+      }
+
+      function renderLoading() {
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("product-grid").style.display = "none";
+        document.getElementById("error-state").style.display = "none";
+        document.getElementById("empty-state").style.display = "none";
+        document.getElementById("no-results").style.display = "none";
+      }
+
+      function renderError(msg) {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("product-grid").style.display = "none";
+        document.getElementById("error-state").style.display = "block";
+        document.getElementById("error-message").textContent = msg;
+      }
+
+      function renderWarning(msg) {
+        const banner = document.getElementById("warning-banner");
+        banner.style.display = "flex";
+        document.getElementById("warning-text").textContent = msg;
+      }
+
+      function normalizeProduct(product) {
+        const key = product.key || product.product_key || "";
+        if (product.stores && Array.isArray(product.stores)) {
+          return { ...product, product_key: key, stores: product.stores };
+        }
+        if (product.store) {
+          return {
+            ...product,
+            product_key: key,
+            stores: [
+              {
+                store: product.store,
+                price: product.price,
+                effective_unit_price: product.effective_unit_price,
+                promo: product.promo,
+                valid_until: product.valid_until,
+                image_path: product.image_path,
+              },
+            ],
+          };
+        }
+        return { ...product, product_key: key, stores: [] };
+      }
+
+      function isProductInStore(product, store) {
+        const normalized = normalizeProduct(product);
+        return normalized.stores.some((s) =>
+          (s.store || "").toLowerCase().includes(store.toLowerCase()),
+        );
+      }
+
+      function searchProducts(query) {
+        if (!query) return true;
+        const q = query.toLowerCase();
+        return (product) => {
+          const name = (product.name || "").toLowerCase();
+          const brand = (product.brand || "").toLowerCase();
+          const unit = (product.unit || "").toLowerCase();
+          return name.includes(q) || brand.includes(q) || unit.includes(q);
+        };
+      }
+
+      function getAllProducts() {
+        if (!consolidatedData) return [];
+        const products = consolidatedData.products || [];
+        const singles = consolidatedData.singles || [];
+        return [...products, ...singles];
+      }
+
+      function getFilteredSortedProducts() {
+        let all = getAllProducts();
+        if (currentFilter !== "all") {
+          all = all.filter((p) => isProductInStore(p, currentFilter));
+        }
+        if (currentSearch) {
+          const fn = searchProducts(currentSearch);
+          all = all.filter(fn);
+        }
+        all = [...all].sort((a, b) => {
+          if (currentSort === "name")
+            return (a.name || "").localeCompare(b.name || "");
+          if (currentSort === "cheapest")
+            return (a.price_min || 0) - (b.price_min || 0);
+          if (currentSort === "savings") {
+            const aGap = a.price_gap || 0;
+            const bGap = b.price_gap || 0;
+            if (aGap === 0 && bGap === 0) return 0;
+            if (aGap === 0) return 1;
+            if (bGap === 0) return -1;
+            return bGap - aGap;
+          }
+          if (currentSort === "expiry") {
+            const aDate = a.valid_until || "9999-12-31";
+            const bDate = b.valid_until || "9999-12-31";
+            return aDate.localeCompare(bDate);
+          }
+          return 0;
+        });
+        return all;
+      }
+
+      function filterPromos(promos) {
+        if (!promos || !Array.isArray(promos)) return [];
+        return promos.filter((p) => p && !p.startsWith("*Harga"));
+      }
+
+      function getPromoColorClass(promo) {
+        if (!promo) return "promo-green";
+        const lower = promo.toLowerCase();
+        if (lower.includes("diskon")) return "promo-red";
+        if (lower.includes("gratis")) return "promo-green";
+        if (lower.includes("dapat")) return "promo-amber";
+        return "promo-green";
+      }
+
+      function buildPromoBadges(promos) {
+        const filtered = filterPromos(promos);
+        if (!filtered.length) return "";
+        return filtered
+          .map(
+            (p) =>
+              `<span class="promo-badge ${getPromoColorClass(p)}">${p}</span>`,
+          )
+          .join(" ");
+      }
+
+      function buildStoreRows(product) {
+        const normalized = normalizeProduct(product);
+        return normalized.stores
+          .map((s) => {
+            const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
+            const color =
+              (displayHints.store_colors &&
+                displayHints.store_colors[storeKey]) ||
+              "#c0bfb8";
+            const storeName =
+              (displayHints.stores && displayHints.stores[storeKey]) || s.store;
+            const promoBadges = buildPromoBadges(s.promo);
+            const displayPrice =
+              s.effective_unit_price && s.effective_unit_price < s.price
+                ? s.effective_unit_price
+                : s.price;
+            return `<div class="store-row">
       <span class="store-dot" style="background:${color}"></span>
       <span class="store-name">${storeName}</span>
       <span class="store-price">${formatIDR(displayPrice)}</span>
       ${promoBadges}
     </div>`;
-  }).join("");
-}
+          })
+          .join("");
+      }
 
-function buildMatchedCard(product) {
-  const normalized = normalizeProduct(product);
-  const key = normalized.product_key || "";
-  const savingsText = product.savings_pct ? `Save ${product.savings_pct}%` : "";
-  const shortDate = product.valid_until ? getShortDateText(product.valid_until) : "";
-  const confBadge = product.match_confidence != null && product.match_confidence < 0.8
-    ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
-  const promoBadge = savingsText
-    ? `<div class="promo-top-badge promo-green">${savingsText}</div>` : "";
-  return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
+      function buildMatchedCard(product) {
+        const normalized = normalizeProduct(product);
+        const key = normalized.product_key || "";
+        const savingsText = product.savings_pct
+          ? `Save ${product.savings_pct}%`
+          : "";
+        const shortDate = product.valid_until
+          ? getShortDateText(product.valid_until)
+          : "";
+        const confBadge =
+          product.match_confidence != null && product.match_confidence < 0.8
+            ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>`
+            : "";
+        const promoBadge = savingsText
+          ? `<div class="promo-top-badge promo-green">${savingsText}</div>`
+          : "";
+        return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
     <div class="card-body">
       <div class="product-name">${product.name || "Unknown"}</div>
       <div class="product-unit">${product.unit || ""}</div>
@@ -905,24 +1162,33 @@ function buildMatchedCard(product) {
     </div>
     <div class="detail-panel" id="detail-${key}"></div>
   </div>`;
-}
+      }
 
-function buildSingleCard(product) {
-  const normalized = normalizeProduct(product);
-  const key = normalized.product_key || "";
-  const s = normalized.stores[0] || {};
-  const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
-  const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
-  const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
-  const shortDate = product.valid_until ? getShortDateText(product.valid_until) : "";
-  const confBadge = product.match_confidence != null && product.match_confidence < 0.8
-    ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>` : "";
-  const displayPrice = s.effective_unit_price && s.effective_unit_price < s.price
-    ? s.effective_unit_price
-    : s.price;
-  const hasPromo = s.effective_unit_price && s.effective_unit_price < s.price;
-  const promoBadgesSingle = hasPromo ? buildPromoBadges(s.promo) : "";
-  return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
+      function buildSingleCard(product) {
+        const normalized = normalizeProduct(product);
+        const key = normalized.product_key || "";
+        const s = normalized.stores[0] || {};
+        const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
+        const color =
+          (displayHints.store_colors && displayHints.store_colors[storeKey]) ||
+          "var(--gray-300)";
+        const storeName =
+          (displayHints.stores && displayHints.stores[storeKey]) || s.store;
+        const shortDate = product.valid_until
+          ? getShortDateText(product.valid_until)
+          : "";
+        const confBadge =
+          product.match_confidence != null && product.match_confidence < 0.8
+            ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>`
+            : "";
+        const displayPrice =
+          s.effective_unit_price && s.effective_unit_price < s.price
+            ? s.effective_unit_price
+            : s.price;
+        const hasPromo =
+          s.effective_unit_price && s.effective_unit_price < s.price;
+        const promoBadgesSingle = hasPromo ? buildPromoBadges(s.promo) : "";
+        return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
     <div class="card-body">
       <div class="product-name">${product.name || "Unknown"}</div>
       <div class="product-unit">${product.unit || ""}</div>
@@ -941,38 +1207,57 @@ function buildSingleCard(product) {
     </div>
     <div class="detail-panel" id="detail-${key}"></div>
   </div>`;
-}
+      }
 
-function buildDetailPanel(product) {
-  const normalized = normalizeProduct(product);
-  const key = normalized.product_key || "";
-  const cheapestStore = (product.cheapest_store || "").toLowerCase().replace(/\s+/g, "");
-  let storeRows = normalized.stores.map(s => {
-    const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
-    const isCheapest = storeKey === cheapestStore;
-    const color = (displayHints.store_colors && displayHints.store_colors[storeKey]) || "var(--gray-300)";
-    const storeName = (displayHints.stores && displayHints.stores[storeKey]) || s.store;
-    const hasPromo = s.effective_unit_price && s.effective_unit_price < s.price;
-    const displayPrice = hasPromo ? s.effective_unit_price : s.price;
-    const originalPrice = hasPromo ? `<span class="original-price">${formatIDR(s.price)}</span> ` : "";
-    const unitPrice = s.effective_unit_price && s.effective_unit_price !== displayPrice
-      ? ` · ${formatIDR(s.effective_unit_price)}/pc` : "";
-    const brochureLink = s.image_path ? `<a class="brochure-link" href="${s.image_path}" target="_blank" onclick="event.stopPropagation(); fetch(this.href).then(r=>{if(!r.ok)this.style.display='none'}).catch(()=>this.style.display='none')">View Brochure</a>` : "";
-    const diff = product.price_gap && !isCheapest ? ` +${formatIDR(product.price_gap)}` : "";
-    const cheapestBadge = isCheapest ? ` ✓ Cheapest` : "";
-    return `<div class="detail-store-row ${isCheapest ? 'cheapest' : ''}">
+      function buildDetailPanel(product) {
+        const normalized = normalizeProduct(product);
+        const key = normalized.product_key || "";
+        const cheapestStore = (product.cheapest_store || "")
+          .toLowerCase()
+          .replace(/\s+/g, "");
+        let storeRows = normalized.stores
+          .map((s) => {
+            const storeKey = (s.store || "").toLowerCase().replace(/\s+/g, "");
+            const isCheapest = storeKey === cheapestStore;
+            const color =
+              (displayHints.store_colors &&
+                displayHints.store_colors[storeKey]) ||
+              "var(--gray-300)";
+            const storeName =
+              (displayHints.stores && displayHints.stores[storeKey]) || s.store;
+            const hasPromo =
+              s.effective_unit_price && s.effective_unit_price < s.price;
+            const displayPrice = hasPromo ? s.effective_unit_price : s.price;
+            const originalPrice = hasPromo
+              ? `<span class="original-price">${formatIDR(s.price)}</span> `
+              : "";
+            const unitPrice =
+              s.effective_unit_price && s.effective_unit_price !== displayPrice
+                ? ` · ${formatIDR(s.effective_unit_price)}/pc`
+                : "";
+            const brochureLink = s.image_path
+              ? `<a class="brochure-link" href="${s.image_path}" target="_blank" onclick="event.stopPropagation(); fetch(this.href).then(r=>{if(!r.ok)this.style.display='none'}).catch(()=>this.style.display='none')">View Brochure</a>`
+              : "";
+            const diff =
+              product.price_gap && !isCheapest
+                ? ` +${formatIDR(product.price_gap)}`
+                : "";
+            const cheapestBadge = isCheapest ? ` ✓ Cheapest` : "";
+            return `<div class="detail-store-row ${isCheapest ? "cheapest" : ""}">
       <span class="store-dot" style="background:${color}"></span>
       <span class="store-name">${storeName}${cheapestBadge}</span>
       <span class="store-price">${originalPrice}${formatIDR(displayPrice)}${unitPrice}${diff}</span>
       ${brochureLink}
     </div>`;
-  }).join("");
+          })
+          .join("");
 
-  const confText = product.match_confidence != null
-    ? `Match confidence: ${Math.round(product.match_confidence * 100)}% (${product.match_method || "unknown"})`
-    : "";
+        const confText =
+          product.match_confidence != null
+            ? `Match confidence: ${Math.round(product.match_confidence * 100)}% (${product.match_method || "unknown"})`
+            : "";
 
-  return `<div class="detail-section">
+        return `<div class="detail-section">
     <h4>Price Comparison</h4>
     ${storeRows}
   </div>
@@ -983,591 +1268,788 @@ function buildDetailPanel(product) {
     </div>
   </div>
   ${confText ? `<div class="detail-section"><p style="font-size:0.82rem;color:var(--gray-500)">${confText}</p></div>` : ""}`;
-}
+      }
 
-function drawBarChart(canvas, productKey, history) {
-  if (!canvas || !history || !history.snapshots) return;
-  const snapshots = history.snapshots.filter(s => s.product_key === productKey).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  if (snapshots.length < 2) {
-    canvas.parentElement.innerHTML = '<div class="no-history">No history available</div>';
-    return;
-  }
-  const ctx = canvas.getContext("2d");
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-  const w = rect.width;
-  const h = rect.height;
-  const padding = { top: 10, right: 10, bottom: 25, left: 10 };
-  const chartW = w - padding.left - padding.right;
-  const chartH = h - padding.top - padding.bottom;
-  const prices = snapshots.map(s => {
-    const effective = s.effective_unit_price && s.effective_unit_price < s.price
-      ? s.effective_unit_price
-      : s.price;
-    return effective || 0;
-  });
-  const maxPrice = Math.max(...prices);
-  const barWidth = Math.min(30, (chartW / snapshots.length) * 0.6);
-  const gap = (chartW - barWidth * snapshots.length) / (snapshots.length + 1);
-  ctx.fillStyle = "var(--green-mid)";
-  snapshots.forEach((s, i) => {
-    const effective = s.effective_unit_price && s.effective_unit_price < s.price
-      ? s.effective_unit_price
-      : s.price;
-    const barH = (effective / maxPrice) * chartH;
-    const x = padding.left + gap + i * (barWidth + gap);
-    const y = padding.top + chartH - barH;
-    ctx.fillStyle = "#4a9e6a";
-    ctx.fillRect(x, y, barWidth, barH);
-    ctx.fillStyle = "#8a8880";
-    ctx.font = "10px 'Plus Jakarta Sans', sans-serif";
-    ctx.textAlign = "center";
-    const d = new Date(s.date);
-    ctx.fillText(d.getDate() + "/" + (d.getMonth() + 1), x + barWidth / 2, h - 5);
-  });
-}
+      function drawBarChart(canvas, productKey, history) {
+        if (!canvas || !history || !history.snapshots) return;
+        const snapshots = history.snapshots
+          .filter((s) => s.product_key === productKey)
+          .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+        if (snapshots.length < 2) {
+          canvas.parentElement.innerHTML =
+            '<div class="no-history">No history available</div>';
+          return;
+        }
+        const ctx = canvas.getContext("2d");
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        const w = rect.width;
+        const h = rect.height;
+        const padding = { top: 10, right: 10, bottom: 25, left: 10 };
+        const chartW = w - padding.left - padding.right;
+        const chartH = h - padding.top - padding.bottom;
+        const prices = snapshots.map((s) => {
+          const effective =
+            s.effective_unit_price && s.effective_unit_price < s.price
+              ? s.effective_unit_price
+              : s.price;
+          return effective || 0;
+        });
+        const maxPrice = Math.max(...prices);
+        const barWidth = Math.min(30, (chartW / snapshots.length) * 0.6);
+        const gap =
+          (chartW - barWidth * snapshots.length) / (snapshots.length + 1);
+        ctx.fillStyle = "var(--green-mid)";
+        snapshots.forEach((s, i) => {
+          const effective =
+            s.effective_unit_price && s.effective_unit_price < s.price
+              ? s.effective_unit_price
+              : s.price;
+          const barH = (effective / maxPrice) * chartH;
+          const x = padding.left + gap + i * (barWidth + gap);
+          const y = padding.top + chartH - barH;
+          ctx.fillStyle = "#4a9e6a";
+          ctx.fillRect(x, y, barWidth, barH);
+          ctx.fillStyle = "#8a8880";
+          ctx.font = "10px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "center";
+          const d = new Date(s.date);
+          ctx.fillText(
+            d.getDate() + "/" + (d.getMonth() + 1),
+            x + barWidth / 2,
+            h - 5,
+          );
+        });
+      }
 
-function validatePriceHistoryKey(productKey) {
-  if (!priceHistoryData || !priceHistoryData.snapshots) return false;
-  return priceHistoryData.snapshots.some(s => s.product_key === productKey);
-}
+      function validatePriceHistoryKey(productKey) {
+        if (!priceHistoryData || !priceHistoryData.snapshots) return false;
+        return priceHistoryData.snapshots.some(
+          (s) => s.product_key === productKey,
+        );
+      }
 
-function expandCard(key) {
-  const card = document.querySelector(`.product-card[data-key="${key}"]`);
-  if (!card) return;
-  if (expandedKey && expandedKey !== key) {
-    const prev = document.querySelector(`.product-card[data-key="${expandedKey}"]`);
-    if (prev) {
-      prev.classList.remove("expanded");
-      const prevDetail = document.getElementById(`detail-${expandedKey}`);
-      if (prevDetail) prevDetail.innerHTML = "";
-    }
-  }
-  const isExpanded = card.classList.contains("expanded");
-  if (isExpanded) {
-    card.classList.remove("expanded");
-    const detail = document.getElementById(`detail-${key}`);
-    if (detail) detail.innerHTML = "";
-    expandedKey = null;
-    history.replaceState(null, "", window.location.pathname);
-  } else {
-    card.classList.add("expanded");
-    const allProducts = getAllProducts();
-    const product = allProducts.find(p => (p.key || p.product_key) === key);
-    if (product) {
-      const detail = document.getElementById(`detail-${key}`);
-      if (detail) {
-        detail.innerHTML = buildDetailPanel(product);
-        setTimeout(() => {
-          const canvas = document.getElementById(`chart-${key}`);
-          if (canvas && validatePriceHistoryKey(key)) {
-            drawBarChart(canvas, key, priceHistoryData);
-          } else if (canvas) {
-            canvas.parentElement.innerHTML = '<div class="no-history">No history available</div>';
+      function expandCard(key) {
+        const card = document.querySelector(`.product-card[data-key="${key}"]`);
+        if (!card) return;
+        if (expandedKey && expandedKey !== key) {
+          const prev = document.querySelector(
+            `.product-card[data-key="${expandedKey}"]`,
+          );
+          if (prev) {
+            prev.classList.remove("expanded");
+            const prevDetail = document.getElementById(`detail-${expandedKey}`);
+            if (prevDetail) prevDetail.innerHTML = "";
           }
-        }, 50);
-      }
-    }
-    expandedKey = key;
-    history.replaceState(null, "", "#" + key);
-  }
-}
-
-function renderCards() {
-  const grid = document.getElementById("product-grid");
-  const filtered = getFilteredSortedProducts();
-
-  if (filtered.length === 0 && getAllProducts().length === 0) {
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("empty-state").style.display = "block";
-    document.getElementById("product-grid").style.display = "none";
-    document.getElementById("no-results").style.display = "none";
-    document.getElementById("load-more-sentinel").style.display = "none";
-    return;
-  }
-
-  if (filtered.length === 0 && currentSearch) {
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("no-results").style.display = "block";
-    document.getElementById("no-results-query").textContent = currentSearch;
-    document.getElementById("product-grid").style.display = "none";
-    document.getElementById("load-more-sentinel").style.display = "none";
-    return;
-  }
-
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("empty-state").style.display = "none";
-  document.getElementById("no-results").style.display = "none";
-  document.getElementById("product-grid").style.display = "grid";
-
-  const end = currentPage * PAGE_SIZE;
-  const pageItems = filtered.slice(0, end);
-
-  // Only rebuild grid if filter/search changed (page === 1), otherwise append
-  const shouldRebuild = currentPage === 1;
-
-  if (shouldRebuild) {
-    grid.innerHTML = "";
-  }
-
-  // Render only the new slice for this page
-  const startIdx = (currentPage - 1) * PAGE_SIZE;
-  const newItems = pageItems.slice(startIdx);
-
-  const html = newItems.map(p => {
-    const normalized = normalizeProduct(p);
-    return normalized.stores.length > 1 ? buildMatchedCard(p) : buildSingleCard(p);
-  }).join("");
-
-  // Append new items
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = html;
-  while (tempDiv.firstChild) {
-    const card = tempDiv.firstChild;
-    grid.appendChild(card);
-    // Attach event listeners to new cards
-    if (card.classList && card.classList.contains("product-card")) {
-      card.addEventListener("click", () => expandCard(card.dataset.key));
-      card.addEventListener("keydown", e => {
-        if (e.key === "Enter" || e.key === " ") { 
-          e.preventDefault(); 
-          expandCard(card.dataset.key); 
         }
+        const isExpanded = card.classList.contains("expanded");
+        if (isExpanded) {
+          card.classList.remove("expanded");
+          const detail = document.getElementById(`detail-${key}`);
+          if (detail) detail.innerHTML = "";
+          expandedKey = null;
+          history.replaceState(null, "", window.location.pathname);
+        } else {
+          card.classList.add("expanded");
+          const allProducts = getAllProducts();
+          const product = allProducts.find(
+            (p) => (p.key || p.product_key) === key,
+          );
+          if (product) {
+            const detail = document.getElementById(`detail-${key}`);
+            if (detail) {
+              detail.innerHTML = buildDetailPanel(product);
+              setTimeout(() => {
+                const canvas = document.getElementById(`chart-${key}`);
+                if (canvas && validatePriceHistoryKey(key)) {
+                  drawBarChart(canvas, key, priceHistoryData);
+                } else if (canvas) {
+                  canvas.parentElement.innerHTML =
+                    '<div class="no-history">No history available</div>';
+                }
+              }, 50);
+            }
+          }
+          expandedKey = key;
+          history.replaceState(null, "", "#" + key);
+        }
+      }
+
+      function renderCards() {
+        const grid = document.getElementById("product-grid");
+        const filtered = getFilteredSortedProducts();
+
+        if (filtered.length === 0 && getAllProducts().length === 0) {
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("empty-state").style.display = "block";
+          document.getElementById("product-grid").style.display = "none";
+          document.getElementById("no-results").style.display = "none";
+          document.getElementById("load-more-sentinel").style.display = "none";
+          return;
+        }
+
+        if (filtered.length === 0 && currentSearch) {
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("no-results").style.display = "block";
+          document.getElementById("no-results-query").textContent =
+            currentSearch;
+          document.getElementById("product-grid").style.display = "none";
+          document.getElementById("load-more-sentinel").style.display = "none";
+          return;
+        }
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("empty-state").style.display = "none";
+        document.getElementById("no-results").style.display = "none";
+        document.getElementById("product-grid").style.display = "grid";
+
+        const end = currentPage * PAGE_SIZE;
+        const pageItems = filtered.slice(0, end);
+
+        // Only rebuild grid if filter/search changed (page === 1), otherwise append
+        const shouldRebuild = currentPage === 1;
+
+        if (shouldRebuild) {
+          grid.innerHTML = "";
+        }
+
+        // Render only the new slice for this page
+        const startIdx = (currentPage - 1) * PAGE_SIZE;
+        const newItems = pageItems.slice(startIdx);
+
+        const html = newItems
+          .map((p) => {
+            const normalized = normalizeProduct(p);
+            return normalized.stores.length > 1
+              ? buildMatchedCard(p)
+              : buildSingleCard(p);
+          })
+          .join("");
+
+        // Append new items
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
+        while (tempDiv.firstChild) {
+          const card = tempDiv.firstChild;
+          grid.appendChild(card);
+          // Attach event listeners to new cards
+          if (card.classList && card.classList.contains("product-card")) {
+            card.addEventListener("click", () => expandCard(card.dataset.key));
+            card.addEventListener("keydown", (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                expandCard(card.dataset.key);
+              }
+            });
+          }
+        }
+
+        // Manage sentinel visibility
+        const sentinel = document.getElementById("load-more-sentinel");
+        if (end < filtered.length) {
+          sentinel.style.display = "block";
+        } else {
+          sentinel.style.display = "none";
+        }
+
+        renderFooterStats(filtered);
+      }
+      function renderFooterStats(filtered) {
+        const stats = consolidatedData.stats || {};
+        const lotteCount = filtered.filter((p) =>
+          isProductInStore(p, "lotte"),
+        ).length;
+        const superindoCount = filtered.filter((p) =>
+          isProductInStore(p, "superindo"),
+        ).length;
+        const matchedCount = filtered.filter((p) => {
+          const n = normalizeProduct(p);
+          return n.stores.length > 1;
+        }).length;
+        document.getElementById("footer-stats").textContent =
+          `Lotte: ${lotteCount} products · Superindo: ${superindoCount} · Matched: ${matchedCount}`;
+        const reviewEl = document.getElementById("footer-review");
+        if (stats.flagged_for_review > 0) {
+          reviewEl.innerHTML = `<a href="admin.html" style="color:var(--amber);text-decoration:none">⚠ ${stats.flagged_for_review} items need review →</a>`;
+          reviewEl.className = "review-warning";
+        } else {
+          reviewEl.textContent = "";
+        }
+      }
+
+      function updateFreshnessBar(timestamp) {
+        if (!timestamp) {
+          document.getElementById("freshness-text").textContent = "Loading...";
+          return;
+        }
+        const now = new Date();
+        const updated = new Date(timestamp);
+        const diffMs = now - updated;
+        const diffMin = Math.floor(diffMs / 60000);
+        const diffHr = Math.floor(diffMin / 60);
+        let text = "";
+        if (diffMin < 1) text = "Just now";
+        else if (diffMin < 60) text = `${diffMin}m ago`;
+        else text = `${diffHr}h ${diffMin % 60}m ago`;
+        document.getElementById("freshness-text").textContent =
+          `Prices updated ${text}`;
+      }
+
+      function setupHashRouting() {
+        window.addEventListener("hashchange", () => {
+          const key = window.location.hash.slice(1);
+          if (key) expandCard(key);
+        });
+      }
+
+      function applyHashAfterLoad() {
+        const key = window.location.hash.slice(1);
+        if (key) {
+          setTimeout(() => expandCard(key), 100);
+        }
+      }
+
+      function startAutoRefresh(intervalMs = 300000) {
+        setInterval(() => {
+          if (document.visibilityState === "visible") {
+            loadData(true);
+          }
+        }, intervalMs);
+      }
+
+      // API-first loading helpers
+      const API_BASE = "/api/v1";
+
+      async function loadFromAPI(endpoint, forceShowDummy) {
+        try {
+          const suffix =
+            (forceShowDummy !== undefined ? forceShowDummy : showDummy) &&
+            !endpoint.includes("show_dummy")
+              ? endpoint.includes("?")
+                ? "&show_dummy=true"
+                : "?show_dummy=true"
+              : "";
+          const resp = await retryFetch(`${API_BASE}${endpoint}${suffix}`);
+          if (!resp.ok) return null;
+          return await resp.json();
+        } catch (e) {
+          console.warn(`API ${endpoint} failed, falling back to static JSON`);
+          return null;
+        }
+      }
+
+      function setDataSource(source) {
+        const el = document.getElementById("data-source");
+        if (el) el.textContent = `(${source === "api" ? "API" : "static"})`;
+      }
+
+      async function loadData(isRefresh = false) {
+        if (!isRefresh) renderLoading();
+        document.getElementById("warning-banner").style.display = "none";
+        document.getElementById("sample-banner").style.display = "none";
+        try {
+          const STATIC_PATH = "output/html";
+          const SAMPLE_PATH = "data/sample/html";
+
+          // API-first: try the API for consolidated product data
+          let consSource = "api";
+          let consOk = false;
+          const apiProducts = await loadFromAPI("/products?limit=100");
+          if (apiProducts && apiProducts.data) {
+            const products = apiProducts.data;
+            // Fetch store colors from the API
+            const storesResp = await loadFromAPI("/stores");
+            const storeColors = {};
+            if (storesResp && storesResp.data) {
+              for (const s of storesResp.data) {
+                if (s.color) storeColors[s.name] = s.color;
+              }
+            }
+            consolidatedData = {
+              products: products.filter((p) => p.stores && p.stores.length > 1),
+              singles: products.filter(
+                (p) => !p.stores || p.stores.length <= 1,
+              ),
+              stats: {},
+              display_hints: {
+                stores: {},
+                store_colors: storeColors,
+                currency: "IDR",
+              },
+              generated_at: new Date().toISOString(),
+            };
+            consOk = true;
+          }
+
+          // Fallback to static JSON if API failed
+          if (!consOk) {
+            consSource = "static";
+            const consLoad = await tryLoadWithFallback(
+              STATIC_PATH,
+              SAMPLE_PATH,
+              "active_promo.json",
+            );
+            if (consLoad.data) {
+              const v = validateData(consLoad.data, "consolidated");
+              if (v.valid) {
+                consolidatedData = consLoad.data;
+                consOk = true;
+              } else {
+                renderError(v.error);
+                return;
+              }
+            }
+          }
+
+          // API-first: try the API for price history
+          let histSource = "api";
+          let histOk = false;
+          const apiPrices = await loadFromAPI("/prices?limit=100");
+          if (apiPrices && apiPrices.data) {
+            priceHistoryData = { snapshots: apiPrices.data };
+            histOk = true;
+          }
+
+          // Fallback to static JSON if API failed
+          if (!histOk) {
+            histSource = "static";
+            const histLoad = await tryLoadWithFallback(
+              STATIC_PATH,
+              SAMPLE_PATH,
+              "price_history.json",
+            );
+            if (histLoad.data) {
+              priceHistoryData = histLoad.data;
+              histOk = true;
+            }
+          }
+
+          // Set data source indicator (prefer API)
+          setDataSource(consSource === "api" ? "api" : "static");
+
+          if (!consOk && !histOk) {
+            renderError(
+              "Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).",
+            );
+            return;
+          }
+          if (!consOk && histOk) {
+            renderWarning(
+              "Consolidated data unavailable. Showing price history only.",
+            );
+            consolidatedData = {
+              products: [],
+              singles: [],
+              display_hints: getDefaultDisplayHints(),
+              stats: {},
+            };
+          }
+          if (!histOk && consOk) {
+            if (!isRefresh)
+              renderWarning(
+                "Price history unavailable. Charts will not display.",
+              );
+            priceHistoryData = null;
+          }
+          const isSample =
+            consolidatedData?.is_sample === true ||
+            priceHistoryData?.is_sample === true;
+          if (isSample) {
+            const banner = document.getElementById("sample-banner");
+            banner.style.display = "flex";
+            banner.innerHTML =
+              "Displaying sample data. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
+          }
+          displayHints =
+            consolidatedData?.display_hints || getDefaultDisplayHints();
+          if (displayHints.store_colors) {
+            const normalizedColors = {};
+            for (const [key, value] of Object.entries(
+              displayHints.store_colors,
+            )) {
+              normalizedColors[key.toLowerCase().replace(/\s+/g, "")] = value;
+            }
+            displayHints.store_colors = normalizedColors;
+          }
+          if (displayHints.stores) {
+            const normalizedStores = {};
+            for (const [key, value] of Object.entries(displayHints.stores)) {
+              normalizedStores[key.toLowerCase().replace(/\s+/g, "")] = value;
+            }
+            displayHints.stores = normalizedStores;
+          }
+          if (consolidatedData?.generated_at) {
+            updateFreshnessBar(consolidatedData.generated_at);
+          }
+          renderCards();
+          renderPromos();
+          renderBrochures();
+          if (!isRefresh) {
+            setupHashRouting();
+            setTimeout(() => applyHashAfterLoad(), 150);
+          }
+        } catch (err) {
+          renderError("Network error: " + err.message);
+        }
+      }
+
+      document.getElementById("search-input").addEventListener("input", (e) => {
+        clearTimeout(window._searchTimeout);
+        window._searchTimeout = setTimeout(() => {
+          currentSearch = e.target.value.trim();
+          currentPage = 1;
+          renderCards();
+        }, 200);
       });
-    }
-  }
 
-  // Manage sentinel visibility
-  const sentinel = document.getElementById("load-more-sentinel");
-  if (end < filtered.length) {
-    sentinel.style.display = "block";
-  } else {
-    sentinel.style.display = "none";
-  }
+      document.querySelectorAll(".chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          document
+            .querySelectorAll(".chip")
+            .forEach((c) => c.classList.remove("active"));
+          chip.classList.add("active");
+          currentFilter = chip.dataset.filter;
+          currentPage = 1;
+          renderCards();
+        });
+      });
 
-  renderFooterStats(filtered);
-}
-function renderFooterStats(filtered) {
-  const stats = consolidatedData.stats || {};
-  const lotteCount = filtered.filter(p => isProductInStore(p, "lotte")).length;
-  const superindoCount = filtered.filter(p => isProductInStore(p, "superindo")).length;
-  const matchedCount = filtered.filter(p => { const n = normalizeProduct(p); return n.stores.length > 1; }).length;
-  document.getElementById("footer-stats").textContent = `Lotte: ${lotteCount} products · Superindo: ${superindoCount} · Matched: ${matchedCount}`;
-  const reviewEl = document.getElementById("footer-review");
-  if (stats.flagged_for_review > 0) {
-    reviewEl.innerHTML = `<a href="admin.html" style="color:var(--amber);text-decoration:none">⚠ ${stats.flagged_for_review} items need review →</a>`;
-    reviewEl.className = "review-warning";
-  } else {
-    reviewEl.textContent = "";
-  }
-}
-
-function updateFreshnessBar(timestamp) {
-  if (!timestamp) {
-    document.getElementById("freshness-text").textContent = "Loading...";
-    return;
-  }
-  const now = new Date();
-  const updated = new Date(timestamp);
-  const diffMs = now - updated;
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHr = Math.floor(diffMin / 60);
-  let text = "";
-  if (diffMin < 1) text = "Just now";
-  else if (diffMin < 60) text = `${diffMin}m ago`;
-  else text = `${diffHr}h ${diffMin % 60}m ago`;
-  document.getElementById("freshness-text").textContent = `Prices updated ${text}`;
-}
-
-function setupHashRouting() {
-  window.addEventListener("hashchange", () => {
-    const key = window.location.hash.slice(1);
-    if (key) expandCard(key);
-  });
-}
-
-function applyHashAfterLoad() {
-  const key = window.location.hash.slice(1);
-  if (key) {
-    setTimeout(() => expandCard(key), 100);
-  }
-}
-
-function startAutoRefresh(intervalMs = 300000) {
-  setInterval(() => {
-    if (document.visibilityState === "visible") {
-      loadData(true);
-    }
-  }, intervalMs);
-}
-
-// API-first loading helpers
-const API_BASE = "/api/v1";
-
-async function loadFromAPI(endpoint, forceShowDummy) {
-  try {
-    const suffix = (forceShowDummy !== undefined ? forceShowDummy : showDummy) && !endpoint.includes("show_dummy")
-      ? (endpoint.includes("?") ? "&show_dummy=true" : "?show_dummy=true")
-      : "";
-    const resp = await retryFetch(`${API_BASE}${endpoint}${suffix}`);
-    if (!resp.ok) return null;
-    return await resp.json();
-  } catch (e) {
-    console.warn(`API ${endpoint} failed, falling back to static JSON`);
-    return null;
-  }
-}
-
-function setDataSource(source) {
-  const el = document.getElementById("data-source");
-  if (el) el.textContent = `(${source === "api" ? "API" : "static"})`;
-}
-
-async function loadData(isRefresh = false) {
-  if (!isRefresh) renderLoading();
-  document.getElementById("warning-banner").style.display = "none";
-  document.getElementById("sample-banner").style.display = "none";
-  try {
-    const STATIC_PATH = "output/html";
-    const SAMPLE_PATH = "data/sample/html";
-
-    // API-first: try the API for consolidated product data
-    let consSource = "api";
-    let consOk = false;
-    const apiProducts = await loadFromAPI("/products?limit=100");
-    if (apiProducts && apiProducts.data) {
-      const products = apiProducts.data;
-      // Fetch store colors from the API
-      const storesResp = await loadFromAPI("/stores");
-      const storeColors = {};
-      if (storesResp && storesResp.data) {
-        for (const s of storesResp.data) {
-          if (s.color) storeColors[s.name] = s.color;
-        }
-      }
-      consolidatedData = {
-        products: products.filter(p => p.stores && p.stores.length > 1),
-        singles: products.filter(p => !p.stores || p.stores.length <= 1),
-        stats: {},
-        display_hints: { stores: {}, store_colors: storeColors, currency: "IDR" },
-        generated_at: new Date().toISOString(),
-      };
-      consOk = true;
-    }
-
-    // Fallback to static JSON if API failed
-    if (!consOk) {
-      consSource = "static";
-      const consLoad = await tryLoadWithFallback(STATIC_PATH, SAMPLE_PATH, "active_promo.json");
-      if (consLoad.data) {
-        const v = validateData(consLoad.data, "consolidated");
-        if (v.valid) { consolidatedData = consLoad.data; consOk = true; }
-        else { renderError(v.error); return; }
-      }
-    }
-
-    // API-first: try the API for price history
-    let histSource = "api";
-    let histOk = false;
-    const apiPrices = await loadFromAPI("/prices?limit=100");
-    if (apiPrices && apiPrices.data) {
-      priceHistoryData = { snapshots: apiPrices.data };
-      histOk = true;
-    }
-
-    // Fallback to static JSON if API failed
-    if (!histOk) {
-      histSource = "static";
-      const histLoad = await tryLoadWithFallback(STATIC_PATH, SAMPLE_PATH, "price_history.json");
-      if (histLoad.data) {
-        priceHistoryData = histLoad.data;
-        histOk = true;
-      }
-    }
-
-    // Set data source indicator (prefer API)
-    setDataSource(consSource === "api" ? "api" : "static");
-
-    if (!consOk && !histOk) {
-      renderError("Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).");
-      return;
-    }
-    if (!consOk && histOk) {
-      renderWarning("Consolidated data unavailable. Showing price history only.");
-      consolidatedData = { products: [], singles: [], display_hints: getDefaultDisplayHints(), stats: {} };
-    }
-    if (!histOk && consOk) {
-      if (!isRefresh) renderWarning("Price history unavailable. Charts will not display.");
-      priceHistoryData = null;
-    }
-    const isSample = consolidatedData?.is_sample === true || priceHistoryData?.is_sample === true;
-    if (isSample) {
-      const banner = document.getElementById("sample-banner");
-      banner.style.display = "flex";
-      banner.innerHTML = "Displaying sample data. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
-    }
-    displayHints = consolidatedData?.display_hints || getDefaultDisplayHints();
-    if (displayHints.store_colors) {
-      const normalizedColors = {};
-      for (const [key, value] of Object.entries(displayHints.store_colors)) {
-        normalizedColors[key.toLowerCase().replace(/\s+/g, "")] = value;
-      }
-      displayHints.store_colors = normalizedColors;
-    }
-    if (displayHints.stores) {
-      const normalizedStores = {};
-      for (const [key, value] of Object.entries(displayHints.stores)) {
-        normalizedStores[key.toLowerCase().replace(/\s+/g, "")] = value;
-      }
-      displayHints.stores = normalizedStores;
-    }
-    if (consolidatedData?.generated_at) {
-      updateFreshnessBar(consolidatedData.generated_at);
-    }
-    renderCards();
-    renderPromos();
-    renderBrochures();
-    if (!isRefresh) {
-      setupHashRouting();
-      setTimeout(() => applyHashAfterLoad(), 150);
-    }
-  } catch (err) {
-    renderError("Network error: " + err.message);
-  }
-}
-
-document.getElementById("search-input").addEventListener("input", (e) => {
-  clearTimeout(window._searchTimeout);
-  window._searchTimeout = setTimeout(() => {
-    currentSearch = e.target.value.trim();
-    currentPage = 1;
-    renderCards();
-  }, 200);
-});
-
-document.querySelectorAll(".chip").forEach(chip => {
-  chip.addEventListener("click", () => {
-    document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
-    chip.classList.add("active");
-    currentFilter = chip.dataset.filter;
-    currentPage = 1;
-    renderCards();
-  });
-});
-
-document.getElementById("sort-select").addEventListener("change", (e) => {
-  currentSort = e.target.value;
-  currentPage = 1;
-  renderCards();
-});
-
-const loadMoreObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting && !isLoadingMore) {
-      const filtered = getFilteredSortedProducts();
-      const end = currentPage * PAGE_SIZE;
-      if (end < filtered.length) {
-        isLoadingMore = true;
-        currentPage++;
+      document.getElementById("sort-select").addEventListener("change", (e) => {
+        currentSort = e.target.value;
+        currentPage = 1;
         renderCards();
-        // Re-enable observer after a short delay to let layout settle
-        setTimeout(() => { isLoadingMore = false; }, 100);
-      }
-    }
-  });
-}, { rootMargin: "200px" });
+      });
 
-loadMoreObserver.observe(document.getElementById("load-more-sentinel"));
+      const loadMoreObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !isLoadingMore) {
+              const filtered = getFilteredSortedProducts();
+              const end = currentPage * PAGE_SIZE;
+              if (end < filtered.length) {
+                isLoadingMore = true;
+                currentPage++;
+                renderCards();
+                // Re-enable observer after a short delay to let layout settle
+                setTimeout(() => {
+                  isLoadingMore = false;
+                }, 100);
+              }
+            }
+          });
+        },
+        { rootMargin: "200px" },
+      );
 
-document.getElementById("warning-retry").addEventListener("click", () => {
-  loadData();
-});
+      loadMoreObserver.observe(document.getElementById("load-more-sentinel"));
 
-function renderPromos() {
-  const el = document.getElementById("promos-content");
-  if (!el || !consolidatedData) return;
-  const catalog = consolidatedData.promo_catalog;
-  if (!catalog || !catalog.length) {
-    el.innerHTML = '<div class="empty-box"><h3>No promos available</h3><p>Promo data will appear here after the next pipeline run.</p></div>';
-    return;
-  }
-  const typeLabels = { discount_pct: "Discount %", discount_fixed: "Discount (Fixed)", bogo: "Buy One Get One", bundle: "Bundle", member_price: "Member Price", promo_price: "Promo Price", freebie: "Freebie", quantity_limit: "Quantity Limit", special: "Other" };
-  const groups = {};
-  catalog.forEach(p => {
-    const label = typeLabels[p.type] || "Other";
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(p);
-  });
-  let html = '<div class="filter-chips" style="margin-bottom:1rem">';
-  html += '<button class="chip active" data-promo-filter="all">All</button>';
-  html += '<button class="chip" data-promo-filter="lotte">Lotte</button>';
-  html += '<button class="chip" data-promo-filter="superindo">Superindo</button>';
-  html += '</div>';
-  const order = ["Discount %", "Discount (Fixed)", "Buy One Get One", "Bundle", "Member Price", "Promo Price", "Freebie", "Quantity Limit", "Other"];
-  order.forEach(label => {
-    if (!groups[label]) return;
-    html += '<div class="promo-type-group"><h3 class="promo-type-header">' + label + '</h3>';
-    groups[label].forEach(p => {
-      const storeHtml = Object.entries(p.stores || {}).map(([s, c]) => '<span class="promo-store-badge" style="background:' + (s === 'Lotte' ? 'var(--lotte)' : 'var(--superindo)') + ';color:white;padding:2px 6px;border-radius:4px;font-size:0.75rem">' + s + ' ' + c + '</span>').join(' ');
-      html += '<div class="promo-card" data-promo-key="' + p.key + '">';
-      html += '<div class="promo-card-header"><strong>' + p.display + '</strong> <span class="promo-count-badge">' + p.product_count + ' products</span></div>';
-      html += '<div class="promo-card-meta">' + storeHtml + '</div>';
-      if (p.example_products && p.example_products.length) {
-        html += '<div class="promo-card-products" style="display:none;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--gray-100)">';
-        p.example_products.forEach(name => {
-          html += '<div class="promo-product-link" style="cursor:pointer;padding:0.2rem 0;font-size:0.85rem;color:var(--green)">' + name + '</div>';
+      document.getElementById("warning-retry").addEventListener("click", () => {
+        loadData();
+      });
+
+      function renderPromos() {
+        const el = document.getElementById("promos-content");
+        if (!el || !consolidatedData) return;
+        const catalog = consolidatedData.promo_catalog;
+        if (!catalog || !catalog.length) {
+          el.innerHTML =
+            '<div class="empty-box"><h3>No promos available</h3><p>Promo data will appear here after the next pipeline run.</p></div>';
+          return;
+        }
+        const typeLabels = {
+          discount_pct: "Discount %",
+          discount_fixed: "Discount (Fixed)",
+          bogo: "Buy One Get One",
+          bundle: "Bundle",
+          member_price: "Member Price",
+          promo_price: "Promo Price",
+          freebie: "Freebie",
+          quantity_limit: "Quantity Limit",
+          special: "Other",
+        };
+        const groups = {};
+        catalog.forEach((p) => {
+          const label = typeLabels[p.type] || "Other";
+          if (!groups[label]) groups[label] = [];
+          groups[label].push(p);
         });
-        html += '</div>';
-      }
-      html += '</div>';
-    });
-    html += '</div>';
-  });
-  el.innerHTML = html;
-  // Click to expand products
-  el.querySelectorAll(".promo-card-header").forEach(h => {
-    h.addEventListener("click", () => {
-      const list = h.parentElement.querySelector(".promo-card-products");
-      if (list) list.style.display = list.style.display === "none" ? "block" : "none";
-    });
-  });
-  // Store filter
-  el.querySelectorAll("[data-promo-filter]").forEach(chip => {
-    chip.addEventListener("click", () => {
-      el.querySelectorAll("[data-promo-filter]").forEach(c => c.classList.remove("active"));
-      chip.classList.add("active");
-      const filter = chip.dataset.promoFilter;
-      el.querySelectorAll(".promo-card").forEach(card => {
-        if (filter === "all") { card.style.display = "block"; return; }
-        const stores = card.querySelector(".promo-card-meta")?.textContent || "";
-        card.style.display = stores.toLowerCase().includes(filter) ? "block" : "none";
-      });
-    });
-  });
-  // Product link click → switch to Products tab and search
-  el.querySelectorAll(".promo-product-link").forEach(link => {
-    link.addEventListener("click", () => {
-      const name = link.textContent;
-      document.querySelector('[data-tab="products"]').click();
-      const searchInput = document.getElementById("search-input");
-      if (searchInput) {
-        searchInput.value = name;
-        searchInput.dispatchEvent(new Event("input"));
-      }
-    });
-  });
-}
-
-function renderBrochures() {
-  const el = document.getElementById("brochures-content");
-  if (!el || !consolidatedData) return;
-  const products = consolidatedData.products || [];
-  const singles = consolidatedData.singles || [];
-  const all = [...products, ...singles];
-  const brochures = {};
-  all.forEach(item => {
-    const stores = item.stores || [item];
-    (Array.isArray(stores) ? stores : [stores]).forEach(se => {
-      const img = se.image_path || item.image_path;
-      if (!img) return;
-      if (!brochures[img]) brochures[img] = { image_path: img, store: se.store || item.store, products: [], count: 0 };
-      brochures[img].count++;
-      if (brochures[img].products.length < 10) brochures[img].products.push(item);
-    });
-  });
-  if (!Object.keys(brochures).length) {
-    el.innerHTML = '<div class="empty-box"><h3>No brochures available</h3><p>Brochure images will appear here once products have associated brochure images.</p></div>';
-    return;
-  }
-  const storeGroups = {};
-  Object.values(brochures).forEach(b => {
-    const dateMatch = b.image_path.match(/\/(\d{4})(\d{2})(\d{2})\//);
-    const dateStr = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : "Unknown date";
-    if (!storeGroups[b.store]) storeGroups[b.store] = {};
-    if (!storeGroups[b.store][dateStr]) storeGroups[b.store][dateStr] = [];
-    storeGroups[b.store][dateStr].push(b);
-  });
-  let html = '<div class="filter-chips" style="margin-bottom:1rem">';
-  html += '<button class="chip active" data-brochure-filter="all">All</button>';
-  html += '<button class="chip" data-brochure-filter="Lotte">Lotte</button>';
-  html += '<button class="chip" data-brochure-filter="Superindo">Superindo</button>';
-  html += '</div>';
-  Object.keys(storeGroups).sort().forEach(storeName => {
-    html += '<div class="brochure-store-group" data-brochure-store="' + storeName + '">';
-    html += '<h3 class="promo-type-header">' + storeName + '</h3>';
-    Object.keys(storeGroups[storeName]).sort().reverse().forEach(dateStr => {
-      html += '<h4 style="font-size:0.82rem;color:var(--gray-600);margin:0.5rem 0 0.3rem">' + dateStr + '</h4>';
-      html += '<div class="brochure-grid">';
-      storeGroups[storeName][dateStr].forEach(b => {
-        html += '<div class="brochure-card">';
-        html += '<div class="brochure-img-wrap" style="cursor:pointer">';
-        html += '<img src="' + b.image_path + '" alt="' + b.store + ' brochure" loading="lazy" style="width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;object-fit:cover;background:var(--gray-100)" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">';
-        html += '<div class="brochure-fallback" style="display:none;width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;align-items:center;justify-content:center;font-size:0.75rem;color:var(--gray-500);background:var(--gray-100)">' + b.store + ' (' + b.count + ' products)</div>';
-        html += '<div style="margin-top:0.3rem;font-size:0.78rem;color:var(--gray-700);font-weight:500">' + b.store + ' <span style="color:var(--gray-500);font-weight:400">(' + b.count + ')</span></div>';
-        html += '</div>';
-        html += '<div class="brochure-products" style="display:none;margin-top:0.5rem;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem">';
-        b.products.forEach(item => {
-          const normalized = normalizeProduct(item);
-          html += normalized.stores.length > 1 ? buildMatchedCard(item) : buildSingleCard(item);
+        let html = '<div class="filter-chips" style="margin-bottom:1rem">';
+        html +=
+          '<button class="chip active" data-promo-filter="all">All</button>';
+        html += '<button class="chip" data-promo-filter="lotte">Lotte</button>';
+        html +=
+          '<button class="chip" data-promo-filter="superindo">Superindo</button>';
+        html += "</div>";
+        const order = [
+          "Discount %",
+          "Discount (Fixed)",
+          "Buy One Get One",
+          "Bundle",
+          "Member Price",
+          "Promo Price",
+          "Freebie",
+          "Quantity Limit",
+          "Other",
+        ];
+        order.forEach((label) => {
+          if (!groups[label]) return;
+          html +=
+            '<div class="promo-type-group"><h3 class="promo-type-header">' +
+            label +
+            "</h3>";
+          groups[label].forEach((p) => {
+            const storeHtml = Object.entries(p.stores || {})
+              .map(
+                ([s, c]) =>
+                  '<span class="promo-store-badge" style="background:' +
+                  (s === "Lotte" ? "var(--lotte)" : "var(--superindo)") +
+                  ';color:white;padding:2px 6px;border-radius:4px;font-size:0.75rem">' +
+                  s +
+                  " " +
+                  c +
+                  "</span>",
+              )
+              .join(" ");
+            html += '<div class="promo-card" data-promo-key="' + p.key + '">';
+            html +=
+              '<div class="promo-card-header"><strong>' +
+              p.display +
+              '</strong> <span class="promo-count-badge">' +
+              p.product_count +
+              " products</span></div>";
+            html += '<div class="promo-card-meta">' + storeHtml + "</div>";
+            if (p.example_products && p.example_products.length) {
+              html +=
+                '<div class="promo-card-products" style="display:none;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--gray-100)">';
+              p.example_products.forEach((name) => {
+                html +=
+                  '<div class="promo-product-link" style="cursor:pointer;padding:0.2rem 0;font-size:0.85rem;color:var(--green)">' +
+                  name +
+                  "</div>";
+              });
+              html += "</div>";
+            }
+            html += "</div>";
+          });
+          html += "</div>";
         });
-        html += '</div></div>';
-      });
-      html += '</div>';
-    });
-    html += '</div>';
-  });
-  el.innerHTML = html;
-  el.querySelectorAll(".brochure-img-wrap").forEach(wrap => {
-    wrap.addEventListener("click", () => {
-      const products = wrap.nextElementSibling;
-      if (products) products.style.display = products.style.display === "none" ? "grid" : "none";
-    });
-  });
-  el.querySelectorAll(".brochure-products .product-card").forEach(card => {
-    card.addEventListener("click", () => {
-      const key = card.dataset.key;
-      document.querySelector('[data-tab="products"]').click();
-      setTimeout(() => expandCard(key), 100);
-    });
-    card.addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); document.querySelector('[data-tab="products"]').click(); setTimeout(() => expandCard(card.dataset.key), 100); }
-    });
-  });
-  el.querySelectorAll("[data-brochure-filter]").forEach(chip => {
-    chip.addEventListener("click", () => {
-      el.querySelectorAll("[data-brochure-filter]").forEach(c => c.classList.remove("active"));
-      chip.classList.add("active");
-      const filter = chip.dataset.brochureFilter;
-      el.querySelectorAll(".brochure-store-group").forEach(group => {
-        group.style.display = (filter === "all" || group.dataset.brochureStore === filter) ? "block" : "none";
-      });
-    });
-  });
-}
+        el.innerHTML = html;
+        // Click to expand products
+        el.querySelectorAll(".promo-card-header").forEach((h) => {
+          h.addEventListener("click", () => {
+            const list = h.parentElement.querySelector(".promo-card-products");
+            if (list)
+              list.style.display =
+                list.style.display === "none" ? "block" : "none";
+          });
+        });
+        // Store filter
+        el.querySelectorAll("[data-promo-filter]").forEach((chip) => {
+          chip.addEventListener("click", () => {
+            el.querySelectorAll("[data-promo-filter]").forEach((c) =>
+              c.classList.remove("active"),
+            );
+            chip.classList.add("active");
+            const filter = chip.dataset.promoFilter;
+            el.querySelectorAll(".promo-card").forEach((card) => {
+              if (filter === "all") {
+                card.style.display = "block";
+                return;
+              }
+              const stores =
+                card.querySelector(".promo-card-meta")?.textContent || "";
+              card.style.display = stores.toLowerCase().includes(filter)
+                ? "block"
+                : "none";
+            });
+          });
+        });
+        // Product link click → switch to Products tab and search
+        el.querySelectorAll(".promo-product-link").forEach((link) => {
+          link.addEventListener("click", () => {
+            const name = link.textContent;
+            document.querySelector('[data-tab="products"]').click();
+            const searchInput = document.getElementById("search-input");
+            if (searchInput) {
+              searchInput.value = name;
+              searchInput.dispatchEvent(new Event("input"));
+            }
+          });
+        });
+      }
 
-// Tab navigation
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    if (tab.classList.contains("active")) return;
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".tab-view").forEach(v => v.classList.remove("active"));
-    tab.classList.add("active");
-    const view = document.getElementById("view-" + tab.dataset.tab);
-    if (view) view.classList.add("active");
-    if (tab.dataset.tab === "promos") {
-      renderPromos();
-    }
-    if (tab.dataset.tab === "brochures") {
-      renderBrochures();
-    }
-  });
-});
+      function renderBrochures() {
+        const el = document.getElementById("brochures-content");
+        if (!el || !consolidatedData) return;
+        const products = consolidatedData.products || [];
+        const singles = consolidatedData.singles || [];
+        const all = [...products, ...singles];
+        const brochures = {};
+        all.forEach((item) => {
+          const stores = item.stores || [item];
+          (Array.isArray(stores) ? stores : [stores]).forEach((se) => {
+            const img = se.image_path || item.image_path;
+            if (!img) return;
+            if (!brochures[img])
+              brochures[img] = {
+                image_path: img,
+                store: se.store || item.store,
+                products: [],
+                count: 0,
+              };
+            brochures[img].count++;
+            if (brochures[img].products.length < 10)
+              brochures[img].products.push(item);
+          });
+        });
+        if (!Object.keys(brochures).length) {
+          el.innerHTML =
+            '<div class="empty-box"><h3>No brochures available</h3><p>Brochure images will appear here once products have associated brochure images.</p></div>';
+          return;
+        }
+        const storeGroups = {};
+        Object.values(brochures).forEach((b) => {
+          const dateMatch = b.image_path.match(/\/(\d{4})(\d{2})(\d{2})\//);
+          const dateStr = dateMatch
+            ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`
+            : "Unknown date";
+          if (!storeGroups[b.store]) storeGroups[b.store] = {};
+          if (!storeGroups[b.store][dateStr])
+            storeGroups[b.store][dateStr] = [];
+          storeGroups[b.store][dateStr].push(b);
+        });
+        let html = '<div class="filter-chips" style="margin-bottom:1rem">';
+        html +=
+          '<button class="chip active" data-brochure-filter="all">All</button>';
+        html +=
+          '<button class="chip" data-brochure-filter="Lotte">Lotte</button>';
+        html +=
+          '<button class="chip" data-brochure-filter="Superindo">Superindo</button>';
+        html += "</div>";
+        Object.keys(storeGroups)
+          .sort()
+          .forEach((storeName) => {
+            html +=
+              '<div class="brochure-store-group" data-brochure-store="' +
+              storeName +
+              '">';
+            html += '<h3 class="promo-type-header">' + storeName + "</h3>";
+            Object.keys(storeGroups[storeName])
+              .sort()
+              .reverse()
+              .forEach((dateStr) => {
+                html +=
+                  '<h4 style="font-size:0.82rem;color:var(--gray-600);margin:0.5rem 0 0.3rem">' +
+                  dateStr +
+                  "</h4>";
+                html += '<div class="brochure-grid">';
+                storeGroups[storeName][dateStr].forEach((b) => {
+                  html += '<div class="brochure-card">';
+                  html +=
+                    '<div class="brochure-img-wrap" style="cursor:pointer">';
+                  html +=
+                    '<img src="' +
+                    b.image_path +
+                    '" alt="' +
+                    b.store +
+                    ' brochure" loading="lazy" style="width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;object-fit:cover;background:var(--gray-100)" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">';
+                  html +=
+                    '<div class="brochure-fallback" style="display:none;width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;align-items:center;justify-content:center;font-size:0.75rem;color:var(--gray-500);background:var(--gray-100)">' +
+                    b.store +
+                    " (" +
+                    b.count +
+                    " products)</div>";
+                  html +=
+                    '<div style="margin-top:0.3rem;font-size:0.78rem;color:var(--gray-700);font-weight:500">' +
+                    b.store +
+                    ' <span style="color:var(--gray-500);font-weight:400">(' +
+                    b.count +
+                    ")</span></div>";
+                  html += "</div>";
+                  html +=
+                    '<div class="brochure-products" style="display:none;margin-top:0.5rem;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem">';
+                  b.products.forEach((item) => {
+                    const normalized = normalizeProduct(item);
+                    html +=
+                      normalized.stores.length > 1
+                        ? buildMatchedCard(item)
+                        : buildSingleCard(item);
+                  });
+                  html += "</div></div>";
+                });
+                html += "</div>";
+              });
+            html += "</div>";
+          });
+        el.innerHTML = html;
+        el.querySelectorAll(".brochure-img-wrap").forEach((wrap) => {
+          wrap.addEventListener("click", () => {
+            const products = wrap.nextElementSibling;
+            if (products)
+              products.style.display =
+                products.style.display === "none" ? "grid" : "none";
+          });
+        });
+        el.querySelectorAll(".brochure-products .product-card").forEach(
+          (card) => {
+            card.addEventListener("click", () => {
+              const key = card.dataset.key;
+              document.querySelector('[data-tab="products"]').click();
+              setTimeout(() => expandCard(key), 100);
+            });
+            card.addEventListener("keydown", (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                document.querySelector('[data-tab="products"]').click();
+                setTimeout(() => expandCard(card.dataset.key), 100);
+              }
+            });
+          },
+        );
+        el.querySelectorAll("[data-brochure-filter]").forEach((chip) => {
+          chip.addEventListener("click", () => {
+            el.querySelectorAll("[data-brochure-filter]").forEach((c) =>
+              c.classList.remove("active"),
+            );
+            chip.classList.add("active");
+            const filter = chip.dataset.brochureFilter;
+            el.querySelectorAll(".brochure-store-group").forEach((group) => {
+              group.style.display =
+                filter === "all" || group.dataset.brochureStore === filter
+                  ? "block"
+                  : "none";
+            });
+          });
+        });
+      }
 
-loadData();
-startAutoRefresh();
-</script>
-</body>
+      // Tab navigation
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          if (tab.classList.contains("active")) return;
+          document
+            .querySelectorAll(".tab")
+            .forEach((t) => t.classList.remove("active"));
+          document
+            .querySelectorAll(".tab-view")
+            .forEach((v) => v.classList.remove("active"));
+          tab.classList.add("active");
+          const view = document.getElementById("view-" + tab.dataset.tab);
+          if (view) view.classList.add("active");
+          if (tab.dataset.tab === "promos") {
+            renderPromos();
+          }
+          if (tab.dataset.tab === "brochures") {
+            renderBrochures();
+          }
+        });
+      });
+
+      loadData();
+      startAutoRefresh();
+    </script>
+  </body>
 </html>

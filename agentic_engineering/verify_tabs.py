@@ -23,7 +23,9 @@ log = logging.getLogger("verify_tabs")
 
 CHROME_PATHS = [
     os.path.expanduser("~/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome"),
-    os.path.expanduser("~/.cache/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-linux64/chrome-headless-shell"),
+    os.path.expanduser(
+        "~/.cache/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-linux64/chrome-headless-shell"
+    ),
     "/usr/bin/chromium-browser",
     "/usr/bin/google-chrome",
     "/usr/bin/chromium",
@@ -83,7 +85,9 @@ def validate_brochures_tab(data: dict):
     return True
 
 
-def capture_screenshots(output_dir: str, chrome_path: str, base_url: str = "https://haqita.pages.dev"):
+def capture_screenshots(
+    output_dir: str, chrome_path: str, base_url: str = "https://haqita.pages.dev"
+):
     """Open the page with show_dummy=true using Selenium and capture screenshots per tab."""
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
@@ -144,15 +148,27 @@ def capture_screenshots(output_dir: str, chrome_path: str, base_url: str = "http
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Verify Cloudflare tab contents and capture screenshots")
-    parser.add_argument("--active-promo", default="output/html/active_promo.json",
-                        help="Path to active_promo.json")
-    parser.add_argument("--output-dir", default=".omo/evidence",
-                        help="Directory to save screenshots and evidence")
-    parser.add_argument("--base-url", default="https://haqita.pages.dev",
-                        help="Base URL for screenshot capture (default: https://haqita.pages.dev)")
-    parser.add_argument("--no-screenshots", action="store_true",
-                        help="Skip browser screenshots")
+    parser = argparse.ArgumentParser(
+        description="Verify Cloudflare tab contents and capture screenshots"
+    )
+    parser.add_argument(
+        "--active-promo",
+        default="output/html/active_promo.json",
+        help="Path to active_promo.json",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=".omo/evidence",
+        help="Directory to save screenshots and evidence",
+    )
+    parser.add_argument(
+        "--base-url",
+        default="https://haqita.pages.dev",
+        help="Base URL for screenshot capture (default: https://haqita.pages.dev)",
+    )
+    parser.add_argument(
+        "--no-screenshots", action="store_true", help="Skip browser screenshots"
+    )
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -188,7 +204,9 @@ def main():
         chrome_path = find_chrome()
         if chrome_path:
             log.info(f"Using Chrome: {chrome_path}")
-            screenshots_ok = capture_screenshots(args.output_dir, chrome_path, args.base_url)
+            screenshots_ok = capture_screenshots(
+                args.output_dir, chrome_path, args.base_url
+            )
             if not screenshots_ok:
                 log.error("[FAIL] Screenshot capture failed")
                 sys.exit(1)

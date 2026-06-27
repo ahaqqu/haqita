@@ -1,13 +1,9 @@
 """Unit tests for publish_html.py (Stage 4: Publish HTML)."""
 
 import json
-import os
-import pytest
 import sys
 import tempfile
-import shutil
 from pathlib import Path
-from unittest.mock import patch
 
 import scripts.publish_html as publish_html_mod
 
@@ -34,18 +30,33 @@ class TestPublishHtml:
             db_dir.mkdir(parents=True)
 
             hist_src = db_dir / "price_history.json"
-            hist_src.write_text(json.dumps({
-                "snapshots": [{
-                    "product_key": "a--b--100g", "name": "A", "brand": "B",
-                    "unit": "100 g", "date": "2026-05-17", "store": "Lotte",
-                    "price": 10000, "effective_unit_price": 10000,
-                    "promo": None, "valid_from": None, "valid_until": None,
-                    "bundle_size": 1, "promo_type": "single",
-                    "match_method": None, "match_confidence": None,
-                    "image_path": None,
-                }],
-                "metadata": {},
-            }))
+            hist_src.write_text(
+                json.dumps(
+                    {
+                        "snapshots": [
+                            {
+                                "product_key": "a--b--100g",
+                                "name": "A",
+                                "brand": "B",
+                                "unit": "100 g",
+                                "date": "2026-05-17",
+                                "store": "Lotte",
+                                "price": 10000,
+                                "effective_unit_price": 10000,
+                                "promo": None,
+                                "valid_from": None,
+                                "valid_until": None,
+                                "bundle_size": 1,
+                                "promo_type": "single",
+                                "match_method": None,
+                                "match_confidence": None,
+                                "image_path": None,
+                            }
+                        ],
+                        "metadata": {},
+                    }
+                )
+            )
 
             self._run_with_root(root)
 
@@ -109,29 +120,51 @@ class TestPublishHtml:
             db_dir.mkdir(parents=True)
 
             hist_src = db_dir / "price_history.json"
-            hist_src.write_text(json.dumps({
-                "snapshots": [
+            hist_src.write_text(
+                json.dumps(
                     {
-                        "product_key": "a--b--100g", "name": "Product A", "brand": "B",
-                        "unit": "100 g", "date": "2026-05-17", "store": "Lotte",
-                        "price": 10000, "effective_unit_price": 10000,
-                        "promo": None, "valid_from": None, "valid_until": None,
-                        "bundle_size": 1, "promo_type": "single",
-                        "match_method": None, "match_confidence": None,
-                        "image_path": None,
-                    },
-                    {
-                        "product_key": "a--b--100g", "name": "Product A", "brand": "B",
-                        "unit": "100 g", "date": "2026-05-17", "store": "Superindo",
-                        "price": 12000, "effective_unit_price": 12000,
-                        "promo": None, "valid_from": None, "valid_until": None,
-                        "bundle_size": 1, "promo_type": "single",
-                        "match_method": "exact", "match_confidence": 1.0,
-                        "image_path": None,
-                    },
-                ],
-                "metadata": {},
-            }))
+                        "snapshots": [
+                            {
+                                "product_key": "a--b--100g",
+                                "name": "Product A",
+                                "brand": "B",
+                                "unit": "100 g",
+                                "date": "2026-05-17",
+                                "store": "Lotte",
+                                "price": 10000,
+                                "effective_unit_price": 10000,
+                                "promo": None,
+                                "valid_from": None,
+                                "valid_until": None,
+                                "bundle_size": 1,
+                                "promo_type": "single",
+                                "match_method": None,
+                                "match_confidence": None,
+                                "image_path": None,
+                            },
+                            {
+                                "product_key": "a--b--100g",
+                                "name": "Product A",
+                                "brand": "B",
+                                "unit": "100 g",
+                                "date": "2026-05-17",
+                                "store": "Superindo",
+                                "price": 12000,
+                                "effective_unit_price": 12000,
+                                "promo": None,
+                                "valid_from": None,
+                                "valid_until": None,
+                                "bundle_size": 1,
+                                "promo_type": "single",
+                                "match_method": "exact",
+                                "match_confidence": 1.0,
+                                "image_path": None,
+                            },
+                        ],
+                        "metadata": {},
+                    }
+                )
+            )
 
             self._run_with_root(root)
 
@@ -233,18 +266,33 @@ class TestPublishHtml:
             db_dir.mkdir(parents=True)
 
             hist_src = db_dir / "price_history.json"
-            hist_src.write_text(json.dumps({
-                "snapshots": [{
-                    "product_key": "a--b--100g", "name": "Expired", "brand": "B",
-                    "unit": "100 g", "date": "2026-05-10", "store": "Lotte",
-                    "price": 10000, "effective_unit_price": 10000,
-                    "promo": None, "valid_from": "2026-05-01", "valid_until": "2026-05-15",
-                    "bundle_size": 1, "promo_type": "single",
-                    "match_method": None, "match_confidence": None,
-                    "image_path": None,
-                }],
-                "metadata": {},
-            }))
+            hist_src.write_text(
+                json.dumps(
+                    {
+                        "snapshots": [
+                            {
+                                "product_key": "a--b--100g",
+                                "name": "Expired",
+                                "brand": "B",
+                                "unit": "100 g",
+                                "date": "2026-05-10",
+                                "store": "Lotte",
+                                "price": 10000,
+                                "effective_unit_price": 10000,
+                                "promo": None,
+                                "valid_from": "2026-05-01",
+                                "valid_until": "2026-05-15",
+                                "bundle_size": 1,
+                                "promo_type": "single",
+                                "match_method": None,
+                                "match_confidence": None,
+                                "image_path": None,
+                            }
+                        ],
+                        "metadata": {},
+                    }
+                )
+            )
 
             review_src = db_dir / "review_queue.json"
             review_src.write_text(json.dumps({"items": []}))

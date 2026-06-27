@@ -77,12 +77,12 @@ To clean a remote D1 database:
 
 ## Served URLs
 
-| URL | Content |
-|---|---|
-| `GET /lotte/all-promo-mart` | Dummy Lotte promo page |
-| `GET /superindo/promosi/katalog-super-hemat/` | Dummy Superindo katalog page |
-| `GET /superindo/promosi/promo-koran/` | Dummy Superindo promo koran page |
-| `GET /lotte/promo/<filename>` | Lotte brochure image from `agentic_engineering/images/lotte/` |
-| `GET /superindo/promo/<filename>` | Superindo brochure image from `agentic_engineering/images/superindo/` |
+| URL                                           | Content                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------- |
+| `GET /lotte/all-promo-mart`                   | Dummy Lotte promo page                                                |
+| `GET /superindo/promosi/katalog-super-hemat/` | Dummy Superindo katalog page                                          |
+| `GET /superindo/promosi/promo-koran/`         | Dummy Superindo promo koran page                                      |
+| `GET /lotte/promo/<filename>`                 | Lotte brochure image from `agentic_engineering/images/lotte/`         |
+| `GET /superindo/promo/<filename>`             | Superindo brochure image from `agentic_engineering/images/superindo/` |
 
 All responses include permissive CORS headers (`Access-Control-Allow-Origin: *`).
