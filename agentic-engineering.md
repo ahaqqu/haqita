@@ -25,7 +25,7 @@ bash verify.sh
 ```
 
 - `prepare.sh` creates the venv, installs `requirements.txt`, checks `GEMINI_API_KEY`, and runs `pytest tests/matching/ -v` as a gate.
-- `verify.sh` creates `/tmp/haqita_verify_*`, starts `agentic_engineering/dummy_server.py`, invokes `haqita.sh` in batch mode, runs Stage 5 with `DUMMY_DATA=1`, runs matching tests, verifies tab content via `?show_dummy=true`, and captures screenshots.
+- `verify.sh` creates `/tmp/haqita_verify_*`, starts `agentic_engineering/dummy_server.py`, invokes `haqita.sh` in batch mode, runs sync_cloudflare with `DUMMY_DATA=1`, runs matching tests, verifies tab content via `?show_dummy=true`, and captures screenshots.
 
 ## Isolation strategy
 

@@ -161,7 +161,7 @@ else:
 done
 
 # ---------------------------------------------------------------------------
-# 4. Run Stage 5 sync with DUMMY_DATA=1
+# 4. Run sync_cloudflare (standalone sync) with DUMMY_DATA=1
 # ---------------------------------------------------------------------------
 if [[ "$SKIP_SYNC" -eq 0 ]]; then
     echo "=== 4. Sync dummy data to Cloudflare ==="

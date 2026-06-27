@@ -232,8 +232,8 @@ menu() {
         echo "  [3] Stage 2: OCR"
         echo "  [4] Stage 3: Consolidation"
         echo "  [5] Stage 4: Publish HTML"
-        echo "  [6] Stage 5: Sync to Cloudflare"
-        echo "  [7] Stage 6: Deploy"
+        echo "  [6] Sync to Cloudflare"
+        echo "  [7] Stage 5: Deploy + Sync"
         echo "  [8] Start HTTP server"
         echo "  [9] Tests"
         echo "  [10] Health check"
@@ -292,8 +292,7 @@ full_pipeline() {
     echo "  Stage 2: OCR all scraped images"
     echo "  Stage 3: Consolidate (update database)"
     echo "  Stage 4: Publish HTML"
-    echo "  Stage 5: Sync to Cloudflare"
-    echo "  Stage 6: Deploy"
+    echo "  Stage 5: Deploy + Sync (merge of old Sync & Deploy)"
     echo
     read -n1 -rsp "Press any key to start, or Ctrl+C to cancel..."
     echo
@@ -718,7 +717,7 @@ stage_cloudflare_sync() {
     while true; do
         clear
         echo "========================================"
-        echo "  Stage 5: Sync to Cloudflare"
+        echo "  Sync to Cloudflare (standalone)"
         echo "========================================"
         echo
         echo "  [1] Run sync"
@@ -774,7 +773,7 @@ stage_deploy() {
     while true; do
         clear
         echo "========================================"
-        echo "  Stage 6: Deploy"
+        echo "  Stage 5: Deploy + Sync"
         echo "========================================"
         echo
         echo "  [1] Run deploy"

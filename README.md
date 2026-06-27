@@ -20,21 +20,14 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
                                                   (price_history,            active_promo.json
                                                    catalog, review,          price_history.json
                                                    consolidated_*)           promo_catalog.json
-                                                                                review_queue.json
-                                                                                index.html
-                                                                            │
-                                                                            ▼
-                                                                      ┌──────────────────┐
-                                                                      │  Stage 5         │
-                                                                      │  Sync to         │
-                                                                      │  Cloudflare      │
-                                                                      └──────────────────┘
-                                                                            │
-                                                                            ▼
-                                                                      ┌──────────────────┐
-                                                                      │  Stage 6         │
-                                                                      │  Deploy          │
-                                                                      └──────────────────┘
+                                                                                 review_queue.json
+                                                                                 index.html
+                                                                             │
+                                                                             ▼
+                                                                       ┌──────────────────┐
+                                                                       │  Stage 5         │
+                                                                       │  Deploy + Sync   │
+                                                                       └──────────────────┘
 ```
 
 Each stage runs independently. If a stage fails, select **[1] → [4] Resume** to continue from where it left off — completed stages are skipped automatically.
@@ -65,7 +58,7 @@ Launches an interactive menu. Select **[1]** for the full pipeline, or run indiv
 
 ## Viewing the HTML UI
 
-After a full pipeline run, the local UI is served automatically by **Stage 6: Deploy** at `http://localhost:8080` (when `deploy.local: true` in `config.yaml`). You can also start the server manually:
+After a full pipeline run, the local UI is served automatically by **Stage 5: Deploy + Sync** at `http://localhost:8080` (when `deploy.local: true` in `config.yaml`). You can also start the server manually:
 
 ```cmd
 python -m http.server 8080
@@ -92,8 +85,8 @@ Run `haqita.bat` (Windows) or `./haqita.sh` (Ubuntu/WSL) to access the interacti
  [3] Stage 2: OCR             → OCR only (submenu: All, Lotte, Superindo, Specific, Dry-run)
  [4] Stage 3: Consolidation   → consolidate only (submenu: Run, Dry-run, Custom dir)
  [5] Stage 4: Publish HTML    → generate active_promo.json + copy for browser (Run, Dry-run, Verbose)
- [6] Stage 5: Sync to Cloudflare → sync data to Cloudflare API (Run, Dry-run, Verbose)
- [7] Stage 6: Deploy          → deploy local dev server and/or Cloudflare Pages (Run, Dry-run, Verbose)
+ [6] Sync to Cloudflare       → sync data to Cloudflare API (standalone; sync also runs as part of deploy)
+ [7] Deploy + Sync            → deploy to Cloudflare Pages + sync, or local dev server (Run, Dry-run, Verbose)
  [8] Start HTTP server        → start python -m http.server 8080
  [9] Tests                    → submenu: Integration tests, Matching tests
  [10] Health check            → pre-flight verification
@@ -158,8 +151,8 @@ For end-to-end verification after a full pipeline run:
 | [staging/ocr.md](docs/staging/ocr.md)                                       | Stage 2: OCR — provider config, output schema, validation                |
 | [staging/consolidation.md](docs/staging/consolidation.md)                   | Stage 3: Consolidation — matching pipeline, schemas, gate details        |
 | [staging/publish-html.md](docs/staging/publish-html.md)                     | Stage 4: Publish HTML — active_promo.json generation, HTML UI            |
-| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md)               | Stage 5: Sync to Cloudflare — API batch sync, R2 image upload            |
-| [staging/deploy-pages.md](docs/staging/deploy-pages.md)                     | Stage 6: Deploy — local dev server and Cloudflare Pages deploy           |
+| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md)               | Sync to Cloudflare — API batch sync, R2 image upload (standalone or via deploy) |
+| [staging/deploy-pages.md](docs/staging/deploy-pages.md)                     | Stage 5: Deploy + Sync — version-aware Cloudflare Pages deploy + sync    |
 | [staging/orchestrator.md](docs/staging/orchestrator.md)                     | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
 | [agentic-engineering.md](agentic-engineering.md)                            | Agentic pipeline verification with dummy data isolation                  |
 | [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md)         | Cloudflare API sync endpoints and schemas                                |
@@ -187,8 +180,8 @@ haqita/
 │   ├── ocr/                          ← Stage 2: OCR processors
 │   ├── consolidate.py                ← Stage 3: Merge + match, write to database/
 │   ├── publish_html.py               ← Stage 4: Generate active_promo.json + copy
-│   ├── sync_cloudflare.py            ← Stage 5: Sync data to Cloudflare API/R2
-│   ├── deploy.py                     ← Stage 6: Deploy local dev server / Cloudflare Pages
+│   ├── sync_cloudflare.py            ← Sync data to Cloudflare API/R2 (standalone or called by deploy.py)
+│   ├── deploy.py                     ← Stage 5: Version-aware Cloudflare Pages deploy + sync, local dev server
 │   ├── orchestrator.py               ← Pipeline orchestrator
 │   ├── health_check.py               ← Pre-flight verification
 │   └── matching/                     ← Matching pipeline (7 gates)
