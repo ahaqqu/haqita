@@ -18,6 +18,7 @@ import http.server
 import json
 import logging
 import os
+import re
 import shutil
 import signal
 import socket
@@ -246,6 +247,50 @@ def _wait_for_port(port: int, timeout: float = 30.0) -> bool:
     return False
 
 
+def _detect_wrangler_port(
+    proc: subprocess.Popen,
+    expected_port: int,
+    timeout: float = 60.0,
+) -> int | None:
+    """Read wrangler's stdout/stderr to find the port it bound to.
+
+    Returns the detected port, or ``None`` on timeout.
+    """
+    port_pattern = re.compile(r"Ready on http://localhost:(\d+)")
+    deadline = time.time() + timeout
+
+    def _read_stream(stream: subprocess.PIPE, results: list) -> None:
+        for line in iter(stream.readline, ""):
+            results.append(line)
+
+    out_lines: list[str] = []
+    err_lines: list[str] = []
+    out_thread = threading.Thread(target=_read_stream, args=(proc.stdout, out_lines), daemon=True)
+    err_thread = threading.Thread(target=_read_stream, args=(proc.stderr, err_lines), daemon=True)
+    out_thread.start()
+    err_thread.start()
+
+    while time.time() < deadline:
+        for line in out_lines + err_lines:
+            m = port_pattern.search(line)
+            if m:
+                return int(m.group(1))
+        if proc.poll() is not None:
+            break
+        time.sleep(0.2)
+
+    # Fall back to expected port if wrangler already bound to it
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(1)
+            sock.connect(("127.0.0.1", expected_port))
+        return expected_port
+    except OSError:
+        pass
+
+    return None
+
+
 def deploy_local(dry_run: bool, verbose: bool) -> dict:
     """Start local wrangler dev server and static HTTP server.
 
@@ -267,23 +312,32 @@ def deploy_local(dry_run: bool, verbose: bool) -> dict:
 
     _register_cleanup()
 
-    # Start wrangler pages dev in web/ on port 8787.
-    logger.info("Starting wrangler pages dev --local on port %d...", LOCAL_WRANGLER_PORT)
+    # Start wrangler pages dev in web/ and detect the actual port.
+    logger.info("Starting wrangler pages dev --local...")
     wrangler_proc = subprocess.Popen(
         ["npm", "run", "dev"],
         cwd=WEB_DIR,
-        stdout=subprocess.PIPE if not verbose else None,
-        stderr=subprocess.PIPE if not verbose else None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
     )
     _background_procs.append(wrangler_proc)
 
-    if not _wait_for_port(LOCAL_WRANGLER_PORT, timeout=60.0):
-        logger.error("wrangler dev did not start on port %d in time.", LOCAL_WRANGLER_PORT)
+    detected_port = _detect_wrangler_port(wrangler_proc, LOCAL_WRANGLER_PORT, timeout=60.0)
+    if detected_port is None:
+        logger.error("wrangler dev did not start in time.")
         _terminate_background()
         return {"status": "error", "error": "wrangler_dev_timeout"}
 
-    logger.info("  wrangler dev ready on http://localhost:%d", LOCAL_WRANGLER_PORT)
+    if detected_port != LOCAL_WRANGLER_PORT:
+        logger.warning(
+            "wrangler dev started on port %d instead of %d.",
+            detected_port,
+            LOCAL_WRANGLER_PORT,
+        )
+
+    wrangler_port = detected_port
+    logger.info("  wrangler dev ready on http://localhost:%d", wrangler_port)
 
     # Start static HTTP server in project root on port 8080.
     logger.info("Starting static HTTP server on port %d...", LOCAL_HTTP_PORT)
@@ -324,7 +378,7 @@ def deploy_local(dry_run: bool, verbose: bool) -> dict:
         httpd.shutdown()
         _terminate_background()
 
-    return {"status": "complete", "ports": [LOCAL_HTTP_PORT, LOCAL_WRANGLER_PORT]}
+    return {"status": "complete", "ports": [LOCAL_HTTP_PORT, wrangler_port]}
 
 
 def _get_local_head_sha() -> str:

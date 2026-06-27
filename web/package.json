@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler pages dev --local",
+    "dev": "wrangler pages dev --local --port 8787",
     "deploy": "wrangler pages deploy . --project-name haqita",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
