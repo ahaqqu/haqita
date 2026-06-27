@@ -9,7 +9,8 @@
 | Location | Local (via `wrangler d1 execute --local`) / Cloudflare (production) |
 | Schema file | `web/schema.sql` |
 | Seed script | `scripts/seed_d1.py` |
-| Schema version | 1.0 |
+| Migration | `web/migrations/001_add_dummy_data.sql` — adds `dummy_data` column to all tables |
+| Schema version | 1.1 |
 
 ## Tables
 
@@ -22,6 +23,7 @@ Stores (supermarkets) with display colors.
 | `id` | INTEGER | NO | Auto-incrementing primary key | 1 |
 | `name` | TEXT | NO | Store name (unique) | `Lotte` |
 | `color` | TEXT | YES | Display color hex code | `#0057A8` |
+| `dummy_data` | INTEGER | NO | Dummy data flag (0=real, 1=dummy) | `0` |
 | `created_at` | DATETIME | YES | Row creation timestamp | `2026-06-21 12:00:00` |
 
 **Constraints:**
@@ -41,6 +43,7 @@ Product catalog entries.
 | `unit` | TEXT | YES | Unit display string | `1440 g` |
 | `unit_type` | TEXT | YES | Unit type classification | `weight`, `volume`, `unit` |
 | `unit_value_g` | REAL | YES | Normalized unit value in grams | `1440.0` |
+| `dummy_data` | INTEGER | NO | Dummy data flag (0=real, 1=dummy) | `0` |
 | `created_at` | DATETIME | YES | Row creation timestamp | `2026-06-21 12:00:00` |
 
 **Constraints:**
@@ -69,6 +72,7 @@ Core price data — append-only with upsert by unique key. Each row represents a
 | `match_method` | TEXT | YES | Matching method | `exact`, `embedding`, `ai` |
 | `match_confidence` | REAL | YES | Match confidence (0.0-1.0) | `0.95` |
 | `standardized_promo` | TEXT | YES | JSON object with standardized promo fields | See below |
+| `dummy_data` | INTEGER | NO | Dummy data flag (0=real, 1=dummy) | `0` |
 | `created_at` | DATETIME | YES | Row creation timestamp | `2026-06-21 12:00:00` |
 
 **Constraints:**
@@ -90,6 +94,7 @@ Promo catalog — derived from the latest pipeline run.
 | `product_count` | INTEGER | YES | Number of products with this promo | `64` |
 | `stores` | TEXT | YES | JSON object mapping store to count | `{"Superindo": 64}` |
 | `example_products` | TEXT | YES | JSON array of example product names | `["Rinso", "Bango"]` |
+| `dummy_data` | INTEGER | NO | Dummy data flag (0=real, 1=dummy) | `0` |
 | `updated_at` | DATETIME | YES | Row update timestamp | `2026-06-21 12:00:00` |
 
 **Constraints:**

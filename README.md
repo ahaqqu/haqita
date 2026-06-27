@@ -129,6 +129,19 @@ Via `haqita.bat`/`./haqita.sh` → Option [9]:
 | **1** | Integration tests (OCR on real images) |
 | **2** | Matching pipeline tests (124 unit tests) |
 
+### Agentic-engineering verification
+
+Dedicated scripts for isolated, production-safe dummy runs:
+
+```bash
+bash prepare.sh          # install deps, verify .env, gate on unit tests
+./haqita.sh              # interactive pipeline
+HAQITA_BATCH=1 ./haqita.sh  # non-interactive batch mode
+bash verify.sh           # end-to-end verification in temp workspace
+```
+
+See [agentic-engineering.md](agentic-engineering.md) for details.
+
 For end-to-end verification after a full pipeline run:
 
 - Local UI: `curl -s http://localhost:8080/` returns the HTML page
@@ -147,6 +160,7 @@ For end-to-end verification after a full pipeline run:
 | [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md) | Stage 5: Sync to Cloudflare — API batch sync, R2 image upload |
 | [staging/deploy-pages.md](docs/staging/deploy-pages.md) | Stage 6: Deploy — local dev server and Cloudflare Pages deploy |
 | [staging/orchestrator.md](docs/staging/orchestrator.md) | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
+| [agentic-engineering.md](agentic-engineering.md) | Agentic pipeline verification with dummy data isolation |
 | [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md) | Cloudflare API sync endpoints and schemas |
 | [staging/security-configuration.md](docs/staging/security-configuration.md) | Security headers, secrets, and WAF configuration |
 | [database/price_history.md](docs/database/price_history.md) | `price_history.json` — append-only price snapshots (schema v1.2) |
@@ -159,6 +173,9 @@ For end-to-end verification after a full pipeline run:
 haqita/
 ├── haqita.bat                        ← Interactive launch menu (Windows)
 ├── haqita.sh                         ← Interactive launch menu (Ubuntu/WSL)
+├── prepare.sh                        ← Dependency installer + unit-test gate for agentic runs
+├── verify.sh                         ← End-to-end dummy pipeline verification in temp workspace
+├── agentic-engineering.md            ← Guide for isolated dummy pipeline runs
 ├── requirements.txt                  ← Python dependencies
 ├── index.html                        ← Main UI: product browser (search, filter, sort, charts)
 ├── admin.html                        ← Admin UI: review queue management

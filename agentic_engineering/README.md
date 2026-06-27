@@ -21,7 +21,7 @@ Dummy supermarket server running at http://localhost:18080
 Run the included verification script to confirm the server and scraper URL overrides work:
 
 ```bash
-bash verify.sh
+bash agentic_engineering/verify.sh
 ```
 
 This starts the server, runs both scrapers in dry-run mode, and asserts that Lotte and Superindo each discover the expected brochure images.
@@ -86,8 +86,3 @@ To clean a remote D1 database:
 | `GET /superindo/promo/<filename>` | Superindo brochure image from `agentic_engineering/images/superindo/` |
 
 All responses include permissive CORS headers (`Access-Control-Allow-Origin: *`).
- *`).
-*`).
-
-*`).
-*`).

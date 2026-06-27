@@ -16,7 +16,11 @@
 
 Returns all stores.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
 ```bash
@@ -41,7 +45,11 @@ curl http://localhost:8787/api/v1/stores
 
 Returns all product categories.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
 ```bash
@@ -73,8 +81,10 @@ Returns paginated products with filtering and sorting.
 | `category` | string | No | — | Filter by category |
 | `has_promo` | enum | No | — | `true` or `false` |
 | `sort` | enum | No | `name` | `name`, `cheapest`, `savings`, `expiry` |
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl "http://localhost:8787/api/v1/products?limit=5&sort=cheapest"
 ```
@@ -138,7 +148,11 @@ curl "http://localhost:8787/api/v1/products?limit=5&sort=cheapest"
 
 Returns a single product with all store prices.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
 ```bash
@@ -164,8 +178,10 @@ Returns price history for a product.
 | `from` | date (YYYY-MM-DD) | No | Start date |
 | `to` | date (YYYY-MM-DD) | No | End date |
 | `store` | string | No | Filter by store |
+| `show_dummy` | enum | No | `true` to return only dummy data; omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl "http://localhost:8787/api/v1/products/rinso-detergen-bubuk-anti-noda-pck-1440gr--rinso--1440gr/history?from=2026-06-01&to=2026-06-30"
 ```
@@ -218,6 +234,7 @@ Returns raw price data with filtering.
 | `cursor` | string | No | — | Base64-encoded pagination cursor |
 | `product_key` | string | No | — | Filter by product key |
 | `store` | string | No | — | Filter by store name |
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
 ```bash
@@ -240,8 +257,10 @@ Searches products by name, brand, or unit.
 |------|------|----------|---------|-------------|
 | `q` | string | **Yes** | — | Search query (min 1 char, max 200) |
 | `limit` | integer | No | 20 | Max results (1-50) |
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl "http://localhost:8787/api/v1/search?q=indomie&limit=10"
 ```
@@ -265,7 +284,11 @@ curl "http://localhost:8787/api/v1/search?q=indomie&limit=10"
 
 Returns all promos sorted by product count descending.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
 ```bash
@@ -297,7 +320,11 @@ curl http://localhost:8787/api/v1/promos
 
 Returns brochure metadata grouped by image.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
 ```bash
@@ -327,7 +354,11 @@ curl http://localhost:8787/api/v1/brochures
 
 Returns summary statistics.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `show_dummy` | enum | No | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
 ```bash

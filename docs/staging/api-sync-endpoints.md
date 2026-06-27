@@ -38,6 +38,7 @@ Upserts stores, products, prices, and promos in a single batch. Idempotent — r
 |-------|------|----------|-------------|
 | `source` | string | Yes | Source identifier (e.g., `haqita-pipeline-v1`) |
 | `sync_run_id` | string | Yes | Unique sync run ID (e.g., `20260621_120000`) |
+| `dummy_data` | boolean | No | `true` marks all rows in this batch as dummy data (default `false`) |
 | `stores` | array | No | Array of store objects (default `[]`) |
 | `products` | array | No | Array of product objects (default `[]`) |
 | `prices` | array | No | Array of price objects (default `[]`) |
