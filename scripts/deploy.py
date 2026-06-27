@@ -349,7 +349,7 @@ def _get_deployed_version(api_url: str, timeout: float = 5.0) -> str | None:
         logger.info("  Version endpoint returned status %s", resp.status_code)
     except requests.RequestException as exc:
         logger.info("  Could not reach version endpoint: %s", exc)
-    except (ValueError, TypeError, KeyError) as exc:
+    except (ValueError, TypeError) as exc:
         logger.info("  Could not parse version response: %s", exc)
     return None
 
@@ -469,7 +469,8 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
         logger.error("Sync after deploy failed: %s", sync_result.get("error"))
         return {"status": "error", "error": sync_result.get("error")}
 
-    return {"status": "complete", "url": "https://haqita.pages.dev", "deploy_needed": needs_deploy}
+    status = "dry_run" if dry_run else "complete"
+    return {"status": status, "url": "https://haqita.pages.dev", "deploy_needed": needs_deploy}
 
 
 def main() -> None:

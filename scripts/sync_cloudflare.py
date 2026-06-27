@@ -495,6 +495,9 @@ def run_sync(
         A dict with keys ``status`` ("ok" or "error") and ``sync_run_id``
         on success, or ``status`` ``"error"`` with ``error`` detail on failure.
     """
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+
     if dry_run:
         logger.info("[DRY-RUN] No data will be sent to the API or R2.")
         logger.info("")
