@@ -438,11 +438,16 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
     if needs_deploy:
         if not dry_run:
             logger.info("Deployed API is stale — deploying new version...")
-            _set_commit_sha_secret(local_sha, dry_run=False)
 
         deploy_result = _deploy_to_cloudflare(dry_run, verbose)
         if deploy_result.get("status") == "error":
             return deploy_result
+
+        # Set COMMIT_SHA secret only after deploy succeeds, so version tracking
+        # is consistent: the running API matches the SHA we recorded.
+        if not dry_run:
+            if not _set_commit_sha_secret(local_sha, dry_run=False):
+                logger.warning("Failed to set COMMIT_SHA secret — version tracking will be broken on the next run")
     else:
         logger.info("Deployed API is up to date (SHA matches). Skipping deploy.")
         if dry_run:
