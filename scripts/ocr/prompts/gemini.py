@@ -4,7 +4,7 @@ Each item must follow this exact structure:
 {
   "name": "full product name as shown",
   "brand": "brand name if visible, else null",
-  "unit": "size as shown (e.g. '85 g', '1.5 L', '6 x 45 ml'), else null",
+  "unit": "size as shown (e.g. '85 g', '1.5 L', '6 x 45 ml'). Look inside the product name if no separate size column exists. Use 'pcs' only for items sold per piece with no weight/volume shown",
   "price": <integer in IDR, numbers only, as shown in brochure as per definition in rules below>,
   "promo": <an array of promo texts if shown (e.g. 'MAX 1', 'LOTTE MART Point SPECIAL PRICE', 'Dapat 5 pcs', 'BUY 1 GET 1'), else null>,
   "period": "validity dates if shown, else null"

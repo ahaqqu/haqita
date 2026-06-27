@@ -47,14 +47,39 @@ _UNIT_CORRECTIONS = [
     (r'\bl\b', '1'),
 ]
 
+# Extracts the first unit-like token from a product name as a fallback when
+# the OCR model returns null for the dedicated unit field.
+_UNIT_EXTRACT_RE = re.compile(
+    r'\b(\d+(?:[.,]\d+)?(?:\s*[×xX]\s*\d+(?:[.,]\d+)?)?)\s*'
+    r'(kg|g|gram|ml|l|liter|lt|pcs|pack|sachet|bks|bungkus|botol|kaleng|'
+    r'pck|pch|tub|box|bag|set|s)\b',
+    re.IGNORECASE,
+)
 
-def clean_unit(raw: str | None) -> str | None:
-    if not raw:
+
+def _extract_unit_from_name(name: str | None) -> str | None:
+    """Return the first unit-like token found in the product name, or None."""
+    if not name:
         return None
-    s = raw.strip()
-    for pattern, replacement in _UNIT_CORRECTIONS:
-        s = re.sub(pattern, replacement, s, flags=re.IGNORECASE)
-    return s if s else None
+    m = _UNIT_EXTRACT_RE.search(name)
+    if not m:
+        return None
+    qty = m.group(1).replace('×', 'x').lower()
+    unit = m.group(2).lower()
+    # Normalise "liter" variants to "l" for consistency with parse_unit_to_base
+    if unit in ('liter', 'lt'):
+        unit = 'l'
+    return f"{qty} {unit}".strip()
+
+
+def clean_unit(raw: str | None, name: str | None = None) -> str | None:
+    if raw:
+        s = raw.strip()
+        for pattern, replacement in _UNIT_CORRECTIONS:
+            s = re.sub(pattern, replacement, s, flags=re.IGNORECASE)
+        return s if s else None
+    # Fallback: many brochures put the size inside the product name.
+    return _extract_unit_from_name(name)
 
 
 def _normalize_promo(promo) -> list[str] | None:
@@ -76,10 +101,14 @@ def validate_product(raw: dict, image_source: str) -> tuple[dict | None, str | N
     if price is None:
         return None, f'price_invalid: {raw.get("price")}'
 
+    unit = clean_unit(raw.get('unit'), name)
+    if not unit:
+        return None, 'unit_missing'
+
     return {
         'name': name,
         'brand': str(raw['brand']).strip() if raw.get('brand') else None,
-        'unit': clean_unit(raw.get('unit')),
+        'unit': unit,
         'price': price,
         'promo': _normalize_promo(raw.get('promo')),
         'period': str(raw['period']).strip() if raw.get('period') else None,

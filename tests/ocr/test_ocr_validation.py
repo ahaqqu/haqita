@@ -53,40 +53,58 @@ class TestValidateProduct:
         assert "price" in reason
 
     def test_brand_preserved(self):
-        raw = {"name": "ABC Kecap", "brand": "ABC", "price": 5000}
+        raw = {"name": "ABC Kecap", "brand": "ABC", "unit": "100 ml", "price": 5000}
         result, reason = validate_product(raw, "test.jpg")
         assert result is not None
         assert result["brand"] == "ABC"
 
     def test_missing_brand(self):
-        raw = {"name": "Gula Pasir", "price": 15000}
+        raw = {"name": "Gula Pasir", "unit": "1 kg", "price": 15000}
         result, reason = validate_product(raw, "test.jpg")
         assert result is not None
         assert result["brand"] is None
 
     def test_promo_preserved(self):
-        raw = {"name": "Item", "promo": ["DAPAT 2 pcs"], "price": 10000}
+        raw = {"name": "Item", "unit": "1 pcs", "promo": ["DAPAT 2 pcs"], "price": 10000}
         result, reason = validate_product(raw, "test.jpg")
         assert result is not None
         assert result["promo"] == ["DAPAT 2 pcs"]
 
     def test_image_source_set(self):
-        raw = {"name": "Item", "price": 5000}
+        raw = {"name": "Item", "unit": "1 pcs", "price": 5000}
         result, reason = validate_product(raw, "promo_abc.jpg")
         assert result is not None
         assert result["image_source"] == "promo_abc.jpg"
 
     def test_ocr_confidence_default(self):
-        raw = {"name": "Item", "price": 5000}
+        raw = {"name": "Item", "unit": "1 pcs", "price": 5000}
         result, reason = validate_product(raw, "test.jpg")
         assert result is not None
         assert result["ocr_confidence"] == 1.0
 
     def test_ocr_raw_price(self):
-        raw = {"name": "Item", "price": "Rp 5.000"}
+        raw = {"name": "Item", "unit": "1 pcs", "price": "Rp 5.000"}
         result, reason = validate_product(raw, "test.jpg")
         assert result is not None
         assert result["ocr_raw_price"] == "Rp 5.000"
+
+    def test_missing_unit(self):
+        raw = {"name": "Item", "price": 5000}
+        result, reason = validate_product(raw, "test.jpg")
+        assert result is None
+        assert reason == "unit_missing"
+
+    def test_null_unit(self):
+        raw = {"name": "Item", "unit": None, "price": 5000}
+        result, reason = validate_product(raw, "test.jpg")
+        assert result is None
+        assert reason == "unit_missing"
+
+    def test_unit_extracted_from_name(self):
+        raw = {"name": "Indomie Goreng 85g", "price": 15000}
+        result, reason = validate_product(raw, "test.jpg")
+        assert result is not None
+        assert result["unit"] == "85 g"
 
 
 class TestParseOcrJson:

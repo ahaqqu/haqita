@@ -70,3 +70,15 @@ class TestCleanUnit:
 
     def test_clean_unchanged(self):
         assert clean_unit("85 g") == "85 g"
+
+    def test_clean_extracts_from_name(self):
+        assert clean_unit(None, "Indomie Goreng 85g") == "85 g"
+
+    def test_clean_extracts_liter_from_name(self):
+        assert clean_unit(None, "Frisian Flag 946ml") == "946 ml"
+
+    def test_clean_extracts_multipack_from_name(self):
+        assert clean_unit(None, "Aqua 6 x 450 ml") == "6 x 450 ml"
+
+    def test_clean_returns_none_when_no_name_match(self):
+        assert clean_unit(None, "Fresh Apple") is None
