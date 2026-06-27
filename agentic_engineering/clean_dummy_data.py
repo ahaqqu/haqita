@@ -59,7 +59,12 @@ def clean_d1_local() -> None:
     for db_file in d1_dir.rglob("*.sqlite"):
         try:
             conn = sqlite3.connect(str(db_file))
-            tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            tables = {
+                r[0]
+                for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
             if {"stores", "products", "prices", "promos"} <= tables:
                 for table in ["prices", "promos", "products", "stores"]:
                     conn.execute(f"DELETE FROM {table}")
@@ -86,7 +91,9 @@ def clean_d1_remote(db_name: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Clean generated pipeline state")
-    parser.add_argument("--d1-local", action="store_true", help="Clean local wrangler D1 SQLite")
+    parser.add_argument(
+        "--d1-local", action="store_true", help="Clean local wrangler D1 SQLite"
+    )
     parser.add_argument("--d1-db-name", help="Clean remote D1 database via wrangler")
     args = parser.parse_args()
 

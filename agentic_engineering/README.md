@@ -7,7 +7,7 @@ This directory contains a lightweight, self-contained HTTP server that serves st
 From the repository root:
 
 ```bash
-python agentic_engineering/dummy/dummy_server.py
+python agentic_engineering/dummy_server.py
 ```
 
 The server binds to `0.0.0.0:18080` and prints:
@@ -21,7 +21,7 @@ Dummy supermarket server running at http://localhost:18080
 Run the included verification script to confirm the server and scraper URL overrides work:
 
 ```bash
-agentic_engineering/dummy/verify.sh
+bash agentic_engineering/verify.sh
 ```
 
 This starts the server, runs both scrapers in dry-run mode, and asserts that Lotte and Superindo each discover the expected brochure images.
@@ -41,10 +41,10 @@ python scripts/scrapers/superindo.py --dry-run
 
 ## Image fixtures
 
-All brochure images are copied into `agentic_engineering/dummy/images/` so the dummy server is completely self-contained. Deleting `database/scrape/` does not break the dummy sites.
+All brochure images are copied into `agentic_engineering/images/` so the dummy server is completely self-contained. Deleting `database/scrape/` does not break the dummy sites.
 
 ```
-agentic_engineering/dummy/images/
+agentic_engineering/images/
 ├── lotte/
 │   ├── HD-1_a23cff43.jpeg
 │   ├── HD-2_7bbd2862.jpeg
@@ -60,29 +60,29 @@ agentic_engineering/dummy/images/
 After a pipeline run, reset all generated state so the next run starts fresh:
 
 ```bash
-.venv/bin/python agentic_engineering/dummy/clean_dummy_data.py
+.venv/bin/python agentic_engineering/clean_dummy_data.py
 ```
 
 This removes local stage results, scraper/OCR state, OCR outputs, `database/*.json`, and `output/html/*`. To also clean a local wrangler D1 SQLite file:
 
 ```bash
-.venv/bin/python agentic_engineering/dummy/clean_dummy_data.py --d1-local
+.venv/bin/python agentic_engineering/clean_dummy_data.py --d1-local
 ```
 
 To clean a remote D1 database:
 
 ```bash
-.venv/bin/python agentic_engineering/dummy/clean_dummy_data.py --d1-db-name haqita-db
+.venv/bin/python agentic_engineering/clean_dummy_data.py --d1-db-name haqita-db
 ```
 
 ## Served URLs
 
-| URL | Content |
-|---|---|
-| `GET /lotte/all-promo-mart` | Dummy Lotte promo page |
-| `GET /superindo/promosi/katalog-super-hemat/` | Dummy Superindo katalog page |
-| `GET /superindo/promosi/promo-koran/` | Dummy Superindo promo koran page |
-| `GET /lotte/promo/<filename>` | Lotte brochure image from `agentic_engineering/dummy/images/lotte/` |
-| `GET /superindo/promo/<filename>` | Superindo brochure image from `agentic_engineering/dummy/images/superindo/` |
+| URL                                           | Content                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------- |
+| `GET /lotte/all-promo-mart`                   | Dummy Lotte promo page                                                |
+| `GET /superindo/promosi/katalog-super-hemat/` | Dummy Superindo katalog page                                          |
+| `GET /superindo/promosi/promo-koran/`         | Dummy Superindo promo koran page                                      |
+| `GET /lotte/promo/<filename>`                 | Lotte brochure image from `agentic_engineering/images/lotte/`         |
+| `GET /superindo/promo/<filename>`             | Superindo brochure image from `agentic_engineering/images/superindo/` |
 
 All responses include permissive CORS headers (`Access-Control-Allow-Origin: *`).

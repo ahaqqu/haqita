@@ -8,9 +8,10 @@ from pathlib import Path
 HOST = "0.0.0.0"
 PORT = 18080
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-PAGES_DIR = PROJECT_ROOT / "agentic_engineering" / "dummy" / "pages"
-IMAGES_DIR = PROJECT_ROOT / "agentic_engineering" / "dummy" / "images"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+PAGES_DIR = SCRIPT_DIR / "pages"
+IMAGES_DIR = PROJECT_ROOT / "agentic_engineering" / "images"
 LOTTE_IMAGES_DIR = IMAGES_DIR / "lotte"
 SUPERINDO_IMAGES_DIR = IMAGES_DIR / "superindo"
 

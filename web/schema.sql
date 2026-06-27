@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS stores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     color TEXT,
+    dummy_data INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -20,6 +21,7 @@ CREATE TABLE IF NOT EXISTS products (
     unit TEXT,
     unit_type TEXT,
     unit_value_g REAL,
+    dummy_data INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS prices (
     match_method TEXT,                -- "exact", "embedding", "ai", or NULL
     match_confidence REAL,            -- 0.0-1.0, or NULL
     standardized_promo TEXT,          -- JSON object, or NULL
+    dummy_data INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (product_key, store, date),
     FOREIGN KEY (product_key) REFERENCES products(key)
@@ -59,6 +62,7 @@ CREATE TABLE IF NOT EXISTS promos (
     product_count INTEGER DEFAULT 0,
     stores TEXT,                      -- JSON object {store: count}
     example_products TEXT,            -- JSON array of strings
+    dummy_data INTEGER NOT NULL DEFAULT 0,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

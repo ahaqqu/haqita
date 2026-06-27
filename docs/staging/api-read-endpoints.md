@@ -2,13 +2,13 @@
 
 ## Overview
 
-| Property | Value |
-|----------|-------|
-| Base URL | `/api/v1` |
-| Version | 1.0 |
-| Auth | None (public read endpoints) |
-| Content-Type | `application/json` |
-| Rate Limit | 100 req/min per IP (Phase 7 WAF rule) |
+| Property     | Value                                 |
+| ------------ | ------------------------------------- |
+| Base URL     | `/api/v1`                             |
+| Version      | 1.0                                   |
+| Auth         | None (public read endpoints)          |
+| Content-Type | `application/json`                    |
+| Rate Limit   | 100 req/min per IP (Phase 7 WAF rule) |
 
 ## Endpoints
 
@@ -16,19 +16,25 @@
 
 Returns all stores.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name         | Type | Required | Default | Description                                                                 |
+| ------------ | ---- | -------- | ------- | --------------------------------------------------------------------------- |
+| `show_dummy` | enum | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl http://localhost:8787/api/v1/stores
 ```
 
 **Example Response:**
+
 ```json
 {
   "data": [
-    {"name": "Lotte", "color": "#0057A8"},
-    {"name": "Superindo", "color": "#E8211D"}
+    { "name": "Lotte", "color": "#0057A8" },
+    { "name": "Superindo", "color": "#E8211D" }
   ]
 }
 ```
@@ -41,14 +47,20 @@ curl http://localhost:8787/api/v1/stores
 
 Returns all product categories.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name         | Type | Required | Default | Description                                                                 |
+| ------------ | ---- | -------- | ------- | --------------------------------------------------------------------------- |
+| `show_dummy` | enum | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl http://localhost:8787/api/v1/categories
 ```
 
 **Example Response:**
+
 ```json
 {
   "data": []
@@ -65,21 +77,24 @@ Returns paginated products with filtering and sorting.
 
 **Query Parameters:**
 
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `limit` | integer | No | 20 | Max results (1-100) |
-| `cursor` | string | No | — | Base64-encoded pagination cursor |
-| `store` | string | No | — | Filter by store name |
-| `category` | string | No | — | Filter by category |
-| `has_promo` | enum | No | — | `true` or `false` |
-| `sort` | enum | No | `name` | `name`, `cheapest`, `savings`, `expiry` |
+| Name         | Type    | Required | Default | Description                                                                 |
+| ------------ | ------- | -------- | ------- | --------------------------------------------------------------------------- |
+| `limit`      | integer | No       | 20      | Max results (1-100)                                                         |
+| `cursor`     | string  | No       | —       | Base64-encoded pagination cursor                                            |
+| `store`      | string  | No       | —       | Filter by store name                                                        |
+| `category`   | string  | No       | —       | Filter by category                                                          |
+| `has_promo`  | enum    | No       | —       | `true` or `false`                                                           |
+| `sort`       | enum    | No       | `name`  | `name`, `cheapest`, `savings`, `expiry`                                     |
+| `show_dummy` | enum    | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl "http://localhost:8787/api/v1/products?limit=5&sort=cheapest"
 ```
 
 **Example Response:**
+
 ```json
 {
   "data": [
@@ -129,6 +144,7 @@ curl "http://localhost:8787/api/v1/products?limit=5&sort=cheapest"
 ```
 
 **Error Responses:**
+
 - `400` — Invalid query parameters (e.g., `limit=0`, `sort=invalid`)
 - `500` — Internal server error
 
@@ -138,9 +154,14 @@ curl "http://localhost:8787/api/v1/products?limit=5&sort=cheapest"
 
 Returns a single product with all store prices.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name         | Type | Required | Default | Description                                                                 |
+| ------------ | ---- | -------- | ------- | --------------------------------------------------------------------------- |
+| `show_dummy` | enum | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl "http://localhost:8787/api/v1/products/rinso-detergen-bubuk-anti-noda-pck-1440gr--rinso--1440gr"
 ```
@@ -148,6 +169,7 @@ curl "http://localhost:8787/api/v1/products/rinso-detergen-bubuk-anti-noda-pck-1
 **Example Response:** Same shape as a single product in the products list (with `stores` array).
 
 **Error Responses:**
+
 - `404` — Product not found
 - `500` — Internal server error
 
@@ -159,18 +181,21 @@ Returns price history for a product.
 
 **Query Parameters:**
 
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| `from` | date (YYYY-MM-DD) | No | Start date |
-| `to` | date (YYYY-MM-DD) | No | End date |
-| `store` | string | No | Filter by store |
+| Name         | Type              | Required | Description                                                      |
+| ------------ | ----------------- | -------- | ---------------------------------------------------------------- |
+| `from`       | date (YYYY-MM-DD) | No       | Start date                                                       |
+| `to`         | date (YYYY-MM-DD) | No       | End date                                                         |
+| `store`      | string            | No       | Filter by store                                                  |
+| `show_dummy` | enum              | No       | `true` to return only dummy data; omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl "http://localhost:8787/api/v1/products/rinso-detergen-bubuk-anti-noda-pck-1440gr--rinso--1440gr/history?from=2026-06-01&to=2026-06-30"
 ```
 
 **Example Response:**
+
 ```json
 {
   "product_key": "rinso-detergen-bubuk-anti-noda-pck-1440gr--rinso--1440gr",
@@ -200,6 +225,7 @@ curl "http://localhost:8787/api/v1/products/rinso-detergen-bubuk-anti-noda-pck-1
 ```
 
 **Error Responses:**
+
 - `404` — Product not found
 - `400` — Invalid date format
 - `500` — Internal server error
@@ -212,19 +238,22 @@ Returns raw price data with filtering.
 
 **Query Parameters:**
 
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `limit` | integer | No | 20 | Max results (1-100) |
-| `cursor` | string | No | — | Base64-encoded pagination cursor |
-| `product_key` | string | No | — | Filter by product key |
-| `store` | string | No | — | Filter by store name |
+| Name          | Type    | Required | Default | Description                                                                 |
+| ------------- | ------- | -------- | ------- | --------------------------------------------------------------------------- |
+| `limit`       | integer | No       | 20      | Max results (1-100)                                                         |
+| `cursor`      | string  | No       | —       | Base64-encoded pagination cursor                                            |
+| `product_key` | string  | No       | —       | Filter by product key                                                       |
+| `store`       | string  | No       | —       | Filter by store name                                                        |
+| `show_dummy`  | enum    | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl "http://localhost:8787/api/v1/prices?store=Superindo&limit=5"
 ```
 
 **Error Responses:**
+
 - `400` — Invalid query parameters
 - `500` — Internal server error
 
@@ -236,17 +265,20 @@ Searches products by name, brand, or unit.
 
 **Query Parameters:**
 
-| Name | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `q` | string | **Yes** | — | Search query (min 1 char, max 200) |
-| `limit` | integer | No | 20 | Max results (1-50) |
+| Name         | Type    | Required | Default | Description                                                                 |
+| ------------ | ------- | -------- | ------- | --------------------------------------------------------------------------- |
+| `q`          | string  | **Yes**  | —       | Search query (min 1 char, max 200)                                          |
+| `limit`      | integer | No       | 20      | Max results (1-50)                                                          |
+| `show_dummy` | enum    | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl "http://localhost:8787/api/v1/search?q=indomie&limit=10"
 ```
 
 **Example Response:**
+
 ```json
 {
   "data": [...],
@@ -256,6 +288,7 @@ curl "http://localhost:8787/api/v1/search?q=indomie&limit=10"
 ```
 
 **Error Responses:**
+
 - `400` — Missing or empty search query
 - `500` — Internal server error
 
@@ -265,14 +298,20 @@ curl "http://localhost:8787/api/v1/search?q=indomie&limit=10"
 
 Returns all promos sorted by product count descending.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name         | Type | Required | Default | Description                                                                 |
+| ------------ | ---- | -------- | ------- | --------------------------------------------------------------------------- |
+| `show_dummy` | enum | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl http://localhost:8787/api/v1/promos
 ```
 
 **Example Response:**
+
 ```json
 {
   "data": [
@@ -282,7 +321,7 @@ curl http://localhost:8787/api/v1/promos
       "type": "discount",
       "discount_pct": 20,
       "product_count": 64,
-      "stores": {"Superindo": 64},
+      "stores": { "Superindo": 64 },
       "example_products": ["Rinso", "Bango"]
     }
   ]
@@ -297,14 +336,20 @@ curl http://localhost:8787/api/v1/promos
 
 Returns brochure metadata grouped by image.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name         | Type | Required | Default | Description                                                                 |
+| ------------ | ---- | -------- | ------- | --------------------------------------------------------------------------- |
+| `show_dummy` | enum | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl http://localhost:8787/api/v1/brochures
 ```
 
 **Example Response:**
+
 ```json
 {
   "data": [
@@ -327,14 +372,20 @@ curl http://localhost:8787/api/v1/brochures
 
 Returns summary statistics.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Name         | Type | Required | Default | Description                                                                 |
+| ------------ | ---- | -------- | ------- | --------------------------------------------------------------------------- |
+| `show_dummy` | enum | No       | `false` | `true` to return only dummy data; `false` or omitted returns only real data |
 
 **Example Request:**
+
 ```bash
 curl http://localhost:8787/api/v1/stats
 ```
 
 **Example Response:**
+
 ```json
 {
   "total_products_lotte": 31,
@@ -372,13 +423,13 @@ do {
 
 ## Response Shapes
 
-| API Field | D1 Table Column | Source JSON Field |
-|-----------|----------------|-------------------|
-| `product.key` | `products.key` | `catalog.canonical_key` |
-| `product.name` | `products.name` | `catalog.display_name` |
-| `product.brand` | `products.brand` | `catalog.brand` |
-| `store_entry.price` | `prices.price` | `snapshot.price` |
-| `store_entry.promo` | `prices.promo` (JSON-decoded) | `snapshot.promo` (array) |
+| API Field                        | D1 Table Column                            | Source JSON Field             |
+| -------------------------------- | ------------------------------------------ | ----------------------------- |
+| `product.key`                    | `products.key`                             | `catalog.canonical_key`       |
+| `product.name`                   | `products.name`                            | `catalog.display_name`        |
+| `product.brand`                  | `products.brand`                           | `catalog.brand`               |
+| `store_entry.price`              | `prices.price`                             | `snapshot.price`              |
+| `store_entry.promo`              | `prices.promo` (JSON-decoded)              | `snapshot.promo` (array)      |
 | `store_entry.standardized_promo` | `prices.standardized_promo` (JSON-decoded) | `snapshot.standardized_promo` |
 
 ## Local Development

@@ -17,23 +17,26 @@ def call_gemini_ocr(image_path: str, cfg: dict, max_retries: int = 3) -> list[di
     load_dotenv()
 
     if os.getenv("MOCK_OCR") == "1":
-        from agentic_engineering.dummy.mocks.mock_ocr import mock_ocr
+        from agentic_engineering.mocks.mock_ocr import mock_ocr
+
         return mock_ocr(image_path)
 
-    gemini_cfg = cfg['ocr'].get('gemini', {})
-    store = cfg.get('store', 'superindo')
+    gemini_cfg = cfg["ocr"].get("gemini", {})
+    store = cfg.get("store", "superindo")
     prompt = get_prompt(store)
 
-    api_key = gemini_cfg.get('api_key') or os.getenv("GEMINI_API_KEY")
+    api_key = gemini_cfg.get("api_key") or os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set in .env")
 
     client = genai.Client(api_key=api_key)
-    model = gemini_cfg.get('model')
+    model = gemini_cfg.get("model")
     if not model:
-        raise ValueError("Gemini model not configured in config.yaml under ocr.gemini.model")
+        raise ValueError(
+            "Gemini model not configured in config.yaml under ocr.gemini.model"
+        )
 
-    with open(image_path, 'rb') as f:
+    with open(image_path, "rb") as f:
         img_bytes = f.read()
 
     def _call():

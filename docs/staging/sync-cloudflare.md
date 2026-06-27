@@ -33,22 +33,23 @@ python scripts/sync_cloudflare.py --api-url http://localhost:8787/api/v1 --verbo
 
 ## CLI Arguments
 
-| Flag | Description |
-|------|-------------|
-| `--dry-run` | Preview what would happen without making any changes |
-| `--verbose` | Show detailed per-table sync reports |
+| Flag        | Description                                                   |
+| ----------- | ------------------------------------------------------------- |
+| `--dry-run` | Preview what would happen without making any changes          |
+| `--verbose` | Show detailed per-table sync reports                          |
 | `--api-url` | Override API URL (default: `https://haqita.pages.dev/api/v1`) |
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SCRAPER_SECRET` | Yes | Bearer token for API auth |
-| `R2_ACCESS_KEY_ID` | Yes | R2 S3-compatible access key |
-| `R2_SECRET_ACCESS_KEY` | Yes | R2 S3-compatible secret key |
-| `R2_ENDPOINT` | Yes | R2 endpoint URL |
-| `R2_BUCKET_NAME` | No | R2 bucket name (default: `haqita-images`) |
-| `R2_PUBLIC_URL` | No | Public R2 URL for constructing image URLs |
+| Variable               | Required | Description                                                                                                                  |
+| ---------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `SCRAPER_SECRET`       | Yes      | Bearer token for API auth                                                                                                    |
+| `R2_ACCESS_KEY_ID`     | Yes      | R2 S3-compatible access key                                                                                                  |
+| `R2_SECRET_ACCESS_KEY` | Yes      | R2 S3-compatible secret key                                                                                                  |
+| `R2_ENDPOINT`          | Yes      | R2 endpoint URL                                                                                                              |
+| `R2_BUCKET_NAME`       | No       | R2 bucket name (default: `haqita-images`)                                                                                    |
+| `R2_PUBLIC_URL`        | No       | Public R2 URL for constructing image URLs                                                                                    |
+| `DUMMY_DATA`           | No       | When `1`, prefixes R2 image keys with `dummy/` and sets `dummy_data=true` in the sync batch for production-safe dummy writes |
 
 ## Data Flow
 

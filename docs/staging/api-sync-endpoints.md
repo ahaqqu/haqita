@@ -2,12 +2,12 @@
 
 ## Overview
 
-| Property | Value |
-|----------|-------|
-| Base URL | `/api/v1` |
-| Auth | Bearer token (`SCRAPER_SECRET`) |
-| Content-Type | `application/json` |
-| Rate Limit | 10 req/min per IP (Phase 7 WAF rule) |
+| Property     | Value                                |
+| ------------ | ------------------------------------ |
+| Base URL     | `/api/v1`                            |
+| Auth         | Bearer token (`SCRAPER_SECRET`)      |
+| Content-Type | `application/json`                   |
+| Rate Limit   | 10 req/min per IP (Phase 7 WAF rule) |
 
 ## Authentication
 
@@ -19,11 +19,13 @@ Authorization: Bearer <your-scraper-secret>
 ```
 
 The secret is set in Cloudflare via:
+
 ```bash
 cd web && npx wrangler pages secret put SCRAPER_SECRET --project-name haqita
 ```
 
 For local development, set it in `web/.dev.vars`:
+
 ```
 SCRAPER_SECRET=dev-secret-for-local-testing
 ```
@@ -34,66 +36,67 @@ Upserts stores, products, prices, and promos in a single batch. Idempotent — r
 
 ### Request Body Schema
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `source` | string | Yes | Source identifier (e.g., `haqita-pipeline-v1`) |
-| `sync_run_id` | string | Yes | Unique sync run ID (e.g., `20260621_120000`) |
-| `stores` | array | No | Array of store objects (default `[]`) |
-| `products` | array | No | Array of product objects (default `[]`) |
-| `prices` | array | No | Array of price objects (default `[]`) |
-| `promos` | array | No | Array of promo objects (default `[]`) |
+| Field         | Type    | Required | Description                                                         |
+| ------------- | ------- | -------- | ------------------------------------------------------------------- |
+| `source`      | string  | Yes      | Source identifier (e.g., `haqita-pipeline-v1`)                      |
+| `sync_run_id` | string  | Yes      | Unique sync run ID (e.g., `20260621_120000`)                        |
+| `dummy_data`  | boolean | No       | `true` marks all rows in this batch as dummy data (default `false`) |
+| `stores`      | array   | No       | Array of store objects (default `[]`)                               |
+| `products`    | array   | No       | Array of product objects (default `[]`)                             |
+| `prices`      | array   | No       | Array of price objects (default `[]`)                               |
+| `promos`      | array   | No       | Array of promo objects (default `[]`)                               |
 
 **Store object:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Store name |
-| `color` | string | No | Display color hex code |
+| Field   | Type   | Required | Description            |
+| ------- | ------ | -------- | ---------------------- |
+| `name`  | string | Yes      | Store name             |
+| `color` | string | No       | Display color hex code |
 
 **Product object:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `key` | string | Yes | Canonical product key |
-| `name` | string | Yes | Display name |
-| `brand` | string (nullable) | No | Brand name |
-| `category` | string (nullable) | No | Product category |
-| `unit` | string | No | Unit display string |
-| `unit_type` | string (nullable) | No | Unit type classification |
-| `unit_value_g` | number (nullable) | No | Normalized unit value in grams |
+| Field          | Type              | Required | Description                    |
+| -------------- | ----------------- | -------- | ------------------------------ |
+| `key`          | string            | Yes      | Canonical product key          |
+| `name`         | string            | Yes      | Display name                   |
+| `brand`        | string (nullable) | No       | Brand name                     |
+| `category`     | string (nullable) | No       | Product category               |
+| `unit`         | string            | No       | Unit display string            |
+| `unit_type`    | string (nullable) | No       | Unit type classification       |
+| `unit_value_g` | number (nullable) | No       | Normalized unit value in grams |
 
 **Price object:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `product_key` | string | Yes | References a product key |
-| `store` | string | Yes | Store name |
-| `price` | integer | Yes | Price in IDR (must be positive) |
-| `effective_unit_price` | integer | Yes | Effective unit price in IDR |
-| `bundle_size` | integer | No | Bundle size (default 1) |
-| `promo` | array (nullable) | No | Array of promo strings, or null |
-| `promo_type` | string (nullable) | No | Promo type |
-| `valid_from` | string (nullable) | No | ISO date YYYY-MM-DD |
-| `valid_until` | string (nullable) | No | ISO date YYYY-MM-DD |
-| `image_path` | string (nullable) | No | Local image path |
-| `scrape_time` | string | No | ISO datetime |
-| `date` | string | Yes | ISO date YYYY-MM-DD |
-| `match_method` | string (nullable) | No | Matching method |
-| `match_confidence` | number (nullable) | No | Match confidence 0.0-1.0 |
-| `standardized_promo` | object (nullable) | No | Standardized promo object |
+| Field                  | Type              | Required | Description                     |
+| ---------------------- | ----------------- | -------- | ------------------------------- |
+| `product_key`          | string            | Yes      | References a product key        |
+| `store`                | string            | Yes      | Store name                      |
+| `price`                | integer           | Yes      | Price in IDR (must be positive) |
+| `effective_unit_price` | integer           | Yes      | Effective unit price in IDR     |
+| `bundle_size`          | integer           | No       | Bundle size (default 1)         |
+| `promo`                | array (nullable)  | No       | Array of promo strings, or null |
+| `promo_type`           | string (nullable) | No       | Promo type                      |
+| `valid_from`           | string (nullable) | No       | ISO date YYYY-MM-DD             |
+| `valid_until`          | string (nullable) | No       | ISO date YYYY-MM-DD             |
+| `image_path`           | string (nullable) | No       | Local image path                |
+| `scrape_time`          | string            | No       | ISO datetime                    |
+| `date`                 | string            | Yes      | ISO date YYYY-MM-DD             |
+| `match_method`         | string (nullable) | No       | Matching method                 |
+| `match_confidence`     | number (nullable) | No       | Match confidence 0.0-1.0        |
+| `standardized_promo`   | object (nullable) | No       | Standardized promo object       |
 
 **Promo object:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `key` | string | Yes | Promo key |
-| `display` | string | Yes | Display text |
-| `type` | string (nullable) | No | Promo type |
-| `discount_pct` | integer (nullable) | No | Discount percentage |
-| `max_qty` | integer (nullable) | No | Maximum quantity |
-| `product_count` | integer | No | Product count (default 0) |
-| `stores` | object | No | Object mapping store names to counts |
-| `example_products` | array | No | Array of example product names |
+| Field              | Type               | Required | Description                          |
+| ------------------ | ------------------ | -------- | ------------------------------------ |
+| `key`              | string             | Yes      | Promo key                            |
+| `display`          | string             | Yes      | Display text                         |
+| `type`             | string (nullable)  | No       | Promo type                           |
+| `discount_pct`     | integer (nullable) | No       | Discount percentage                  |
+| `max_qty`          | integer (nullable) | No       | Maximum quantity                     |
+| `product_count`    | integer            | No       | Product count (default 0)            |
+| `stores`           | object             | No       | Object mapping store names to counts |
+| `example_products` | array              | No       | Array of example product names       |
 
 ### Example Request
 
@@ -137,10 +140,10 @@ curl -X POST \
 ```json
 {
   "sync_run_id": "20260621_120000",
-  "stores": {"inserted": 0, "updated": 1, "skipped": 0},
-  "products": {"inserted": 1, "updated": 0, "skipped": 0},
-  "prices": {"inserted": 1, "updated": 0, "skipped": 0},
-  "promos": {"inserted": 0, "updated": 0, "skipped": 0},
+  "stores": { "inserted": 0, "updated": 1, "skipped": 0 },
+  "products": { "inserted": 1, "updated": 0, "skipped": 0 },
+  "prices": { "inserted": 1, "updated": 0, "skipped": 0 },
+  "promos": { "inserted": 0, "updated": 0, "skipped": 0 },
   "errors": []
 }
 ```
@@ -166,17 +169,17 @@ Records R2 URLs for uploaded images in the `prices.image_r2_url` column.
 
 ### Request Body Schema
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `images` | array | Yes | Array of image objects (min 1) |
+| Field    | Type  | Required | Description                    |
+| -------- | ----- | -------- | ------------------------------ |
+| `images` | array | Yes      | Array of image objects (min 1) |
 
 **Image object:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `local_path` | string | Yes | Original local path (matches `prices.image_path`) |
-| `r2_key` | string | Yes | R2 object key |
-| `r2_url` | string (url) | No | Public R2 URL (derived from r2_key if not provided) |
+| Field        | Type         | Required | Description                                         |
+| ------------ | ------------ | -------- | --------------------------------------------------- |
+| `local_path` | string       | Yes      | Original local path (matches `prices.image_path`)   |
+| `r2_key`     | string       | Yes      | R2 object key                                       |
+| `r2_url`     | string (url) | No       | Public R2 URL (derived from r2_key if not provided) |
 
 ### Example Request
 
@@ -214,14 +217,14 @@ curl -X POST \
 
 ## Sync Response Format
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `sync_run_id` | string | Matches the request |
-| `stores` | object | Insert/update/skip counts |
-| `products` | object | Insert/update/skip counts |
-| `prices` | object | Insert/update/skip counts |
-| `promos` | object | Insert/update/skip counts |
-| `errors` | array | Array of error objects with `table`, `key`, `error` |
+| Field         | Type   | Description                                         |
+| ------------- | ------ | --------------------------------------------------- |
+| `sync_run_id` | string | Matches the request                                 |
+| `stores`      | object | Insert/update/skip counts                           |
+| `products`    | object | Insert/update/skip counts                           |
+| `prices`      | object | Insert/update/skip counts                           |
+| `promos`      | object | Insert/update/skip counts                           |
+| `errors`      | array  | Array of error objects with `table`, `key`, `error` |
 
 ## Local Testing
 

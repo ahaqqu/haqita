@@ -1,7 +1,7 @@
-import { Hono } from 'hono';
-import { handle } from 'hono/cloudflare-pages';
-import type { Context } from 'hono';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { Hono } from "hono";
+import { handle } from "hono/cloudflare-pages";
+import type { Context } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 import {
   productsQuerySchema,
@@ -12,7 +12,7 @@ import {
   syncImagesSchema,
   decodeCursor,
   encodeCursor,
-} from './schemas';
+} from "./schemas";
 import {
   getProducts,
   getLatestPricesForProducts,
@@ -26,9 +26,9 @@ import {
   getStats,
   type PriceRow,
   type ProductRow,
-} from './db';
-import { authMiddleware } from './middleware/auth';
-import { securityHeadersMiddleware } from './middleware/security';
+} from "./db";
+import { authMiddleware } from "./middleware/auth";
+import { securityHeadersMiddleware } from "./middleware/security";
 import type {
   Bindings,
   ProductResponse,
@@ -42,16 +42,16 @@ import type {
   SyncBatchResponse,
   SyncImagesResponse,
   SyncImagesError,
-} from './types';
+} from "./types";
 
-const app = new Hono<{ Bindings: Bindings }>().basePath('/api');
+const app = new Hono<{ Bindings: Bindings }>().basePath("/api");
 
 // Apply security headers to all responses
-app.use('*', securityHeadersMiddleware);
+app.use("*", securityHeadersMiddleware);
 
 /** Safely parse a JSON column; return null on empty input or parse failure. */
 function safeJsonParse<T>(value: string | null): T | null {
-  if (value === null || value === undefined || value === '') return null;
+  if (value === null || value === undefined || value === "") return null;
   try {
     return JSON.parse(value) as T;
   } catch {
@@ -60,10 +60,15 @@ function safeJsonParse<T>(value: string | null): T | null {
 }
 
 /** Build a ProductResponse from a product row and its latest price rows. */
-function buildProductResponse(product: ProductRow, prices: PriceRow[]): ProductResponse {
+function buildProductResponse(
+  product: ProductRow,
+  prices: PriceRow[],
+): ProductResponse {
   const stores: StoreEntry[] = prices.map((price) => {
     const promo = safeJsonParse<string[]>(price.promo);
-    const standardizedPromo = safeJsonParse<StandardizedPromo>(price.standardized_promo);
+    const standardizedPromo = safeJsonParse<StandardizedPromo>(
+      price.standardized_promo,
+    );
 
     return {
       store: price.store,
@@ -90,7 +95,8 @@ function buildProductResponse(product: ProductRow, prices: PriceRow[]): ProductR
 
   const valid_until = prices.reduce<string | null>((earliest, price) => {
     if (price.valid_until === null) return earliest;
-    if (earliest === null || price.valid_until < earliest) return price.valid_until;
+    if (earliest === null || price.valid_until < earliest)
+      return price.valid_until;
     return earliest;
   }, null);
 
@@ -112,8 +118,16 @@ function buildProductResponse(product: ProductRow, prices: PriceRow[]): ProductR
 }
 
 /** Return a consistent JSON error response. */
-function errorResponse(c: Context, status: number, error: string, message: string) {
-  return c.json<ErrorResponse>({ error, message }, status as ContentfulStatusCode);
+function errorResponse(
+  c: Context,
+  status: number,
+  error: string,
+  message: string,
+) {
+  return c.json<ErrorResponse>(
+    { error, message },
+    status as ContentfulStatusCode,
+  );
 }
 
 /** Group latest price rows by their product key. */
@@ -148,12 +162,16 @@ function buildPriceResponse(row: PriceRow): PriceResponse {
     scrape_time: row.scrape_time,
     match_method: row.match_method,
     match_confidence: row.match_confidence,
-    standardized_promo: safeJsonParse<StandardizedPromo>(row.standardized_promo),
+    standardized_promo: safeJsonParse<StandardizedPromo>(
+      row.standardized_promo,
+    ),
   };
 }
 
 /** Build a HistoryResponse snapshot from a raw price row. */
-function buildHistorySnapshot(row: PriceRow): HistoryResponse['snapshots'][number] {
+function buildHistorySnapshot(
+  row: PriceRow,
+): HistoryResponse["snapshots"][number] {
   return {
     store: row.store,
     price: row.price,
@@ -169,42 +187,52 @@ function buildHistorySnapshot(row: PriceRow): HistoryResponse['snapshots'][numbe
     scrape_time: row.scrape_time,
     match_method: row.match_method,
     match_confidence: row.match_confidence,
-    standardized_promo: safeJsonParse<StandardizedPromo>(row.standardized_promo),
+    standardized_promo: safeJsonParse<StandardizedPromo>(
+      row.standardized_promo,
+    ),
   };
 }
 
 // Health check (from Phase 1)
-app.get('/health', (c) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get("/health", (c) => {
+  return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 // Read endpoints (Phase 3)
 
-app.get('/v1/stores', async (c) => {
-  const stores = await getStores(c.env.DB);
+app.get("/v1/stores", async (c) => {
+  const showDummy = c.req.query("show_dummy") === "true";
+  const stores = await getStores(c.env.DB, showDummy);
   return c.json({ data: stores });
 });
 
-app.get('/v1/categories', async (c) => {
-  const categories = await getCategories(c.env.DB);
+app.get("/v1/categories", async (c) => {
+  const showDummy = c.req.query("show_dummy") === "true";
+  const categories = await getCategories(c.env.DB, showDummy);
   return c.json({ data: categories });
 });
 
-app.get('/v1/stats', async (c) => {
-  const stats = await getStats(c.env.DB);
+app.get("/v1/stats", async (c) => {
+  const showDummy = c.req.query("show_dummy") === "true";
+  const stats = await getStats(c.env.DB, showDummy);
   return c.json(stats);
 });
 
-app.get('/v1/products', async (c) => {
+app.get("/v1/products", async (c) => {
   const parseResult = productsQuerySchema.safeParse(c.req.query());
   if (!parseResult.success) {
-    return errorResponse(c, 400, 'Invalid query', parseResult.error.message);
+    return errorResponse(c, 400, "Invalid query", parseResult.error.message);
   }
 
   const query = parseResult.data;
-  const offset = decodeCursor(query.cursor ?? '');
+  const offset = decodeCursor(query.cursor ?? "");
   const hasPromo =
-    query.has_promo === 'true' ? true : query.has_promo === 'false' ? false : undefined;
+    query.has_promo === "true"
+      ? true
+      : query.has_promo === "false"
+        ? false
+        : undefined;
+  const showDummy = query.show_dummy === "true" ? true : undefined;
 
   const { products, total } = await getProducts(c.env.DB, {
     limit: query.limit,
@@ -213,14 +241,19 @@ app.get('/v1/products', async (c) => {
     store: query.store,
     category: query.category,
     has_promo: hasPromo,
+    showDummy,
   });
 
   const productKeys = products.map((product) => product.key);
-  const priceRows = await getLatestPricesForProducts(c.env.DB, productKeys);
+  const priceRows = await getLatestPricesForProducts(
+    c.env.DB,
+    productKeys,
+    showDummy,
+  );
   const priceMap = groupPricesByProductKey(priceRows);
 
   const data = products.map((product) =>
-    buildProductResponse(product, priceMap.get(product.key) ?? [])
+    buildProductResponse(product, priceMap.get(product.key) ?? []),
   );
 
   const hasMore = offset + products.length < total;
@@ -232,72 +265,83 @@ app.get('/v1/products', async (c) => {
   });
 });
 
-app.get('/v1/products/:key', async (c) => {
-  const key = c.req.param('key') ?? '';
-  if (key === '') {
-    return errorResponse(c, 404, 'Not found', 'Product key is required');
+app.get("/v1/products/:key", async (c) => {
+  const key = c.req.param("key") ?? "";
+  if (key === "") {
+    return errorResponse(c, 404, "Not found", "Product key is required");
   }
 
   const product = await getProductByKey(c.env.DB, key);
   if (product === null) {
-    return errorResponse(c, 404, 'Not found', `Product ${key} not found`);
+    return errorResponse(c, 404, "Not found", `Product ${key} not found`);
   }
 
-  const prices = await getLatestPricesForProducts(c.env.DB, [key]);
+  const showDummy = c.req.query("show_dummy") === "true" || undefined;
+  const prices = await getLatestPricesForProducts(c.env.DB, [key], showDummy);
   return c.json(buildProductResponse(product, prices));
 });
 
-app.get('/v1/products/:key/history', async (c) => {
-  const key = c.req.param('key') ?? '';
-  if (key === '') {
-    return errorResponse(c, 404, 'Not found', 'Product key is required');
+app.get("/v1/products/:key/history", async (c) => {
+  const key = c.req.param("key") ?? "";
+  if (key === "") {
+    return errorResponse(c, 404, "Not found", "Product key is required");
   }
 
   const product = await getProductByKey(c.env.DB, key);
   if (product === null) {
-    return errorResponse(c, 404, 'Not found', `Product ${key} not found`);
+    return errorResponse(c, 404, "Not found", `Product ${key} not found`);
   }
 
   const parseResult = historyQuerySchema.safeParse(c.req.query());
   if (!parseResult.success) {
-    return errorResponse(c, 400, 'Invalid query', parseResult.error.message);
+    return errorResponse(c, 400, "Invalid query", parseResult.error.message);
   }
 
   const query = parseResult.data;
-  const rows = await getPriceHistory(c.env.DB, key, {
-    from: query.from,
-    to: query.to,
-    store: query.store,
-  });
+  const showDummy = query.show_dummy === "true" ? true : undefined;
+  const rows = await getPriceHistory(
+    c.env.DB,
+    key,
+    {
+      from: query.from,
+      to: query.to,
+      store: query.store,
+    },
+    showDummy,
+  );
 
   const snapshots = rows.map(buildHistorySnapshot);
   return c.json<HistoryResponse>({ product_key: key, snapshots });
 });
 
-app.get('/v1/prices', async (c) => {
+app.get("/v1/prices", async (c) => {
   const parseResult = pricesQuerySchema.safeParse(c.req.query());
   if (!parseResult.success) {
-    return errorResponse(c, 400, 'Invalid query', parseResult.error.message);
+    return errorResponse(c, 400, "Invalid query", parseResult.error.message);
   }
 
   const query = parseResult.data;
   const limit = query.limit;
-  const offset = decodeCursor(query.cursor ?? '');
+  const offset = decodeCursor(query.cursor ?? "");
+  const showDummy = query.show_dummy === "true" ? true : undefined;
 
   const baseParams: (string | number | null)[] = [];
   const conditions: string[] = [];
 
-  if (query.product_key !== undefined && query.product_key !== '') {
-    conditions.push('product_key = ?');
+  if (query.product_key !== undefined && query.product_key !== "") {
+    conditions.push("product_key = ?");
     baseParams.push(query.product_key);
   }
 
-  if (query.store !== undefined && query.store !== '') {
-    conditions.push('store = ?');
+  if (query.store !== undefined && query.store !== "") {
+    conditions.push("store = ?");
     baseParams.push(query.store);
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  conditions.push(`dummy_data = ${showDummy === true ? 1 : 0}`);
+
+  const where =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const countSql = `SELECT COUNT(*) AS total FROM prices ${where}`;
   const selectSql = `SELECT * FROM prices ${where} ORDER BY date DESC, product_key, store LIMIT ? OFFSET ?`;
 
@@ -305,10 +349,14 @@ app.get('/v1/prices', async (c) => {
   const selectParams = [...baseParams, limit, offset];
 
   const [countResult, rowsResult] = await Promise.all([
-    c.env.DB.prepare(countSql).bind(...countParams).all() as Promise<{
+    c.env.DB.prepare(countSql)
+      .bind(...countParams)
+      .all() as Promise<{
       results?: { total: number }[];
     }>,
-    c.env.DB.prepare(selectSql).bind(...selectParams).all() as Promise<{
+    c.env.DB.prepare(selectSql)
+      .bind(...selectParams)
+      .all() as Promise<{
       results?: PriceRow[];
     }>,
   ]);
@@ -326,48 +374,65 @@ app.get('/v1/prices', async (c) => {
   });
 });
 
-app.get('/v1/search', async (c) => {
+app.get("/v1/search", async (c) => {
   const parseResult = searchQuerySchema.safeParse(c.req.query());
   if (!parseResult.success) {
-    return errorResponse(c, 400, 'Invalid query', parseResult.error.message);
+    return errorResponse(c, 400, "Invalid query", parseResult.error.message);
   }
 
   const query = parseResult.data;
-  const products = await searchProducts(c.env.DB, query.q, query.limit);
+  const showDummy = c.req.query("show_dummy") === "true" || undefined;
+  const products = await searchProducts(
+    c.env.DB,
+    query.q,
+    query.limit,
+    showDummy,
+  );
   const productKeys = products.map((product) => product.key);
-  const priceRows = await getLatestPricesForProducts(c.env.DB, productKeys);
+  const priceRows = await getLatestPricesForProducts(
+    c.env.DB,
+    productKeys,
+    showDummy,
+  );
   const priceMap = groupPricesByProductKey(priceRows);
 
   const data = products.map((product) =>
-    buildProductResponse(product, priceMap.get(product.key) ?? [])
+    buildProductResponse(product, priceMap.get(product.key) ?? []),
   );
 
   return c.json<SearchResponse>({ data, query: query.q, count: data.length });
 });
 
-app.get('/v1/promos', async (c) => {
-  const promos = await getPromos(c.env.DB);
+app.get("/v1/promos", async (c) => {
+  const showDummy = c.req.query("show_dummy") === "true";
+  const promos = await getPromos(c.env.DB, showDummy);
   return c.json({ data: promos });
 });
 
-app.get('/v1/brochures', async (c) => {
-  const brochures = await getBrochures(c.env.DB);
+app.get("/v1/brochures", async (c) => {
+  const showDummy = c.req.query("show_dummy") === "true";
+  const brochures = await getBrochures(c.env.DB, showDummy);
   return c.json({ data: brochures });
 });
 
 // Sync endpoints (Phase 4)
 
-app.post('/v1/sync/batch', authMiddleware, async (c) => {
+app.post("/v1/sync/batch", authMiddleware, async (c) => {
   let body: unknown;
   try {
     body = await c.req.json();
   } catch {
-    return errorResponse(c, 400, 'Invalid JSON', 'Request body must be valid JSON');
+    return errorResponse(
+      c,
+      400,
+      "Invalid JSON",
+      "Request body must be valid JSON",
+    );
   }
 
   const parseResult = syncBatchSchema.safeParse(body);
   if (!parseResult.success) {
-    return errorResponse(c, 400, 'Invalid body', parseResult.error.message);
+    return errorResponse(c, 400, "Invalid body", parseResult.error.message);
   }
 
   const batch = parseResult.data;
@@ -385,13 +450,19 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
   for (const store of batch.stores) {
     try {
       await db
-        .prepare('INSERT OR REPLACE INTO stores (name, color) VALUES (?, ?)')
-        .bind(store.name, store.color ?? null)
+        .prepare(
+          "INSERT OR REPLACE INTO stores (name, color, dummy_data) VALUES (?, ?, ?)",
+        )
+        .bind(store.name, store.color ?? null, batch.dummy_data ? 1 : 0)
         .run();
       response.stores.updated += 1;
     } catch (err) {
       response.stores.skipped += 1;
-      response.errors.push({ table: 'stores', key: store.name, error: String(err) });
+      response.errors.push({
+        table: "stores",
+        key: store.name,
+        error: String(err),
+      });
     }
   }
 
@@ -399,7 +470,7 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
     try {
       await db
         .prepare(
-          'INSERT OR REPLACE INTO products (key, name, brand, category, unit, unit_type, unit_value_g) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          "INSERT OR REPLACE INTO products (key, name, brand, category, unit, unit_type, unit_value_g, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
           product.key,
@@ -408,13 +479,18 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           product.category ?? null,
           product.unit,
           product.unit_type ?? null,
-          product.unit_value_g ?? null
+          product.unit_value_g ?? null,
+          batch.dummy_data ? 1 : 0,
         )
         .run();
       response.products.updated += 1;
     } catch (err) {
       response.products.skipped += 1;
-      response.errors.push({ table: 'products', key: product.key, error: String(err) });
+      response.errors.push({
+        table: "products",
+        key: product.key,
+        error: String(err),
+      });
     }
   }
 
@@ -422,7 +498,7 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
     try {
       await db
         .prepare(
-          'INSERT OR REPLACE INTO prices (product_key, store, price, effective_unit_price, bundle_size, promo, promo_type, valid_from, valid_until, image_path, scrape_time, date, match_method, match_confidence, standardized_promo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          "INSERT OR REPLACE INTO prices (product_key, store, price, effective_unit_price, bundle_size, promo, promo_type, valid_from, valid_until, image_path, scrape_time, date, match_method, match_confidence, standardized_promo, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
           price.product_key,
@@ -430,7 +506,9 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           price.price,
           price.effective_unit_price,
           price.bundle_size,
-          price.promo !== undefined && price.promo !== null ? JSON.stringify(price.promo) : null,
+          price.promo !== undefined && price.promo !== null
+            ? JSON.stringify(price.promo)
+            : null,
           price.promo_type ?? null,
           price.valid_from ?? null,
           price.valid_until ?? null,
@@ -439,15 +517,21 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           price.date,
           price.match_method ?? null,
           price.match_confidence ?? null,
-          price.standardized_promo !== undefined && price.standardized_promo !== null
+          price.standardized_promo !== undefined &&
+            price.standardized_promo !== null
             ? JSON.stringify(price.standardized_promo)
-            : null
+            : null,
+          batch.dummy_data ? 1 : 0,
         )
         .run();
       response.prices.updated += 1;
     } catch (err) {
       response.prices.skipped += 1;
-      response.errors.push({ table: 'prices', key: `${price.product_key}:${price.store}:${price.date}`, error: String(err) });
+      response.errors.push({
+        table: "prices",
+        key: `${price.product_key}:${price.store}:${price.date}`,
+        error: String(err),
+      });
     }
   }
 
@@ -455,7 +539,7 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
     try {
       await db
         .prepare(
-          'INSERT OR REPLACE INTO promos (key, display, type, discount_pct, max_qty, product_count, stores, example_products) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          "INSERT OR REPLACE INTO promos (key, display, type, discount_pct, max_qty, product_count, stores, example_products, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
           promo.key,
@@ -465,13 +549,20 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
           promo.max_qty ?? null,
           promo.product_count,
           promo.stores !== undefined ? JSON.stringify(promo.stores) : null,
-          promo.example_products !== undefined ? JSON.stringify(promo.example_products) : null
+          promo.example_products !== undefined
+            ? JSON.stringify(promo.example_products)
+            : null,
+          batch.dummy_data ? 1 : 0,
         )
         .run();
       response.promos.updated += 1;
     } catch (err) {
       response.promos.skipped += 1;
-      response.errors.push({ table: 'promos', key: promo.key, error: String(err) });
+      response.errors.push({
+        table: "promos",
+        key: promo.key,
+        error: String(err),
+      });
     }
   }
 
@@ -479,17 +570,22 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
   return c.json<SyncBatchResponse>(response, status as ContentfulStatusCode);
 });
 
-app.post('/v1/sync/images', authMiddleware, async (c) => {
+app.post("/v1/sync/images", authMiddleware, async (c) => {
   let body: unknown;
   try {
     body = await c.req.json();
   } catch {
-    return errorResponse(c, 400, 'Invalid JSON', 'Request body must be valid JSON');
+    return errorResponse(
+      c,
+      400,
+      "Invalid JSON",
+      "Request body must be valid JSON",
+    );
   }
 
   const parseResult = syncImagesSchema.safeParse(body);
   if (!parseResult.success) {
-    return errorResponse(c, 400, 'Invalid body', parseResult.error.message);
+    return errorResponse(c, 400, "Invalid body", parseResult.error.message);
   }
 
   const { images } = parseResult.data;
@@ -500,9 +596,10 @@ app.post('/v1/sync/images', authMiddleware, async (c) => {
 
   for (const image of images) {
     try {
-      const r2Url = image.r2_url ?? `${c.env.R2_PUBLIC_URL ?? ''}/${image.r2_key}`;
+      const r2Url =
+        image.r2_url ?? `${c.env.R2_PUBLIC_URL ?? ""}/${image.r2_key}`;
       const result = await db
-        .prepare('UPDATE prices SET image_r2_url = ? WHERE image_path = ?')
+        .prepare("UPDATE prices SET image_r2_url = ? WHERE image_path = ?")
         .bind(r2Url, image.local_path)
         .run();
       const changes = (result.meta as { changes?: number }).changes ?? 0;
@@ -518,16 +615,19 @@ app.post('/v1/sync/images', authMiddleware, async (c) => {
   }
 
   const status = errors.length > 0 ? 207 : 200;
-  return c.json<SyncImagesResponse>({ updated, skipped, errors }, status as ContentfulStatusCode);
+  return c.json<SyncImagesResponse>(
+    { updated, skipped, errors },
+    status as ContentfulStatusCode,
+  );
 });
 
 // 404 catch-all for unmatched routes
-app.all('*', (c) => {
+app.all("*", (c) => {
   return errorResponse(
     c,
     404,
-    'Not found',
-    `Route ${c.req.method} ${c.req.path} does not exist`
+    "Not found",
+    `Route ${c.req.method} ${c.req.path} does not exist`,
   );
 });
 

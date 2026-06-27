@@ -97,7 +97,9 @@ def save_sync_state(state: dict) -> None:
         raise
 
 
-def update_sync_state(state: dict, uploaded_images: list[dict], sync_run_id: str) -> None:
+def update_sync_state(
+    state: dict, uploaded_images: list[dict], sync_run_id: str
+) -> None:
     """Update sync state after a successful sync.
 
     Args:
@@ -223,6 +225,7 @@ def build_sync_batch(
     return {
         "source": "haqita-pipeline-v1",
         "sync_run_id": sync_run_id,
+        "dummy_data": os.getenv("DUMMY_DATA") == "1",
         "stores": stores,
         "products": products,
         "prices": prices,
@@ -238,12 +241,14 @@ def send_batch_sync(api_url: str, secret: str, batch: dict, dry_run: bool) -> di
     non-retryable error (401/400) occurs.
     """
     if dry_run:
+        dummy_flag = batch.get("dummy_data", False)
         logger.info(
-            "  [DRY-RUN] Would sync: %d stores, %d products, %d prices, %d promos",
+            "  [DRY-RUN] Would sync: %d stores, %d products, %d prices, %d promos (dummy_data=%s)",
             len(batch["stores"]),
             len(batch["products"]),
             len(batch["prices"]),
             len(batch["promos"]),
+            dummy_flag,
         )
         return {
             "dry_run": True,
@@ -355,9 +360,7 @@ def get_images_to_upload(history: dict, sync_state: dict) -> list[dict]:
     and ``abs_path``.
     """
     image_paths = {
-        s["image_path"]
-        for s in history.get("snapshots", [])
-        if s.get("image_path")
+        s["image_path"] for s in history.get("snapshots", []) if s.get("image_path")
     }
     uploaded_images = sync_state.get("uploaded_images", {})
     to_upload = []
@@ -377,6 +380,9 @@ def get_images_to_upload(history: dict, sync_state: dict) -> list[dict]:
             continue
 
         r2_key = local_path_str.replace("database/scrape/", "", 1)
+        # Prefix with dummy/ when DUMMY_DATA is set
+        if os.getenv("DUMMY_DATA") == "1":
+            r2_key = f"dummy/{r2_key}"
         to_upload.append(
             {
                 "local_path": local_path_str,
@@ -390,7 +396,10 @@ def get_images_to_upload(history: dict, sync_state: dict) -> list[dict]:
 
 
 def upload_images_to_r2(
-    images: list[dict], r2_client: boto3.client, bucket_name: str, dry_run: bool  # type: ignore[name-defined]
+    images: list[dict],
+    r2_client: boto3.client,
+    bucket_name: str,
+    dry_run: bool,  # type: ignore[name-defined]
 ) -> dict:
     """Upload images to R2 and return a mapping of local path to public R2 URL.
 
