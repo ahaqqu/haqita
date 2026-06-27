@@ -13,8 +13,9 @@ import type { StatsResponse } from './types';
  * When showDummy is true, return only dummy data (dummy_data=1).
  */
 function dummyDataClause(showDummy: boolean | undefined, tableAlias: string): string {
-  if (showDummy === true) return `${tableAlias}.dummy_data = 1`;
-  return `${tableAlias}.dummy_data = 0`;
+  const dot = tableAlias ? '.' : '';
+  if (showDummy === true) return `${tableAlias}${dot}dummy_data = 1`;
+  return `${tableAlias}${dot}dummy_data = 0`;
 }
 
 /** Raw price row as stored in the `prices` table. */
