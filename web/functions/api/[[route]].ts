@@ -247,7 +247,8 @@ app.get('/v1/products/:key', async (c) => {
     return errorResponse(c, 404, 'Not found', `Product ${key} not found`);
   }
 
-  const prices = await getLatestPricesForProducts(c.env.DB, [key]);
+  const showDummy = c.req.query('show_dummy') === 'true' || undefined;
+  const prices = await getLatestPricesForProducts(c.env.DB, [key], showDummy);
   return c.json(buildProductResponse(product, prices));
 });
 
@@ -337,9 +338,10 @@ app.get('/v1/search', async (c) => {
   }
 
   const query = parseResult.data;
+  const showDummy = c.req.query('show_dummy') === 'true' || undefined;
   const products = await searchProducts(c.env.DB, query.q, query.limit);
   const productKeys = products.map((product) => product.key);
-  const priceRows = await getLatestPricesForProducts(c.env.DB, productKeys);
+  const priceRows = await getLatestPricesForProducts(c.env.DB, productKeys, showDummy);
   const priceMap = groupPricesByProductKey(priceRows);
 
   const data = products.map((product) =>
@@ -350,12 +352,14 @@ app.get('/v1/search', async (c) => {
 });
 
 app.get('/v1/promos', async (c) => {
-  const promos = await getPromos(c.env.DB);
+  const showDummy = c.req.query('show_dummy') === 'true';
+  const promos = await getPromos(c.env.DB, showDummy);
   return c.json({ data: promos });
 });
 
 app.get('/v1/brochures', async (c) => {
-  const brochures = await getBrochures(c.env.DB);
+  const showDummy = c.req.query('show_dummy') === 'true';
+  const brochures = await getBrochures(c.env.DB, showDummy);
   return c.json({ data: brochures });
 });
 
@@ -389,8 +393,8 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
   for (const store of batch.stores) {
     try {
       await db
-        .prepare('INSERT OR REPLACE INTO stores (name, color) VALUES (?, ?)')
-        .bind(store.name, store.color ?? null)
+        .prepare('INSERT OR REPLACE INTO stores (name, color, dummy_data) VALUES (?, ?, ?)')
+        .bind(store.name, store.color ?? null, batch.dummy_data ? 1 : 0)
         .run();
       response.stores.updated += 1;
     } catch (err) {
@@ -403,7 +407,7 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
     try {
       await db
         .prepare(
-          'INSERT OR REPLACE INTO products (key, name, brand, category, unit, unit_type, unit_value_g) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          'INSERT OR REPLACE INTO products (key, name, brand, category, unit, unit_type, unit_value_g, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         )
         .bind(
           product.key,
@@ -427,7 +431,7 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
     try {
       await db
         .prepare(
-          'INSERT OR REPLACE INTO prices (product_key, store, price, effective_unit_price, bundle_size, promo, promo_type, valid_from, valid_until, image_path, scrape_time, date, match_method, match_confidence, standardized_promo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT OR REPLACE INTO prices (product_key, store, price, effective_unit_price, bundle_size, promo, promo_type, valid_from, valid_until, image_path, scrape_time, date, match_method, match_confidence, standardized_promo, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         )
         .bind(
           price.product_key,
@@ -461,7 +465,7 @@ app.post('/v1/sync/batch', authMiddleware, async (c) => {
     try {
       await db
         .prepare(
-          'INSERT OR REPLACE INTO promos (key, display, type, discount_pct, max_qty, product_count, stores, example_products) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT OR REPLACE INTO promos (key, display, type, discount_pct, max_qty, product_count, stores, example_products, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         )
         .bind(
           promo.key,
@@ -539,4 +543,3 @@ app.all('*', (c) => {
 });
 
 export const onRequest = handle(app);
-pp);

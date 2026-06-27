@@ -183,7 +183,8 @@ export async function getProducts(
  */
 export async function getLatestPricesForProducts(
   db: D1Database,
-  productKeys: string[]
+  productKeys: string[],
+  showDummy?: boolean
 ): Promise<PriceRow[]> {
   if (productKeys.length === 0) return [];
 
@@ -258,10 +259,11 @@ export async function getPriceHistory(
 
 /** Get all configured stores. */
 export async function getStores(
-  db: D1Database
+  db: D1Database,
+  showDummy?: boolean
 ): Promise<{ name: string; color: string | null }[]> {
   const result = await db
-    .prepare('SELECT name, color FROM stores ORDER BY name')
+    .prepare(`SELECT name, color FROM stores WHERE ${dummyDataClause(showDummy, '')} ORDER BY name`)
     .all() as D1AllResult<{ name: string; color: string | null }>;
 
   return result.results ?? [];
@@ -293,9 +295,9 @@ export async function searchProducts(
 }
 
 /** Get the promo catalog with parsed JSON columns. */
-export async function getPromos(db: D1Database): Promise<PromoCatalogRow[]> {
+export async function getPromos(db: D1Database, showDummy?: boolean): Promise<PromoCatalogRow[]> {
   const result = await db
-    .prepare('SELECT key, display, type, discount_pct, max_qty, product_count, stores, example_products FROM promos ORDER BY product_count DESC')
+    .prepare(`SELECT key, display, type, discount_pct, max_qty, product_count, stores, example_products FROM promos WHERE ${dummyDataClause(showDummy, '')} ORDER BY product_count DESC`)
     .all() as D1AllResult<{
       key: string;
       display: string;
@@ -321,12 +323,12 @@ export async function getPromos(db: D1Database): Promise<PromoCatalogRow[]> {
 }
 
 /** Get brochure metadata grouped by image path, store, and date. */
-export async function getBrochures(db: D1Database): Promise<BrochureCatalogRow[]> {
+export async function getBrochures(db: D1Database, showDummy?: boolean): Promise<BrochureCatalogRow[]> {
   const result = await db
     .prepare(
       `SELECT image_path, store, date, COUNT(*) AS product_count, GROUP_CONCAT(product_key) AS product_keys
        FROM prices
-       WHERE image_path IS NOT NULL
+       WHERE image_path IS NOT NULL AND ${dummyDataClause(showDummy, '')}
        GROUP BY image_path, store, date
        ORDER BY store, date DESC`
     )
@@ -386,8 +388,5 @@ export async function getStats(db: D1Database, showDummy?: boolean): Promise<Sta
     lotte_only: row?.lotte_only ?? 0,
     superindo_only: row?.superindo_only ?? 0,
     total_products: row?.total_products ?? 0,
-  };
-}
-l_products ?? 0,
   };
 }
