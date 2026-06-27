@@ -111,7 +111,7 @@ export async function getProducts(
   const countConditions: string[] = [];
 
   if (opts.store !== undefined && opts.store !== '') {
-    const clause = 'EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = ?)';
+    const clause = `EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND store = ? AND ${dummyDataClause(opts.showDummy, '')})`;
     conditions.push(clause);
     countConditions.push(clause);
     params.push(opts.store);
@@ -126,11 +126,11 @@ export async function getProducts(
   }
 
   if (opts.has_promo === true) {
-    const clause = `EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND promo IS NOT NULL${opts.showDummy !== undefined ? ` AND ${dummyDataClause(opts.showDummy, '')}` : ''})`;
+    const clause = `EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND promo IS NOT NULL AND ${dummyDataClause(opts.showDummy, '')})`;
     conditions.push(clause);
     countConditions.push(clause);
   } else if (opts.has_promo === false) {
-    const clause = `NOT EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND promo IS NOT NULL${opts.showDummy !== undefined ? ` AND ${dummyDataClause(opts.showDummy, '')}` : ''})`;
+    const clause = `NOT EXISTS (SELECT 1 FROM prices WHERE product_key = p.key AND promo IS NOT NULL AND ${dummyDataClause(opts.showDummy, '')})`;
     conditions.push(clause);
     countConditions.push(clause);
   }
@@ -153,9 +153,9 @@ export async function getProducts(
   const selectSql = `
     SELECT
       p.*,
-      (SELECT MIN(price) FROM prices WHERE product_key = p.key) AS price_min,
-      (SELECT MAX(price) - MIN(price) FROM prices WHERE product_key = p.key) AS price_gap,
-      (SELECT MIN(valid_until) FROM prices WHERE product_key = p.key AND valid_until IS NOT NULL) AS earliest_valid_until
+      (SELECT MIN(price) FROM prices WHERE product_key = p.key AND ${dummyDataClause(opts.showDummy, '')}) AS price_min,
+      (SELECT MAX(price) - MIN(price) FROM prices WHERE product_key = p.key AND ${dummyDataClause(opts.showDummy, '')}) AS price_gap,
+      (SELECT MIN(valid_until) FROM prices WHERE product_key = p.key AND valid_until IS NOT NULL AND ${dummyDataClause(opts.showDummy, '')}) AS earliest_valid_until
     FROM products p
     ${where}
     ORDER BY ${orderBy}
@@ -227,7 +227,8 @@ export async function getProductByKey(
 export async function getPriceHistory(
   db: D1Database,
   productKey: string,
-  opts: { from?: string; to?: string; store?: string }
+  opts: { from?: string; to?: string; store?: string },
+  showDummy?: boolean
 ): Promise<PriceRow[]> {
   const sql = `
     SELECT product_key, store, price, effective_unit_price, bundle_size, promo, promo_type,
@@ -238,6 +239,7 @@ export async function getPriceHistory(
       AND (? IS NULL OR date >= ?)
       AND (? IS NULL OR date <= ?)
       AND (? IS NULL OR store = ?)
+      AND ${dummyDataClause(showDummy, '')}
     ORDER BY date ASC
   `;
 
@@ -270,9 +272,12 @@ export async function getStores(
 }
 
 /** Get all non-null product categories in alphabetical order. */
-export async function getCategories(db: D1Database): Promise<string[]> {
+export async function getCategories(
+  db: D1Database,
+  showDummy?: boolean
+): Promise<string[]> {
   const result = await db
-    .prepare('SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category')
+    .prepare(`SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND ${dummyDataClause(showDummy, '')} ORDER BY category`)
     .all() as D1AllResult<{ category: string }>;
 
   const rows = result.results ?? [];
@@ -283,11 +288,12 @@ export async function getCategories(db: D1Database): Promise<string[]> {
 export async function searchProducts(
   db: D1Database,
   query: string,
-  limit: number
+  limit: number,
+  showDummy?: boolean
 ): Promise<ProductRow[]> {
   const pattern = `%${query}%`;
   const result = await db
-    .prepare('SELECT key, name, brand, unit, unit_type, unit_value_g, category FROM products WHERE name LIKE ? OR brand LIKE ? OR unit LIKE ? ORDER BY name LIMIT ?')
+    .prepare(`SELECT key, name, brand, unit, unit_type, unit_value_g, category FROM products WHERE (name LIKE ? OR brand LIKE ? OR unit LIKE ?) AND ${dummyDataClause(showDummy, '')} ORDER BY name LIMIT ?`)
     .bind(pattern, pattern, pattern, limit)
     .all() as D1AllResult<ProductRow>;
 

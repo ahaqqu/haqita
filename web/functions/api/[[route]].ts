@@ -187,7 +187,8 @@ app.get('/v1/stores', async (c) => {
 });
 
 app.get('/v1/categories', async (c) => {
-  const categories = await getCategories(c.env.DB);
+  const showDummy = c.req.query('show_dummy') === 'true';
+  const categories = await getCategories(c.env.DB, showDummy);
   return c.json({ data: categories });
 });
 
@@ -269,11 +270,12 @@ app.get('/v1/products/:key/history', async (c) => {
   }
 
   const query = parseResult.data;
+  const showDummy = query.show_dummy === 'true' ? true : undefined;
   const rows = await getPriceHistory(c.env.DB, key, {
     from: query.from,
     to: query.to,
     store: query.store,
-  });
+  }, showDummy);
 
   const snapshots = rows.map(buildHistorySnapshot);
   return c.json<HistoryResponse>({ product_key: key, snapshots });
@@ -288,6 +290,7 @@ app.get('/v1/prices', async (c) => {
   const query = parseResult.data;
   const limit = query.limit;
   const offset = decodeCursor(query.cursor ?? '');
+  const showDummy = query.show_dummy === 'true' ? true : undefined;
 
   const baseParams: (string | number | null)[] = [];
   const conditions: string[] = [];
@@ -301,6 +304,8 @@ app.get('/v1/prices', async (c) => {
     conditions.push('store = ?');
     baseParams.push(query.store);
   }
+
+  conditions.push(`dummy_data = ${showDummy === true ? 1 : 0}`);
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const countSql = `SELECT COUNT(*) AS total FROM prices ${where}`;
@@ -339,7 +344,7 @@ app.get('/v1/search', async (c) => {
 
   const query = parseResult.data;
   const showDummy = c.req.query('show_dummy') === 'true' || undefined;
-  const products = await searchProducts(c.env.DB, query.q, query.limit);
+  const products = await searchProducts(c.env.DB, query.q, query.limit, showDummy);
   const productKeys = products.map((product) => product.key);
   const priceRows = await getLatestPricesForProducts(c.env.DB, productKeys, showDummy);
   const priceMap = groupPricesByProductKey(priceRows);

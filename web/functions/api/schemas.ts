@@ -28,6 +28,7 @@ export const historyQuerySchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   store: z.string().optional(),
+  show_dummy: z.enum(['true', 'false']).optional(),
 });
 
 /** GET /api/v1/prices query parameters. */
@@ -36,6 +37,7 @@ export const pricesQuerySchema = z.object({
   cursor: z.string().optional(),
   product_key: z.string().optional(),
   store: z.string().optional(),
+  show_dummy: z.enum(['true', 'false']).optional(),
 });
 
 /** GET /api/v1/search query parameters. */

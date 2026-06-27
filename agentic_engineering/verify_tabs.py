@@ -83,8 +83,8 @@ def validate_brochures_tab(data: dict):
     return True
 
 
-def capture_screenshots(output_dir: str, chrome_path: str):
-    """Open the live page with show_dummy=true using Selenium and capture screenshots per tab."""
+def capture_screenshots(output_dir: str, chrome_path: str, base_url: str = "https://haqita.pages.dev"):
+    """Open the page with show_dummy=true using Selenium and capture screenshots per tab."""
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
@@ -100,7 +100,7 @@ def capture_screenshots(output_dir: str, chrome_path: str):
 
     driver = webdriver.Chrome(options=opts)
     try:
-        url = "https://haqita.pages.dev/?show_dummy=true"
+        url = f"{base_url}/?show_dummy=true"
         log.info(f"Opening {url}")
         driver.get(url)
 
@@ -149,6 +149,8 @@ def main():
                         help="Path to active_promo.json")
     parser.add_argument("--output-dir", default=".omo/evidence",
                         help="Directory to save screenshots and evidence")
+    parser.add_argument("--base-url", default="https://haqita.pages.dev",
+                        help="Base URL for screenshot capture (default: https://haqita.pages.dev)")
     parser.add_argument("--no-screenshots", action="store_true",
                         help="Skip browser screenshots")
     args = parser.parse_args()
@@ -186,7 +188,7 @@ def main():
         chrome_path = find_chrome()
         if chrome_path:
             log.info(f"Using Chrome: {chrome_path}")
-            screenshots_ok = capture_screenshots(args.output_dir, chrome_path)
+            screenshots_ok = capture_screenshots(args.output_dir, chrome_path, args.base_url)
             if not screenshots_ok:
                 log.error("[FAIL] Screenshot capture failed")
                 sys.exit(1)
