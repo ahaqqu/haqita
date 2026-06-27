@@ -35,7 +35,7 @@ cloudflare_sync:
 
 deploy:
   local: true
-  cloudflare: false
+  cloudflare: true
 
 monitoring:
   review_queue_max: 100

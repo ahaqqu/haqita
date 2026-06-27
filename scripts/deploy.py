@@ -20,6 +20,7 @@ import logging
 import os
 import shutil
 import signal
+import socket
 import socketserver
 import subprocess
 import sys
@@ -236,7 +237,7 @@ def _wait_for_port(port: int, timeout: float = 30.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            with socketserver.socket(socketserver.TCPServer.address_family, socketserver.SOCK_STREAM) as sock:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(1)
                 sock.connect(("127.0.0.1", port))
             return True
