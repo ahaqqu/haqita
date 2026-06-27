@@ -72,6 +72,12 @@ def setup_logging(verbose: bool) -> logging.Logger:
     ch.setFormatter(logging.Formatter("%(message)s"))
     deploy_logger.addHandler(ch)
 
+    sync_logger = logging.getLogger("scripts.sync_cloudflare")
+    sync_logger.setLevel(logging.DEBUG)
+    sync_logger.handlers = []
+    sync_logger.addHandler(fh)
+    sync_logger.addHandler(ch)
+
     deploy_logger.info("Log file: %s", log_file)
     return deploy_logger
 
@@ -446,7 +452,7 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
         # Set COMMIT_SHA secret only after deploy succeeds, so version tracking
         # is consistent: the running API matches the SHA we recorded.
         if not dry_run:
-            if not _set_commit_sha_secret(local_sha, dry_run=False):
+            if not _set_commit_sha_secret(local_sha, dry_run=dry_run):
                 logger.warning("Failed to set COMMIT_SHA secret — version tracking will be broken on the next run")
     else:
         logger.info("Deployed API is up to date (SHA matches). Skipping deploy.")
