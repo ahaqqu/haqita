@@ -13,7 +13,7 @@ Run the full haqita pipeline against isolated dummy fixtures in a temp workspace
 
 ```bash
 # Step 1 — Install deps, verify .env, gate on unit tests
-bash prepare.sh
+bash agentic_engineering/prepare.sh
 
 # Step 2 — Run the full pipeline (interactive or batch)
 ./haqita.sh                # interactive menu
@@ -21,11 +21,11 @@ HAQITA_BATCH=1 ./haqita.sh # non-interactive batch mode
 
 # Step 3 — Verify end results in an isolated workspace, sync dummy data,
 #          assert Cloudflare tabs, capture screenshots
-bash verify.sh
+bash agentic_engineering/verify.sh
 ```
 
-- `prepare.sh` creates the venv, installs `requirements.txt`, checks `GEMINI_API_KEY`, and runs `pytest tests/matching/ -v` as a gate.
-- `verify.sh` creates `/tmp/haqita_verify_*`, starts `agentic_engineering/dummy_server.py`, invokes `haqita.sh` in batch mode, runs sync_cloudflare with `DUMMY_DATA=1`, runs matching tests, verifies tab content via `?show_dummy=true`, and captures screenshots.
+- `agentic_engineering/prepare.sh` creates the venv, installs `requirements.txt`, checks `GEMINI_API_KEY`, and runs `pytest tests/matching/ -v` as a gate.
+- `agentic_engineering/verify.sh` creates `/tmp/haqita_verify_*`, starts `agentic_engineering/dummy_server.py`, invokes `haqita.sh` in batch mode, runs sync_cloudflare with `DUMMY_DATA=1`, runs matching tests, verifies tab content via `?show_dummy=true`, and captures screenshots.
 
 ## Isolation strategy
 
@@ -37,7 +37,7 @@ bash verify.sh
 ## Mock external APIs
 
 ```bash
-MOCK_OCR=1 MOCK_AI_VERIFIER=1 bash prepare.sh && HAQITA_BATCH=1 ./haqita.sh && bash verify.sh
+MOCK_OCR=1 MOCK_AI_VERIFIER=1 bash agentic_engineering/prepare.sh && HAQITA_BATCH=1 ./haqita.sh && bash agentic_engineering/verify.sh
 ```
 
 ## Fixture regeneration
@@ -58,8 +58,8 @@ rm -rf /tmp/haqita_verify_*
 
 ## Self-fix loop
 
-1. Run `bash verify.sh` and note which assertion failed.
+1. Run `bash agentic_engineering/verify.sh` and note which assertion failed.
 2. Inspect the stage status files in the workspace `output/stage_results/`.
 3. Fix the root cause (pipeline script, dummy server, or fixture).
-4. Re-run `bash verify.sh`.
+4. Re-run `bash agentic_engineering/verify.sh`.
 5. Repeat up to 5 times. Escalate if unresolved.
