@@ -65,6 +65,27 @@ class TestBuildSyncBatch:
         assert product["unit_type"] == "weight"
         assert product["unit_value_g"] == 100
 
+    def test_null_unit_becomes_empty_string(self):
+        catalog = {
+            "prod1": {
+                "canonical_key": "canonical1",
+                "display_name": "Display Name",
+                "unit": None,
+            }
+        }
+        batch = sc.build_sync_batch({"snapshots": []}, catalog, [], {})
+        assert batch["products"][0]["unit"] == ""
+
+    def test_missing_unit_defaults_to_empty_string(self):
+        catalog = {
+            "prod1": {
+                "canonical_key": "canonical1",
+                "display_name": "Display Name",
+            }
+        }
+        batch = sc.build_sync_batch({"snapshots": []}, catalog, [], {})
+        assert batch["products"][0]["unit"] == ""
+
     def test_maps_snapshot_fields_to_prices(self):
         snapshot = {
             "product_key": "a--b--100g",
