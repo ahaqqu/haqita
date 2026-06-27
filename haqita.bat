@@ -20,8 +20,8 @@ echo.
  echo  [3] Stage 2: OCR
  echo  [4] Stage 3: Consolidation
  echo  [5] Stage 4: Publish HTML
- echo  [6] Stage 5: Sync to Cloudflare
- echo  [7] Stage 6: Deploy
+ echo  [6] Sync to Cloudflare
+ echo  [7] Stage 5: Deploy + Sync
  echo  [8] Start HTTP server
  echo  [9] Tests
  echo  [10] Health check
@@ -85,8 +85,7 @@ echo.
  echo  Stage 2: OCR all scraped images
  echo  Stage 3: Consolidate (update database)
  echo  Stage 4: Publish HTML
- echo  Stage 5: Sync to Cloudflare
- echo  Stage 6: Deploy
+ echo  Stage 5: Deploy + Sync (merge of old Sync & Deploy)
 
 echo.
 echo  Press any key to start, or Ctrl+C to cancel...
@@ -536,13 +535,13 @@ goto STAGE_CONSOLIDATION
  goto STAGE_PUBLISH_HTML
 
  :: ============================================================
- :: Stage 5: Sync to Cloudflare
+ :: Sync to Cloudflare (standalone)
  :: ============================================================
 
  :STAGE_CLOUDFLARE_SYNC
  cls
  echo ========================================
- echo  Stage 5: Sync to Cloudflare
+ echo  Sync to Cloudflare
  echo ========================================
  echo.
  echo  [1] Run sync
@@ -596,13 +595,13 @@ goto STAGE_CONSOLIDATION
  goto STAGE_CLOUDFLARE_SYNC
 
  :: ============================================================
- :: Stage 6: Deploy
+ :: Stage 5: Deploy + Sync
  :: ============================================================
 
  :STAGE_DEPLOY
  cls
  echo ========================================
- echo  Stage 6: Deploy
+ echo  Stage 5: Deploy + Sync
  echo ========================================
  echo.
  echo  [1] Run deploy

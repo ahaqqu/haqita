@@ -5,7 +5,7 @@
 A consumer-facing web application to track and compare grocery prices across supermarkets in Jakarta. The current system is a local Python pipeline that produces static JSON + HTML files. This plan migrates the project to a Cloudflare-hosted architecture **incrementally**: keep the proven local pipeline, deploy the existing static HTML UI first, and add a Cloudflare-backed dynamic layer behind it. React and a full SPA rewrite are explicitly deferred.
 
 **Current state:** local pipeline (`scrape → OCR → consolidate → publish-html`) writes to `database/` and `output/html/`.  
-**Target state:** same local pipeline plus a new **Stage 5 (Cloudflare sync)** that pushes data to a Hono API backed by D1/R2. The existing `index.html` is deployed to Cloudflare Pages and consumes the API where dynamic features need it.
+**Target state:** same local pipeline plus a new **Stage 5 (Deploy + Sync)** that deploys to Cloudflare Pages (if the API version is stale) and pushes data to the Hono API backed by D1/R2. Sync was originally a separate stage but was merged into deploy for a simpler pipeline. The existing `index.html` is deployed to Cloudflare Pages and consumes the API where dynamic features need it.
 
 **Scope constraints for this plan:**
 - Keep local JSON databases (`database/*.json`) unchanged.
@@ -28,9 +28,11 @@ A consumer-facing web application to track and compare grocery prices across sup
 │  └─────────┘   └─────────┘   └─────────────┘            │                │
 │                                                         ▼                │
 │                                               ┌─────────────────────┐    │
-│                                               │ Stage 5: Sync to    │    │
-│                                               │ Cloudflare          │    │
-│                                               │ (scripts/sync_cf.py)│    │
+│                                               │ Stage 5: Deploy +   │    │
+│                                               │ Sync                │    │
+│                                               │ (deploy.py calls    │    │
+│                                               │  run_sync from      │    │
+│                                               │  sync_cloudflare.py)│    │
 │                                               └─────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -82,26 +84,31 @@ The existing pipeline continues to work exactly as today:
 3. **Stage 3 — Consolidate**: matches products, writes `database/price_history.json`, `database/product_catalog.json`, `database/review_queue.json`
 4. **Stage 4 — Publish HTML**: generates `output/html/active_promo.json`, `price_history.json`, `promo_catalog.json`, `review_queue.json`
 
-### New: Stage 5 — Cloudflare Sync
+### Stage 5 — Deploy + Sync (merged from Cloudflare Sync)
 
-Add `scripts/sync_cloudflare.py` that pushes the latest consolidated data to Cloudflare **without modifying local files**.
+Add `scripts/sync_cloudflare.py` that pushes the latest consolidated data to Cloudflare **without modifying local files**, and `scripts/deploy.py` that wraps sync into deploy.
 
-Responsibilities:
+Originally Stage 5 (Cloudflare sync) and Stage 6 (Deploy) were separate; they have been merged into a single Stage 5 (Deploy + Sync) that:
+1. Reads local HEAD SHA and checks the deployed API version.
+2. If stale: sets COMMIT_SHA secret, copies static files, typechecks, deploys to Cloudflare Pages.
+3. Syncs data to the deployed API via `run_sync()` from `sync_cloudflare.py`.
+
+Sync responsibilities:
 - Read `output/html/active_promo.json` and `database/price_history.json`.
 - Upsert stores, products, prices, and promo catalog into D1 via Hono API.
 - Upload new/updated brochure images to R2 (depending on chosen image option).
 - Emit a sync report (counts inserted/updated/skipped, errors).
 
-Behavior:
-- Idempotent: re-running Stage 5 must not duplicate prices or products.
+Sync behavior:
+- Idempotent: re-running sync must not duplicate prices or products.
 - Dry-run mode: preview what would be synced.
 - Resume-friendly: track uploaded image hashes / synced snapshot IDs locally in `database/sync_state.json`.
 - Failure handling: local files are never modified; API/R2 failures are logged and do not break the pipeline.
 
 Trigger options:
-- Manual: `python scripts/sync_cloudflare.py`
+- As part of deploy: `python scripts/deploy.py`
+- Standalone sync: `python scripts/sync_cloudflare.py`
 - Menu item in `haqita.sh` / `haqita.bat`
-- Optional: run automatically after Stage 4 when `--sync` flag is passed
 
 ---
 
@@ -332,7 +339,7 @@ index.html renders cards, promos, brochures
 ```
 Python pipeline (Stages 1–4) → output/html/*.json + database/*.json
   │
-  ▼ Stage 5: scripts/sync_cloudflare.py
+  ▼ Stage 5: Deploy + Sync (scripts/deploy.py → run_sync)
   │   Authorization: Bearer <SCRAPER_SECRET>
   ▼
 Hono API
@@ -423,7 +430,7 @@ If usage grows to 1,000 users, revisit caching and the D1/Workers free-tier limi
 - [ ] Create D1 schema and seed with sample data from a pipeline run.
 - [ ] Build Hono API with all public read endpoints.
 - [ ] Build protected `POST /api/v1/sync/batch` and `/api/v1/sync/images` endpoints.
-- [ ] Build `scripts/sync_cloudflare.py` Stage 5 and wire it into `haqita.sh` / `haqita.bat`.
+- [ ] Build `scripts/deploy.py` (with sync integration) and `scripts/sync_cloudflare.py` Stage 5 and wire them into `haqita.sh` / `haqita.bat`.
 - [ ] Deploy existing `index.html` + `output/html/` to Cloudflare Pages.
 - [ ] Update `index.html` to consume the API for dynamic data where beneficial, while keeping static JSON fallback.
 - [ ] Add security middleware and rate limiting.
@@ -461,7 +468,7 @@ If usage grows to 1,000 users, revisit caching and the D1/Workers free-tier limi
 - Verify pagination cursors and search ranking.
 
 ### Integration tests
-- End-to-end: run full local pipeline → run Stage 5 sync → query API → assert counts match `active_promo.json`.
+- End-to-end: run full local pipeline → run Stage 5 deploy+sync → query API → assert counts match `active_promo.json`.
 - Image upload test (dry-run mode): verify manifest is correct without uploading.
 
 ### Static UI tests
@@ -470,7 +477,7 @@ If usage grows to 1,000 users, revisit caching and the D1/Workers free-tier limi
 
 ### Pre-deployment checklist
 - [ ] `wrangler deploy` to staging Pages/Workers.
-- [ ] Run Stage 5 against staging.
+- [ ] Run Stage 5 deploy+sync against staging.
 - [ ] Verify all endpoints return expected JSON.
 - [ ] Verify images load correctly.
 - [ ] Check security headers and CORS.
@@ -491,7 +498,7 @@ If usage grows to 1,000 users, revisit caching and the D1/Workers free-tier limi
 haqita/
 ├── index.html                # Existing static UI — stays at repo root
 ├── scripts/                  # Existing Python pipeline
-│   ├── sync_cloudflare.py    # NEW: Stage 5
+│   ├── deploy.py             # Stage 5: Deploy + Sync
 │   └── ...
 ├── web/                      # NEW: Cloudflare Pages project
 │   ├── public/               # Populated at deploy time from repo root / output/html
@@ -551,7 +558,10 @@ Open `http://localhost:8080` and configure the UI to call `http://localhost:8787
 
 ### Running Stage 5 locally
 ```bash
-# Dry-run preview
+# Deploy + sync (dry-run preview)
+python scripts/deploy.py --dry-run
+
+# Standalone sync (dry-run preview)
 python scripts/sync_cloudflare.py --dry-run
 
 # Actual sync to local/staging API

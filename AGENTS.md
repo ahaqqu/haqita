@@ -22,7 +22,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 
 ## Pipeline fixes
 
-### Deploy-then-sync (Stage 6)
+### Deploy-then-sync (Stage 5)
 
 The deploy stage now checks the deployed API version before syncing:
 1. Reads local HEAD SHA via `git rev-parse HEAD`

@@ -14,7 +14,7 @@ Stage 5 blindly POSTs to `https://haqita.pages.dev/api/v1/sync/batch` without ch
 [sync_batch] Transient error: API error (404): {"error":"Not found"}
 ```
 
-## Solution: Merge Stage 5 into Stage 6
+## Solution: Merge sync into deploy (now Stage 5: Deploy + Sync)
 
 Combine deploy + sync into one deploy-then-sync step so the API is always up to date before data is pushed.
 
@@ -59,7 +59,7 @@ Combine deploy + sync into one deploy-then-sync step so the API is always up to 
 | `web/functions/api/[[route]].ts` | Add `GET /api/v1/version` returning `c.env.COMMIT_SHA \|\| c.env.CF_PAGES_COMMIT_SHA \|\| "unknown"` |
 | `scripts/sync_cloudflare.py` | Expose `run_sync(api_url, secret, dry_run, verbose)` as a callable; keep CLI `main()` for direct use |
 | `scripts/deploy.py` | Add version check logic; import and call sync after deploy; set COMMIT_SHA secret before deploy |
-| `scripts/orchestrator.py` | Merge Stage 5 into Stage 6 (Stage 6 runs both deploy + sync) |
+| `scripts/orchestrator.py` | Merge sync into deploy (now Stage 5: Deploy + Sync runs both) |
 | `.env.example` | Add `CLOUDFLARE_API_TOKEN`, ensure all credentials documented |
 
 ### Auth & credentials
