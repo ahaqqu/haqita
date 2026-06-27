@@ -128,13 +128,13 @@ Via `haqita.bat`/`./haqita.sh` → Option [9]:
 Dedicated scripts for isolated, production-safe dummy runs:
 
 ```bash
-bash prepare.sh          # install deps, verify .env, gate on unit tests
+bash agentic_engineering/prepare.sh          # install deps, verify .env, gate on unit tests
 ./haqita.sh              # interactive pipeline
 HAQITA_BATCH=1 ./haqita.sh  # non-interactive batch mode
-bash verify.sh           # end-to-end verification in temp workspace
+bash agentic_engineering/verify.sh           # end-to-end verification in temp workspace
 ```
 
-See [agentic-engineering.md](agentic-engineering.md) for details.
+See [agentic_engineering/agentic-engineering.md](agentic_engineering/agentic-engineering.md) for details.
 
 For end-to-end verification after a full pipeline run:
 
@@ -154,7 +154,7 @@ For end-to-end verification after a full pipeline run:
 | [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md)               | Sync to Cloudflare — API batch sync, R2 image upload (standalone or via deploy) |
 | [staging/deploy-pages.md](docs/staging/deploy-pages.md)                     | Stage 5: Deploy + Sync — version-aware Cloudflare Pages deploy + sync    |
 | [staging/orchestrator.md](docs/staging/orchestrator.md)                     | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
-| [agentic-engineering.md](agentic-engineering.md)                            | Agentic pipeline verification with dummy data isolation                  |
+| [agentic_engineering/agentic-engineering.md](agentic_engineering/agentic-engineering.md)                            | Agentic pipeline verification with dummy data isolation                  |
 | [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md)         | Cloudflare API sync endpoints and schemas                                |
 | [staging/security-configuration.md](docs/staging/security-configuration.md) | Security headers, secrets, and WAF configuration                         |
 | [database/price_history.md](docs/database/price_history.md)                 | `price_history.json` — append-only price snapshots (schema v1.2)         |
@@ -167,9 +167,10 @@ For end-to-end verification after a full pipeline run:
 haqita/
 ├── haqita.bat                        ← Interactive launch menu (Windows)
 ├── haqita.sh                         ← Interactive launch menu (Ubuntu/WSL)
-├── prepare.sh                        ← Dependency installer + unit-test gate for agentic runs
-├── verify.sh                         ← End-to-end dummy pipeline verification in temp workspace
-├── agentic-engineering.md            ← Guide for isolated dummy pipeline runs
+├── agentic_engineering/
+│   ├── prepare.sh                        ← Dependency installer + unit-test gate for agentic runs
+│   ├── verify.sh                         ← End-to-end dummy pipeline verification in temp workspace
+│   └── agentic-engineering.md            ← Guide for isolated dummy pipeline runs
 ├── requirements.txt                  ← Python dependencies
 ├── index.html                        ← Main UI: product browser (search, filter, sort, charts)
 ├── admin.html                        ← Admin UI: review queue management

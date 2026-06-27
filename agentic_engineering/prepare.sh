@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# prepare.sh — Install deps, verify .env, gate on unit tests.
+# agentic_engineering/prepare.sh — Install deps, verify .env, gate on unit tests.
 #
 # Usage:
-#   bash prepare.sh
+#   bash agentic_engineering/prepare.sh
 #
 # Exits non-zero if:
 #   - Python 3.12+ is not found
@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 echo "=== Haqita Prepare ==="
