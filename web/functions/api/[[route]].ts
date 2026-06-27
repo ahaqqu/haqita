@@ -198,6 +198,12 @@ app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Version endpoint — used by deploy.py to verify the deployed API is up to date
+app.get("/v1/version", (c) => {
+  const sha = c.env.COMMIT_SHA || c.env.CF_PAGES_COMMIT_SHA || "unknown";
+  return c.json({ version: sha, deployed_at: new Date().toISOString() });
+});
+
 // Read endpoints (Phase 3)
 
 app.get("/v1/stores", async (c) => {

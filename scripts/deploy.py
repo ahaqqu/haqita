@@ -1,8 +1,8 @@
 """
-Haqita Stage 6: Deploy.
+Haqita Stage 6: Deploy + Sync.
 
-Deploys the browser UI locally (wrangler pages dev + HTTP server) and/or to
-Cloudflare Pages. Reads deployment targets from config.yaml deploy section.
+Deploys the browser UI to Cloudflare Pages (if the deployed API version is
+stale), then syncs data to the deployed API. Also supports local dev server.
 
 Usage:
     python scripts/deploy.py                           # Deploy configured targets
@@ -17,6 +17,7 @@ import argparse
 import http.server
 import json
 import logging
+import os
 import shutil
 import signal
 import socketserver
@@ -27,9 +28,12 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import requests
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.config import load_config
+from scripts.sync_cloudflare import run_sync
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_HTML = ROOT / "output" / "html"
@@ -316,18 +320,63 @@ def deploy_local(dry_run: bool, verbose: bool) -> dict:
     return {"status": "complete", "ports": [LOCAL_HTTP_PORT, LOCAL_WRANGLER_PORT]}
 
 
-def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
-    """Deploy static files to Cloudflare Pages."""
-    logger.info("=== Cloudflare Pages deploy ===")
+def _get_local_head_sha() -> str:
+    """Return the local HEAD commit SHA via ``git rev-parse HEAD``."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True, text=True, cwd=ROOT, timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        logger.warning("Could not get local HEAD SHA: %s", exc)
+    return "unknown"
 
-    if not (WEB_DIR / "package.json").exists():
-        logger.error("web/package.json not found. Run setup first.")
-        return {"status": "error", "error": "web_package_json_missing"}
 
-    if not (ROOT / "index.html").exists():
-        logger.error("index.html not found at project root.")
-        return {"status": "error", "error": "index_html_missing"}
+def _get_deployed_version(api_url: str, timeout: float = 5.0) -> str | None:
+    """Call ``GET {api_url}/version`` and return the ``version`` field.
 
+    Returns None if the endpoint is unreachable, returns a non-200 status,
+    or the response is not valid JSON.
+    """
+    version_url = api_url.rstrip("/") + "/version"
+    try:
+        resp = requests.get(version_url, timeout=timeout)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("version", None)
+        logger.info("  Version endpoint returned status %s", resp.status_code)
+    except requests.RequestException as exc:
+        logger.info("  Could not reach version endpoint: %s", exc)
+    except (ValueError, TypeError, KeyError) as exc:
+        logger.info("  Could not parse version response: %s", exc)
+    return None
+
+
+def _set_commit_sha_secret(sha: str, dry_run: bool) -> bool:
+    """Set COMMIT_SHA as a Cloudflare Pages secret via ``wrangler pages secret put``."""
+    if dry_run:
+        logger.info("[DRY-RUN] Would set COMMIT_SHA=%s as Cloudflare Pages secret", sha[:12])
+        return True
+
+    _require_command("wrangler", "wrangler")
+    logger.info("Setting COMMIT_SHA as Cloudflare Pages secret...")
+    result = subprocess.run(
+        ["wrangler", "pages", "secret", "put", "COMMIT_SHA", sha],
+        cwd=WEB_DIR,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        logger.error("Failed to set COMMIT_SHA secret:\n%s", result.stdout + result.stderr)
+        return False
+    logger.info("  COMMIT_SHA secret updated to %s", sha[:12])
+    return True
+
+
+def _deploy_to_cloudflare(dry_run: bool, verbose: bool) -> dict:
+    """Deploy static files to Cloudflare Pages (raw deploy — no version check)."""
     _require_command("npm", "npm")
     _install_deps_if_needed(dry_run)
     _copy_static_files(dry_run)
@@ -350,6 +399,72 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
 
     logger.info("  Deploy complete: https://haqita.pages.dev")
     return {"status": "complete", "url": "https://haqita.pages.dev"}
+
+
+def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
+    """Deploy to Cloudflare Pages if the deployed API is stale, then sync data.
+
+    Flow:
+    1. Read local HEAD SHA.
+    2. Call ``GET {api_url}/version`` on the deployed API.
+    3. If the SHA differs or the endpoint is unreachable: set COMMIT_SHA secret,
+       copy static files, typecheck, deploy.
+    4. After deploy (or if SHA already matches), sync data via ``run_sync()``.
+    """
+    logger.info("=== Cloudflare Pages deploy + sync ===")
+
+    if not (WEB_DIR / "package.json").exists():
+        logger.error("web/package.json not found. Run setup first.")
+        return {"status": "error", "error": "web_package_json_missing"}
+
+    if not (ROOT / "index.html").exists():
+        logger.error("index.html not found at project root.")
+        return {"status": "error", "error": "index_html_missing"}
+
+    # Determine API URL
+    _cfg = load_config()
+    cf_cfg = _cfg.get("cloudflare_sync", {})
+    env_url = os.getenv("CLOUDFLARE_API_URL")
+    api_url = (env_url or cf_cfg.get("api_url", "https://haqita.pages.dev/api/v1")).rstrip("/")
+
+    # Read local SHA and check deployed version
+    local_sha = _get_local_head_sha()
+    logger.info("Local HEAD SHA: %s", local_sha[:12] if local_sha != "unknown" else local_sha)
+    deployed_version = _get_deployed_version(api_url)
+    logger.info("Deployed version: %s", deployed_version[:12] if deployed_version else "N/A")
+
+    needs_deploy = deployed_version is None or deployed_version != local_sha
+
+    if needs_deploy:
+        if not dry_run:
+            logger.info("Deployed API is stale — deploying new version...")
+            _set_commit_sha_secret(local_sha, dry_run=False)
+
+        deploy_result = _deploy_to_cloudflare(dry_run, verbose)
+        if deploy_result.get("status") == "error":
+            return deploy_result
+    else:
+        logger.info("Deployed API is up to date (SHA matches). Skipping deploy.")
+        if dry_run:
+            logger.info("[DRY-RUN] Would skip deploy")
+
+    # Sync data to the (now current) API
+    logger.info("")
+    logger.info("=== Syncing data to deployed API ===")
+    if dry_run:
+        secret = ""
+    else:
+        secret = os.getenv("SCRAPER_SECRET", "")
+        if not secret:
+            logger.error("SCRAPER_SECRET not set. Cannot sync.")
+            return {"status": "error", "error": "SCRAPER_SECRET not set"}
+
+    sync_result = run_sync(api_url, secret, dry_run=dry_run, verbose=verbose)
+    if sync_result.get("status") == "error":
+        logger.error("Sync after deploy failed: %s", sync_result.get("error"))
+        return {"status": "error", "error": sync_result.get("error")}
+
+    return {"status": "complete", "url": "https://haqita.pages.dev", "deploy_needed": needs_deploy}
 
 
 def main() -> None:

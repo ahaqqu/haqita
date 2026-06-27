@@ -1,9 +1,14 @@
 """
 Haqita Pipeline Orchestrator.
 
-Chains scrape -> OCR -> consolidation -> publish HTML -> Cloudflare sync -> deploy
+Chains scrape -> OCR -> consolidation -> publish HTML -> deploy+sync
 stages with JSON-based inter-stage communication. Each stage writes its status to
 output/stage_results/ for the next stage to consume and for resume support.
+
+Stage 5 (cloudflare-sync) has been merged into Stage 6 (deploy): the deploy
+stage now deploys to Cloudflare Pages and then syncs data to the deployed API.
+The separate ``--stage cloudflare-sync`` flag is kept for backward compatibility
+but emits a deprecation warning and delegates to deploy.
 
 Usage:
     python scripts/orchestrator.py --full
@@ -11,7 +16,6 @@ Usage:
     python scripts/orchestrator.py --stage ocr --stores lotte
     python scripts/orchestrator.py --stage consolidate
     python scripts/orchestrator.py --stage publish-html
-    python scripts/orchestrator.py --stage cloudflare-sync
     python scripts/orchestrator.py --stage deploy
     python scripts/orchestrator.py --full --dry-run
     python scripts/orchestrator.py --full --verbose
@@ -344,7 +348,7 @@ def run_deploy(dry_run: bool, logger: logging.Logger) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Haqita Pipeline Orchestrator")
-    parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate, publish-html, cloudflare-sync, deploy")
+    parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate, publish-html, deploy (sync runs as part of deploy)")
     parser.add_argument("--stage", choices=["scrape", "ocr", "consolidate", "publish-html", "cloudflare-sync", "deploy"], help="Run a single stage")
     parser.add_argument("--stores", default="lotte,superindo", help="Comma-separated store names (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Preview what would run without making changes")
@@ -384,7 +388,6 @@ def main():
         ocr_status = read_stage_status("ocr")
         cons_status = read_stage_status("consolidate")
         publish_status = read_stage_status("publish_html")
-        cf_sync_status = read_stage_status("cloudflare_sync")
         deploy_status = read_stage_status("deploy")
 
         scrape_done = scrape_status and scrape_status.get("stores") and all(
@@ -397,7 +400,7 @@ def main():
         )
         cons_done = cons_status and cons_status.get("status") in ("complete", "dry_run")
         publish_done = publish_status and publish_status.get("status") in ("complete", "dry_run")
-        cf_sync_done = cf_sync_status and cf_sync_status.get("status") in ("complete", "dry_run")
+        # Stage 5 (cloudflare-sync) is merged into deploy now; resume uses deploy status
         deploy_done = deploy_status and deploy_status.get("status") in ("complete", "dry_run")
 
         if scrape_done:
@@ -436,15 +439,6 @@ def main():
 
         print()
 
-        if cf_sync_done:
-            logger.info("Cloudflare sync already complete, skipping")
-            print("  [SKIP] Cloudflare sync — already complete")
-        else:
-            print("  [RUN] Cloudflare sync")
-            cf_sync_result = run_cloudflare_sync(args.dry_run, logger)
-
-        print()
-
         if deploy_done:
             logger.info("Deploy already complete, skipping")
             print("  [SKIP] Deploy — already complete")
@@ -471,17 +465,10 @@ def main():
         publish_result = run_publish_html(args.dry_run, logger)
         print()
 
-        # Stage 5: Sync to Cloudflare
-        cf_sync_result = run_cloudflare_sync(args.dry_run, logger)
-        if cf_sync_result.get("status") == "error":
-            logger.error("Stage 5 failed. Use --resume to continue from here.")
-            sys.exit(1)
-        print()
-
-        # Stage 6: Deploy
+        # Stage 5: Deploy + Sync (formerly two separate stages)
         deploy_result = run_deploy(args.dry_run, logger)
         if deploy_result.get("status") == "error":
-            logger.error("Stage 6 failed. Use --resume to continue from here.")
+            logger.error("Stage 5 (deploy+sync) failed. Use --resume to continue from here.")
             sys.exit(1)
         print()
 
@@ -498,7 +485,8 @@ def main():
         publish_result = run_publish_html(args.dry_run, logger)
 
     elif args.stage == "cloudflare-sync":
-        cf_sync_result = run_cloudflare_sync(args.dry_run, logger)
+        logger.warning("[DEPRECATED] --stage cloudflare-sync is deprecated. Sync now runs as part of --stage deploy. Delegating to deploy...")
+        deploy_result = run_deploy(args.dry_run, logger)
 
     elif args.stage == "deploy":
         deploy_result = run_deploy(args.dry_run, logger)

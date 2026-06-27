@@ -475,36 +475,31 @@ def send_images_sync(api_url: str, secret: str, manifest: dict, dry_run: bool) -
         return {"error": str(exc)}
 
 
-def main() -> None:
-    """Parse CLI flags and run the Stage 5 Cloudflare sync."""
-    parser = argparse.ArgumentParser(description="Haqita Stage 5: Sync to Cloudflare")
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Preview without uploading"
-    )
-    parser.add_argument(
-        "--verbose", action="store_true", help="Show detailed sync report"
-    )
-    parser.add_argument(
-        "--api-url",
-        type=str,
-        help="Override API URL (default: https://haqita.pages.dev/api/v1)",
-    )
-    args = parser.parse_args()
+def run_sync(
+    api_url: str, secret: str, dry_run: bool = False, verbose: bool = False
+) -> dict:
+    """Run the full sync pipeline and return a result dict.
 
-    setup_logging(args.verbose)
-    cfg = load_config()
+    This is the programmatic entry point, callable from ``deploy.py``.
+    It performs the same work as ``main()`` (load source data, build batch,
+    send batch, upload images to R2, record R2 URLs) but does not parse
+    CLI arguments or set up logging --- the caller owns logging.
 
-    if args.dry_run:
+    Args:
+        api_url: Base API URL (e.g. ``https://haqita.pages.dev/api/v1``).
+        secret: Bearer token for sync endpoints (empty string for dry-run).
+        dry_run: If True, log what would happen without making changes.
+        verbose: If True, log at DEBUG level.
+
+    Returns:
+        A dict with keys ``status`` ("ok" or "error") and ``sync_run_id``
+        on success, or ``status`` ``"error"`` with ``error`` detail on failure.
+    """
+    if dry_run:
         logger.info("[DRY-RUN] No data will be sent to the API or R2.")
         logger.info("")
 
-    api_url = get_api_url(args, cfg)
     logger.info("API URL: %s", api_url)
-
-    if args.dry_run:
-        secret = ""
-    else:
-        secret = get_scraper_secret()
 
     # Load source data
     history = load_json(
@@ -529,11 +524,10 @@ def main() -> None:
     logger.info("")
 
     logger.info("Syncing batch to API...")
-    batch_result = send_batch_sync(api_url, secret, batch, args.dry_run)
+    batch_result = send_batch_sync(api_url, secret, batch, dry_run)
     if "error" in batch_result:
         logger.error("Batch sync failed. See error above.")
-        if not args.dry_run:
-            sys.exit(1)
+        return {"status": "error", "error": batch_result["error"]}
     logger.info("")
 
     # R2 image upload
@@ -544,18 +538,19 @@ def main() -> None:
     uploaded: dict = {}
     if images_to_upload:
         logger.info("  %d image(s) to upload", len(images_to_upload))
-        if not args.dry_run:
+        if not dry_run:
+            cfg = load_config()
             r2_client = get_r2_client(cfg)
             bucket_name = os.getenv("R2_BUCKET_NAME", "haqita-images")
             uploaded = upload_images_to_r2(
-                images_to_upload, r2_client, bucket_name, args.dry_run
+                images_to_upload, r2_client, bucket_name, dry_run
             )
         else:
             uploaded = upload_images_to_r2(
-                images_to_upload, None, "haqita-images", args.dry_run
+                images_to_upload, None, "haqita-images", dry_run
             )
 
-        if uploaded and not args.dry_run:
+        if uploaded and not dry_run:
             logger.info("Recording R2 URLs in API...")
             image_manifest = {
                 "images": [
@@ -567,14 +562,14 @@ def main() -> None:
                     for local_path in uploaded
                 ]
             }
-            send_images_sync(api_url, secret, image_manifest, args.dry_run)
+            send_images_sync(api_url, secret, image_manifest, dry_run)
     else:
         logger.info("  No new or changed images to upload.")
 
     logger.info("")
 
     # Update sync state after successful operations
-    if not args.dry_run and "error" not in batch_result:
+    if not dry_run and "error" not in batch_result:
         if images_to_upload:
             uploaded_hashes = [
                 {"local_path": img["local_path"], "hash": img["hash"]}
@@ -589,6 +584,35 @@ def main() -> None:
 
     logger.info("")
     logger.info("Sync complete.")
+
+    return {"status": "ok", "sync_run_id": batch["sync_run_id"]}
+
+
+def main() -> None:
+    """Parse CLI flags and run the Stage 5 Cloudflare sync."""
+    parser = argparse.ArgumentParser(description="Haqita Stage 5: Sync to Cloudflare")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Preview without uploading"
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Show detailed sync report"
+    )
+    parser.add_argument(
+        "--api-url",
+        type=str,
+        help="Override API URL (default: https://haqita.pages.dev/api/v1)",
+    )
+    args = parser.parse_args()
+
+    setup_logging(args.verbose)
+    cfg = load_config()
+
+    api_url = get_api_url(args, cfg)
+    secret = "" if args.dry_run else get_scraper_secret()
+
+    result = run_sync(api_url, secret, args.dry_run, args.verbose)
+    if result.get("status") == "error":
+        sys.exit(1)
 
 
 if __name__ == "__main__":
