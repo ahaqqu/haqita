@@ -10,6 +10,8 @@ export interface Bindings {
   IMAGES: R2Bucket;
   R2_PUBLIC_URL: string;
   SCRAPER_SECRET: string;
+  COMMIT_SHA?: string;
+  CF_PAGES_COMMIT_SHA?: string;
 }
 
 /** Product payload returned by the public API. */
