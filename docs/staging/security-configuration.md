@@ -36,7 +36,7 @@ echo "SCRAPER_SECRET=your_secret" >> .env
 
 4. Verify the new secret works:
    ```bash
-   python scripts/sync_cloudflare.py --api-url https://haqita.pages.dev/api/v1 --dry-run
+   python scripts/sync_cloudflare.py --api-url https://haqita.pages.dev/api/v1
    ```
 
 5. The old secret is immediately invalid — no downtime.

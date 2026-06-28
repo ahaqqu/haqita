@@ -202,9 +202,7 @@ pause() {
 }
 
 # Batch mode — run the full pipeline non-interactively, then exit
-# Additional arguments (e.g. --dry-run) are forwarded to the orchestrator.
 if [[ "${HAQITA_BATCH:-0}" == "1" ]] || [[ "${1:-}" == "--batch" ]]; then
-    # Collect extra args: if invoked via --batch, shift it off; if via env var, $@ is already the extras
     if [[ "${1:-}" == "--batch" ]]; then
         shift
     fi
@@ -213,7 +211,7 @@ if [[ "${HAQITA_BATCH:-0}" == "1" ]] || [[ "${1:-}" == "--batch" ]]; then
     echo "  Running Full Pipeline (batch mode)"
     echo "========================================"
     echo
-    $PYTHON scripts/orchestrator.py --full --verbose "$@"
+    $PYTHON scripts/orchestrator.py --full "$@"
     echo "========================================"
     echo "  Pipeline complete (batch mode)."
     echo "========================================"
@@ -246,7 +244,7 @@ menu() {
             3) stage_ocr ;;
             4) stage_consolidation ;;
             5) stage_publish_html ;;
-            6) stage_cloudflare_sync ;;
+             6) stage_cloudflare_sync ;;
             7) stage_deploy ;;
             8) http_server ;;
             9) stage_tests ;;
@@ -258,31 +256,6 @@ menu() {
 }
 
 full_pipeline_menu() {
-    while true; do
-        clear
-        echo "========================================"
-        echo "  Full Pipeline Options"
-        echo "========================================"
-        echo
-        echo "  [1] Verbose"
-        echo "  [2] Non-verbose"
-        echo "  [3] Dry-run + verbose"
-        echo "  [4] Resume from last failed stage"
-        echo "  [0] Back"
-        echo
-        read -rp "Your choice: " fp_choice
-        case "$fp_choice" in
-            1) full_pipeline_verbose; break ;;
-            2) full_pipeline; break ;;
-            3) full_pipeline_verbose_dryrun; break ;;
-            4) full_pipeline_resume; break ;;
-            0) break ;;
-            *) echo "Invalid choice. Press any key to try again..."; pause ;;
-        esac
-    done
-}
-
-full_pipeline() {
     clear
     echo "========================================"
     echo "  Running Full Pipeline"
@@ -294,48 +267,30 @@ full_pipeline() {
     echo "  Stage 4: Publish HTML"
     echo "  Stage 5: Deploy + Sync (merge of old Sync & Deploy)"
     echo
+    echo "  [1] Run full pipeline"
+    echo "  [2] Resume from last failed stage"
+    echo "  [0] Back"
+    echo
+    read -rp "Your choice: " fp_choice
+    case "$fp_choice" in
+        1) full_pipeline; break ;;
+        2) full_pipeline_resume; break ;;
+        0) return ;;
+        *) echo "Invalid choice. Press any key to try again..."; pause ;;
+    esac
+}
+
+full_pipeline() {
+    clear
+    echo "========================================"
+    echo "  Running Full Pipeline"
+    echo "========================================"
+    echo
     read -n1 -rsp "Press any key to start, or Ctrl+C to cancel..."
     echo
     $PYTHON scripts/orchestrator.py --full
     echo "========================================"
     echo "  Pipeline complete."
-    echo "========================================"
-    echo
-    pause
-}
-
-full_pipeline_verbose() {
-    clear
-    echo "========================================"
-    echo "  Running Full Pipeline - Verbose"
-    echo "========================================"
-    echo
-    echo "  Detailed log will be written to output/logs/"
-    echo
-    read -n1 -rsp "Press any key to start, or Ctrl+C to cancel..."
-    echo
-    $PYTHON scripts/orchestrator.py --full --verbose
-    echo "========================================"
-    echo "  Pipeline complete."
-    echo "========================================"
-    echo
-    pause
-}
-
-full_pipeline_verbose_dryrun() {
-    clear
-    echo "========================================"
-    echo "  Running Full Pipeline - Dry-run + verbose"
-    echo "========================================"
-    echo
-    echo "  Detailed log will be written to output/logs/"
-    echo "  No changes will be made to the database."
-    echo
-    read -n1 -rsp "Press any key to start, or Ctrl+C to cancel..."
-    echo
-    $PYTHON scripts/orchestrator.py --full --verbose --dry-run
-    echo "========================================"
-    echo "  Dry-run complete."
     echo "========================================"
     echo
     pause
@@ -367,7 +322,6 @@ stage_scrape() {
         echo "  [1] Scrape all stores"
         echo "  [2] Scrape Lotte Mart only"
         echo "  [3] Scrape Superindo only"
-        echo "  [4] Dry-run (report new images only)"
         echo "  [0] Back"
         echo
         read -rp "Your choice: " scrape_choice
@@ -375,7 +329,6 @@ stage_scrape() {
             1) scrape_all ;;
             2) scrape_lotte ;;
             3) scrape_superindo ;;
-            4) scrape_dryrun ;;
             0) break ;;
             *) echo "Invalid choice. Press any key to try again..."; pause ;;
         esac
@@ -419,21 +372,6 @@ scrape_all() {
     pause
 }
 
-scrape_dryrun() {
-    clear
-    echo "========================================"
-    echo "  Scrape Dry-run"
-    echo "========================================"
-    echo
-    echo "--- Lotte Mart ---"
-    $PYTHON scripts/scrapers/lotte.py --dry-run
-    echo
-    echo "--- Superindo ---"
-    $PYTHON scripts/scrapers/superindo.py --dry-run
-    echo
-    pause
-}
-
 stage_ocr() {
     while true; do
         clear
@@ -445,7 +383,6 @@ stage_ocr() {
         echo "  [2] OCR Lotte images"
         echo "  [3] OCR Superindo images"
         echo "  [4] OCR specific image"
-        echo "  [5] Dry-run (report products without saving)"
         echo "  [0] Back"
         echo
         read -rp "Your choice: " ocr_choice
@@ -454,7 +391,6 @@ stage_ocr() {
             2) ocr_lotte ;;
             3) ocr_superindo ;;
             4) ocr_specific ;;
-            5) ocr_dryrun ;;
             0) break ;;
             *) echo "Invalid choice. Press any key to try again..."; pause ;;
         esac
@@ -526,66 +462,6 @@ ocr_specific() {
     pause
 }
 
-ocr_dryrun() {
-    while true; do
-        clear
-        echo "========================================"
-        echo "  OCR Dry-run"
-        echo "========================================"
-        echo
-        echo "  [1] Lotte"
-        echo "  [2] Superindo"
-        echo "  [3] Both"
-        echo "  [0] Back"
-        echo
-        read -rp "Your choice: " dry_choice
-        case "$dry_choice" in
-            1) ocr_lotte_dry; break ;;
-            2) ocr_superindo_dry; break ;;
-            3) ocr_both_dry; break ;;
-            0) break ;;
-            *) echo "Invalid choice. Press any key to try again..."; pause ;;
-        esac
-    done
-}
-
-ocr_lotte_dry() {
-    clear
-    echo "========================================"
-    echo "  OCR Dry-run - Lotte"
-    echo "========================================"
-    echo
-    $PYTHON scripts/ocr/run_ocr.py --store lotte --dry-run
-    echo
-    pause
-}
-
-ocr_superindo_dry() {
-    clear
-    echo "========================================"
-    echo "  OCR Dry-run - Superindo"
-    echo "========================================"
-    echo
-    $PYTHON scripts/ocr/run_ocr.py --store superindo --dry-run
-    echo
-    pause
-}
-
-ocr_both_dry() {
-    clear
-    echo "========================================"
-    echo "  OCR Dry-run - Both Stores"
-    echo "========================================"
-    echo
-    echo "--- Lotte ---"
-    $PYTHON scripts/ocr/run_ocr.py --store lotte --dry-run
-    echo
-    echo "--- Superindo ---"
-    $PYTHON scripts/ocr/run_ocr.py --store superindo --dry-run
-    echo
-    pause
-}
-
 stage_consolidation() {
     while true; do
         clear
@@ -594,15 +470,13 @@ stage_consolidation() {
         echo "========================================"
         echo
         echo "  [1] Run consolidation"
-        echo "  [2] Dry-run (no database update)"
-        echo "  [3] Custom input directory"
+        echo "  [2] Custom input directory"
         echo "  [0] Back"
         echo
         read -rp "Your choice: " cons_choice
         case "$cons_choice" in
             1) consolidate_run ;;
-            2) consolidate_dryrun ;;
-            3) consolidate_custom ;;
+            2) consolidate_custom ;;
             0) break ;;
             *) echo "Invalid choice. Press any key to try again..."; pause ;;
         esac
@@ -616,17 +490,6 @@ consolidate_run() {
     echo "========================================"
     echo
     $PYTHON scripts/consolidate.py
-    echo
-    pause
-}
-
-consolidate_dryrun() {
-    clear
-    echo "========================================"
-    echo "  Consolidation Dry-run"
-    echo "========================================"
-    echo
-    $PYTHON scripts/consolidate.py --dry-run
     echo
     pause
 }
@@ -645,34 +508,9 @@ consolidate_custom() {
 }
 
 stage_publish_html() {
-    while true; do
-        clear
-        echo "========================================"
-        echo "  Stage 4: Publish HTML"
-        echo "========================================"
-        echo
-        echo "  [1] Run normally"
-        echo "  [2] Dry-run (preview copies)"
-        echo "  [3] Verbose (show file sizes)"
-        echo "  [4] Verbose + Dry-run"
-        echo "  [0] Back"
-        echo
-        read -rp "Your choice: " pub_choice
-        case "$pub_choice" in
-            1) publish_html_run ;;
-            2) publish_html_dryrun ;;
-            3) publish_html_verbose ;;
-            4) publish_html_verbose_dryrun ;;
-            0) break ;;
-            *) echo "Invalid choice. Press any key to try again..."; pause ;;
-        esac
-    done
-}
-
-publish_html_run() {
     clear
     echo "========================================"
-    echo "  Publish HTML"
+    echo "  Stage 4: Publish HTML"
     echo "========================================"
     echo
     $PYTHON scripts/publish_html.py
@@ -680,63 +518,7 @@ publish_html_run() {
     pause
 }
 
-publish_html_dryrun() {
-    clear
-    echo "========================================"
-    echo "  Publish HTML - Dry-run"
-    echo "========================================"
-    echo
-    $PYTHON scripts/publish_html.py --dry-run
-    echo
-    pause
-}
-
-publish_html_verbose() {
-    clear
-    echo "========================================"
-    echo "  Publish HTML - Verbose"
-    echo "========================================"
-    echo
-    $PYTHON scripts/publish_html.py --verbose
-    echo
-    pause
-}
-
-publish_html_verbose_dryrun() {
-    clear
-    echo "========================================"
-    echo "  Publish HTML - Verbose + Dry-run"
-    echo "========================================"
-    echo
-    $PYTHON scripts/publish_html.py --verbose --dry-run
-    echo
-    pause
-}
-
 stage_cloudflare_sync() {
-    while true; do
-        clear
-        echo "========================================"
-        echo "  Sync to Cloudflare (standalone)"
-        echo "========================================"
-        echo
-        echo "  [1] Run sync"
-        echo "  [2] Dry-run (preview)"
-        echo "  [3] Verbose sync"
-        echo "  [0] Back"
-        echo
-        read -rp "Your choice: " cf_choice
-        case "$cf_choice" in
-            1) cloudflare_sync_run; break ;;
-            2) cloudflare_sync_dryrun; break ;;
-            3) cloudflare_sync_verbose; break ;;
-            0) break ;;
-            *) echo "Invalid choice. Press any key to try again..."; pause ;;
-        esac
-    done
-}
-
-cloudflare_sync_run() {
     clear
     echo "========================================"
     echo "  Sync to Cloudflare"
@@ -747,93 +529,13 @@ cloudflare_sync_run() {
     pause
 }
 
-cloudflare_sync_dryrun() {
-    clear
-    echo "========================================"
-    echo "  Sync to Cloudflare - Dry-run"
-    echo "========================================"
-    echo
-    $PYTHON scripts/sync_cloudflare.py --dry-run
-    echo
-    pause
-}
-
-cloudflare_sync_verbose() {
-    clear
-    echo "========================================"
-    echo "  Sync to Cloudflare - Verbose"
-    echo "========================================"
-    echo
-    $PYTHON scripts/sync_cloudflare.py --verbose
-    echo
-    pause
-}
-
 stage_deploy() {
-    while true; do
-        clear
-        echo "========================================"
-        echo "  Stage 5: Deploy + Sync"
-        echo "========================================"
-        echo
-        echo "  [1] Run deploy"
-        echo "  [2] Dry-run (preview)"
-        echo "  [3] Verbose deploy"
-        echo "  [4] Verbose + Dry-run"
-        echo "  [0] Back"
-        echo
-        read -rp "Your choice: " deploy_choice
-        case "$deploy_choice" in
-            1) deploy_run; break ;;
-            2) deploy_dryrun; break ;;
-            3) deploy_verbose; break ;;
-            4) deploy_verbose_dryrun; break ;;
-            0) break ;;
-            *) echo "Invalid choice. Press any key to try again..."; pause ;;
-        esac
-    done
-}
-
-deploy_run() {
     clear
     echo "========================================"
-    echo "  Deploy"
+    echo "  Stage 5: Deploy + Sync"
     echo "========================================"
     echo
     $PYTHON scripts/deploy.py
-    echo
-    pause
-}
-
-deploy_dryrun() {
-    clear
-    echo "========================================"
-    echo "  Deploy - Dry-run"
-    echo "========================================"
-    echo
-    $PYTHON scripts/deploy.py --dry-run
-    echo
-    pause
-}
-
-deploy_verbose() {
-    clear
-    echo "========================================"
-    echo "  Deploy - Verbose"
-    echo "========================================"
-    echo
-    $PYTHON scripts/deploy.py --verbose
-    echo
-    pause
-}
-
-deploy_verbose_dryrun() {
-    clear
-    echo "========================================"
-    echo "  Deploy - Verbose + Dry-run"
-    echo "========================================"
-    echo
-    $PYTHON scripts/deploy.py --verbose --dry-run
     echo
     pause
 }
@@ -891,7 +593,7 @@ health_check() {
     echo "  Health Check"
     echo "========================================"
     echo
-    $PYTHON scripts/health_check.py --verbose
+    $PYTHON scripts/health_check.py
     echo
     pause
 }

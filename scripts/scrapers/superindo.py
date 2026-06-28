@@ -80,7 +80,6 @@ class SuperindoScraper(BaseScraper):
 
 def main():
     parser = argparse.ArgumentParser(description="Superindo Promo Scraper")
-    parser.add_argument("--dry-run", action="store_true", help="Check for new images without downloading")
     parser.add_argument("--url", help="Single URL override (for testing a specific page)")
     args = parser.parse_args()
 
@@ -94,19 +93,14 @@ def main():
 
     print("=" * 60)
     print(f"  {scraper.store_name} Promo Scraper")
-    if args.dry_run:
-        print("  Dry-run: YES (no download)")
     print("=" * 60)
     print()
 
     image_refs = scraper.collect_image_refs()
+    print(f"[*] Found {len(image_refs)} promo image(s)\n")
 
     if not image_refs:
         print("[!] No promo images found. Exiting.")
-        return
-
-    if args.dry_run:
-        print(f"[*] Would check {len(image_refs)} image(s) for new content.")
         return
 
     new_images, existing_images = scraper.download_and_classify(image_refs, state)

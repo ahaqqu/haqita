@@ -6,8 +6,6 @@ stale), then syncs data to the deployed API. Also supports local dev server.
 
 Usage:
     python scripts/deploy.py                           # Deploy configured targets
-    python scripts/deploy.py --dry-run                 # Preview without executing
-    python scripts/deploy.py --verbose                 # Show detailed output
     python scripts/deploy.py --target local            # Local dev server only
     python scripts/deploy.py --target cloudflare       # Cloudflare Pages only
     python scripts/deploy.py --target both             # Both targets
@@ -55,7 +53,7 @@ logger = logging.getLogger(__name__)
 _background_procs: list[subprocess.Popen] = []
 
 
-def setup_logging(verbose: bool) -> logging.Logger:
+def setup_logging() -> logging.Logger:
     """Configure the deploy logger with console and file handlers."""
     LOG_DIR = ROOT / "output" / "logs"
     LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -72,7 +70,7 @@ def setup_logging(verbose: bool) -> logging.Logger:
     deploy_logger.addHandler(fh)
 
     ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG if verbose else logging.INFO)
+    ch.setLevel(logging.DEBUG)
     ch.setFormatter(logging.Formatter("%(message)s"))
     deploy_logger.addHandler(ch)
 
@@ -144,7 +142,7 @@ def _require_command(name: str, friendly: str) -> str:
     return path
 
 
-def _copy_static_files(dry_run: bool) -> list[str]:
+def _copy_static_files() -> list[str]:
     """Copy root index.html and output/html/*.json into web/public/."""
     files_to_copy = [
         (ROOT / "index.html", PUBLIC_DIR / "index.html"),
@@ -157,46 +155,36 @@ def _copy_static_files(dry_run: bool) -> list[str]:
     copied: list[str] = []
     warned: list[str] = []
 
-    if dry_run:
-        logger.info("[DRY-RUN] Would copy static files to %s/", PUBLIC_DIR.relative_to(ROOT))
-    else:
-        PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
-        # Remove stale files so the public dir mirrors the latest output.
-        for stale in PUBLIC_DIR.iterdir():
-            if stale.name in {".gitkeep"}:
-                continue
-            try:
-                if stale.is_file() or stale.is_symlink():
-                    stale.unlink()
-                elif stale.is_dir():
-                    shutil.rmtree(stale)
-            except OSError as exc:
-                logger.warning("Could not remove stale public file %s: %s", stale, exc)
+    PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
+    # Remove stale files so the public dir mirrors the latest output.
+    for stale in PUBLIC_DIR.iterdir():
+        if stale.name in {".gitkeep"}:
+            continue
+        try:
+            if stale.is_file() or stale.is_symlink():
+                stale.unlink()
+            elif stale.is_dir():
+                shutil.rmtree(stale)
+        except OSError as exc:
+            logger.warning("Could not remove stale public file %s: %s", stale, exc)
 
     for src, dst in files_to_copy:
         if not src.exists():
             logger.warning("[WARN] Source not found: %s", src.relative_to(ROOT))
             warned.append(src.name)
             continue
-        if dry_run:
-            logger.info("  [WOULD COPY] %s -> %s/", src.name, PUBLIC_DIR.relative_to(ROOT))
+        if src.is_dir():
+            shutil.copytree(src, dst, dirs_exist_ok=True)
         else:
-            if src.is_dir():
-                shutil.copytree(src, dst, dirs_exist_ok=True)
-            else:
-                shutil.copy2(src, dst)
-            logger.info("  [OK] %s -> %s/", src.name, PUBLIC_DIR.relative_to(ROOT))
+            shutil.copy2(src, dst)
+        logger.info("  [OK] %s -> %s/", src.name, PUBLIC_DIR.relative_to(ROOT))
         copied.append(src.name)
 
     return copied
 
 
-def _run_typecheck(dry_run: bool) -> None:
+def _run_typecheck() -> None:
     """Run TypeScript typecheck in web/."""
-    if dry_run:
-        logger.info("[DRY-RUN] Would run: cd web && npm run typecheck")
-        return
-
     _require_command("npm", "npm")
     logger.info("Running typecheck...")
     result = subprocess.run(
@@ -211,14 +199,10 @@ def _run_typecheck(dry_run: bool) -> None:
     logger.info("  Typecheck passed.")
 
 
-def _install_deps_if_needed(dry_run: bool) -> None:
+def _install_deps_if_needed() -> None:
     """Install npm dependencies in web/ if node_modules is missing."""
     node_modules = WEB_DIR / "node_modules"
     if node_modules.exists():
-        return
-
-    if dry_run:
-        logger.info("[DRY-RUN] Would install web/ dependencies")
         return
 
     _require_command("npm", "npm")
@@ -293,7 +277,7 @@ def _detect_wrangler_port(
     return None
 
 
-def deploy_local(dry_run: bool, verbose: bool) -> dict:
+def deploy_local() -> dict:
     """Start local wrangler dev server and static HTTP server.
 
     This function blocks until the user interrupts it (Ctrl+C). The background
@@ -302,15 +286,9 @@ def deploy_local(dry_run: bool, verbose: bool) -> dict:
     logger.info("=== Local deploy ===")
     logger.info("Target: http://localhost:%d (static) and http://localhost:%d (API)", LOCAL_HTTP_PORT, LOCAL_WRANGLER_PORT)
 
-    if dry_run:
-        logger.info("[DRY-RUN] Would start:")
-        logger.info("  cd web && npm run dev")
-        logger.info("  python -m http.server %d (from project root)", LOCAL_HTTP_PORT)
-        return {"status": "dry_run", "ports": [LOCAL_HTTP_PORT, LOCAL_WRANGLER_PORT]}
-
     _require_command("npm", "npm")
-    _install_deps_if_needed(dry_run=False)
-    _copy_static_files(dry_run=False)
+    _install_deps_if_needed()
+    _copy_static_files()
 
     _register_cleanup()
 
@@ -347,10 +325,6 @@ def deploy_local(dry_run: bool, verbose: bool) -> dict:
     class QuietHandler(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(ROOT), **kwargs)
-
-        def log_message(self, format, *args):
-            if verbose:
-                super().log_message(format, *args)
 
     httpd = socketserver.TCPServer(("", LOCAL_HTTP_PORT), QuietHandler)
     http_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -417,12 +391,8 @@ def _get_deployed_version(api_url: str, timeout: float = 5.0) -> str | None:
     return None
 
 
-def _set_commit_sha_secret(sha: str, dry_run: bool) -> bool:
+def _set_commit_sha_secret(sha: str) -> bool:
     """Set COMMIT_SHA as a Cloudflare Pages secret via ``wrangler pages secret put``."""
-    if dry_run:
-        logger.info("[DRY-RUN] Would set COMMIT_SHA=%s as Cloudflare Pages secret", sha[:12])
-        return True
-
     _require_command("wrangler", "wrangler")
     logger.info("Setting COMMIT_SHA as Cloudflare Pages secret...")
     result = subprocess.run(
@@ -439,7 +409,7 @@ def _set_commit_sha_secret(sha: str, dry_run: bool) -> bool:
     return True
 
 
-def _apply_d1_schema_remote(dry_run: bool, verbose: bool) -> bool:
+def _apply_d1_schema_remote() -> bool:
     """Apply ``web/schema.sql`` to the remote (production) D1 database.
 
     The schema uses ``CREATE TABLE IF NOT EXISTS`` / ``CREATE INDEX IF NOT
@@ -449,7 +419,7 @@ def _apply_d1_schema_remote(dry_run: bool, verbose: bool) -> bool:
     fresh or reset remote D1 has no schema, so every batch sync row fails with
     ``no such table … SQLITE_ERROR``.
 
-    Returns True on success (or dry-run), False on failure.
+    Returns True on success, False on failure.
     """
     schema_file = WEB_DIR / "schema.sql"
     if not schema_file.exists():
@@ -461,12 +431,6 @@ def _apply_d1_schema_remote(dry_run: bool, verbose: bool) -> bool:
     # show `--file=./web/schema.sql` run from the project root, but here we run
     # from web/, so absolute is the robust choice.
     schema_arg = f"--file={schema_file.resolve()}"
-    if dry_run:
-        logger.info(
-            "[DRY-RUN] Would run: wrangler d1 execute haqita-db --remote %s",
-            schema_arg,
-        )
-        return True
 
     wrangler = _require_command("wrangler", "wrangler")
     logger.info("Applying D1 schema to remote database (idempotent)...")
@@ -476,7 +440,7 @@ def _apply_d1_schema_remote(dry_run: bool, verbose: bool) -> bool:
             "--remote", schema_arg,
         ],
         cwd=WEB_DIR,
-        capture_output=not verbose,
+        capture_output=True,
         text=True,
     )
     if result.returncode != 0:
@@ -490,22 +454,18 @@ def _apply_d1_schema_remote(dry_run: bool, verbose: bool) -> bool:
     return True
 
 
-def _deploy_to_cloudflare(dry_run: bool, verbose: bool) -> dict:
+def _deploy_to_cloudflare() -> dict:
     """Deploy static files to Cloudflare Pages (raw deploy — no version check)."""
     _require_command("npm", "npm")
-    _install_deps_if_needed(dry_run)
-    _copy_static_files(dry_run)
-    _run_typecheck(dry_run)
-
-    if dry_run:
-        logger.info("[DRY-RUN] Would run: cd web && npm run deploy")
-        return {"status": "dry_run", "url": "https://haqita.pages.dev"}
+    _install_deps_if_needed()
+    _copy_static_files()
+    _run_typecheck()
 
     logger.info("Deploying to Cloudflare Pages...")
     result = subprocess.run(
         ["npm", "run", "deploy"],
         cwd=WEB_DIR,
-        capture_output=not verbose,
+        capture_output=True,
         text=True,
     )
     if result.returncode != 0:
@@ -517,8 +477,6 @@ def _deploy_to_cloudflare(dry_run: bool, verbose: bool) -> dict:
 
 
 def deploy_cloudflare(
-    dry_run: bool,
-    verbose: bool,
     skip_d1_schema: bool = False,
     verify_r2: bool = False,
 ) -> dict:
@@ -568,22 +526,17 @@ def deploy_cloudflare(
     needs_deploy = deployed_version is None or deployed_version != local_sha
 
     if needs_deploy:
-        if not dry_run:
-            logger.info("Deployed API is stale — deploying new version...")
-
-        deploy_result = _deploy_to_cloudflare(dry_run, verbose)
+        logger.info("Deployed API is stale — deploying new version...")
+        deploy_result = _deploy_to_cloudflare()
         if deploy_result.get("status") == "error":
             return deploy_result
 
         # Set COMMIT_SHA secret only after deploy succeeds, so version tracking
         # is consistent: the running API matches the SHA we recorded.
-        if not dry_run:
-            if not _set_commit_sha_secret(local_sha, dry_run=dry_run):
-                logger.warning("Failed to set COMMIT_SHA secret — version tracking will be broken on the next run")
+        if not _set_commit_sha_secret(local_sha):
+            logger.warning("Failed to set COMMIT_SHA secret — version tracking will be broken on the next run")
     else:
         logger.info("Deployed API is up to date (SHA matches). Skipping deploy.")
-        if dry_run:
-            logger.info("[DRY-RUN] Would skip deploy")
 
     # Apply D1 schema to remote (idempotent) before syncing, so the batch
     # endpoints always have their tables. The Pages static deploy alone does
@@ -592,8 +545,8 @@ def deploy_cloudflare(
     if apply_schema:
         logger.info("")
         logger.info("=== Applying D1 schema to remote database ===")
-        schema_applied = _apply_d1_schema_remote(dry_run, verbose)
-        if not schema_applied and not dry_run:
+        schema_applied = _apply_d1_schema_remote()
+        if not schema_applied:
             logger.error(
                 "Remote D1 schema apply failed. Aborting sync to avoid a "
                 "100%% 'no such table' failure. Run `wrangler d1 execute "
@@ -608,22 +561,18 @@ def deploy_cloudflare(
     # Sync data to the (now current) API
     logger.info("")
     logger.info("=== Syncing data to deployed API ===")
-    if dry_run:
-        secret = ""
-    else:
-        secret = os.getenv("SCRAPER_SECRET", "")
-        if not secret:
-            logger.error("SCRAPER_SECRET not set. Cannot sync.")
-            return {"status": "error", "error": "SCRAPER_SECRET not set"}
+    secret = os.getenv("SCRAPER_SECRET", "")
+    if not secret:
+        logger.error("SCRAPER_SECRET not set. Cannot sync.")
+        return {"status": "error", "error": "SCRAPER_SECRET not set"}
 
-    sync_result = run_sync(api_url, secret, dry_run=dry_run, verbose=verbose, verify_r2=verify_r2)
+    sync_result = run_sync(api_url, secret, verify_r2=verify_r2)
     if sync_result.get("status") == "error":
         logger.error("Sync after deploy failed: %s", sync_result.get("error"))
         return {"status": "error", "error": sync_result.get("error")}
 
-    status = "dry_run" if dry_run else "complete"
     return {
-        "status": status,
+        "status": "complete",
         "url": "https://haqita.pages.dev",
         "deploy_needed": needs_deploy,
         "d1_schema_applied": schema_applied if apply_schema else "skipped",
@@ -632,8 +581,6 @@ def deploy_cloudflare(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Haqita Stage 5: Deploy + Sync")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without executing")
-    parser.add_argument("--verbose", action="store_true", help="Show detailed output")
     parser.add_argument(
         "--target",
         choices=["local", "cloudflare", "both"],
@@ -651,7 +598,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    setup_logging(args.verbose)
+    setup_logging()
     cfg = load_config()
     deploy_cfg = cfg.get("deploy", {})
 
@@ -670,31 +617,26 @@ def main() -> None:
         sys.exit(1)
 
     logger.info("Deploy target: %s", target)
-    if args.dry_run:
-        logger.info("[DRY-RUN] No servers will be started and no deploy will run.")
-        logger.info("")
 
     details: dict = {"target": target}
     try:
         if target == "local":
-            result = deploy_local(args.dry_run, args.verbose)
+            result = deploy_local()
         elif target == "cloudflare":
             result = deploy_cloudflare(
-                args.dry_run, args.verbose,
                 skip_d1_schema=args.skip_d1_schema,
                 verify_r2=args.verify_r2,
             )
         elif target == "both":
             cf_result = deploy_cloudflare(
-                args.dry_run, args.verbose,
                 skip_d1_schema=args.skip_d1_schema,
                 verify_r2=args.verify_r2,
             )
             details["cloudflare"] = cf_result
-            if cf_result.get("status") == "error" and not args.dry_run:
+            if cf_result.get("status") == "error":
                 write_status("error", target, details)
                 sys.exit(1)
-            result = deploy_local(args.dry_run, args.verbose)
+            result = deploy_local()
             details["local"] = result
         else:
             raise ValueError(f"Unknown target: {target}")

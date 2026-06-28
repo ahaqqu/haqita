@@ -413,24 +413,25 @@ class TestMainFunction:
         monkeypatch.setattr(seed_d1, "PROMO_CATALOG_SRC", promo_file)
         monkeypatch.setattr(seed_d1, "ACTIVE_PROMO_SRC", tmp_path / "active_promo.json")
 
-    def test_dry_run_does_not_write_file(self, tmp_path, monkeypatch):
-        """--dry-run should not create seed.sql."""
+    def test_writes_seed_file(self, tmp_path, monkeypatch):
+        """Should create seed.sql file."""
         seed_file = tmp_path / "seed.sql"
         monkeypatch.setattr(seed_d1, "SEED_FILE", seed_file)
         self._setup_data_files(tmp_path, monkeypatch)
 
-        monkeypatch.setattr(sys, "argv", ["seed_d1.py", "--dry-run"])
+        monkeypatch.setattr(sys, "argv", ["seed_d1.py"])
         seed_d1.main()
 
-        assert not seed_file.exists()
+        assert seed_file.exists()
+        assert seed_file.stat().st_size > 0
 
-    def test_verbose_prints_row_counts(self, capsys, tmp_path, monkeypatch):
-        """--verbose should print row counts for each table."""
+    def test_prints_row_counts(self, capsys, tmp_path, monkeypatch):
+        """Should print row counts for each table."""
         seed_file = tmp_path / "seed.sql"
         monkeypatch.setattr(seed_d1, "SEED_FILE", seed_file)
         self._setup_data_files(tmp_path, monkeypatch)
 
-        monkeypatch.setattr(sys, "argv", ["seed_d1.py", "--verbose", "--dry-run"])
+        monkeypatch.setattr(sys, "argv", ["seed_d1.py"])
         seed_d1.main()
 
         captured = capsys.readouterr()

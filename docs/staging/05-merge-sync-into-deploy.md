@@ -57,7 +57,7 @@ Combine deploy + sync into one deploy-then-sync step so the API is always up to 
 | File | Change |
 |---|---|
 | `web/functions/api/[[route]].ts` | Add `GET /api/v1/version` returning `c.env.COMMIT_SHA \|\| c.env.CF_PAGES_COMMIT_SHA \|\| "unknown"` |
-| `scripts/sync_cloudflare.py` | Expose `run_sync(api_url, secret, dry_run, verbose)` as a callable; keep CLI `main()` for direct use |
+| `scripts/sync_cloudflare.py` | Expose `run_sync(api_url, secret)` as a callable; keep CLI `main()` for direct use |
 | `scripts/deploy.py` | Add version check logic; import and call sync after deploy; set COMMIT_SHA secret before deploy |
 | `scripts/orchestrator.py` | Merge sync into deploy (now Stage 5: Deploy + Sync runs both) |
 | `.env.example` | Add `CLOUDFLARE_API_TOKEN`, ensure all credentials documented |

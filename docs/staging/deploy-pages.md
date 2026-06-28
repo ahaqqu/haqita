@@ -53,7 +53,6 @@ Or run directly:
 
 ```bash
 python scripts/deploy.py
-python scripts/deploy.py --dry-run
 python scripts/deploy.py --target cloudflare
 python scripts/deploy.py --target both
 python scripts/deploy.py --skip-d1-schema          # Skip remote D1 schema apply
@@ -192,5 +191,5 @@ You can also run the E2E verification from the pipeline itself by selecting **[1
 | Deployment failed | Authentication or project issue | Check `wrangler whoami`, check project name |
 | CORS errors | Same-origin violation | Verify page and API are on same domain |
 | Sync 404 | Deployed API missing routes | Deploy first (deploy.py now version-checks and deploys before syncing) |
-| Sync all rows errored | Remote D1 has no tables | Stage 5 auto-applies schema; check `wrangler d1 execute haqita-db --remote --file=./web/schema.sql` manually, or re-run with `--verbose` |
+| Sync all rows errored | Remote D1 has no tables | Stage 5 auto-applies schema; check `wrangler d1 execute haqita-db --remote --file=./web/schema.sql` manually |
 | D1 schema apply failed | Wrangler auth or DB not found | Verify `wrangler whoami` and `wrangler d1 list` show `haqita-db`; use `--skip-d1-schema` to bypass temporarily |

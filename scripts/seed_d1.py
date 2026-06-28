@@ -6,8 +6,6 @@ SQL insert statements for seeding the D1 database.
 
 Usage:
     python scripts/seed_d1.py                    # Generate seed.sql
-    python scripts/seed_d1.py --dry-run          # Preview without writing
-    python scripts/seed_d1.py --verbose          # Show row counts per table
     python scripts/seed_d1.py --apply            # Apply directly to local D1 via wrangler
 """
 
@@ -137,7 +135,7 @@ def generate_product_inserts(catalog: dict) -> list[str]:
     return statements
 
 
-def generate_price_inserts(history: dict, verbose: bool = False) -> list[str]:
+def generate_price_inserts(history: dict) -> list[str]:
     """Generate INSERT statements for the prices table from price_history.json snapshots.
 
     Maps snapshot fields to prices table columns:
@@ -190,7 +188,7 @@ def generate_price_inserts(history: dict, verbose: bool = False) -> list[str]:
             continue
 
         missing = [field for field in required_for_warning if snapshot.get(field) is None]
-        if verbose and missing:
+        if missing:
             key = snapshot.get("product_key", "<unknown>")
             print("[WARN] Snapshot for " + key + " missing fields: " + ", ".join(missing))
 
@@ -262,7 +260,7 @@ def generate_promo_inserts(promo_catalog: list) -> list[str]:
     return statements
 
 
-def generate_seed_sql(history: dict, catalog: dict, promo_catalog_data: list, verbose: bool = False) -> str:
+def generate_seed_sql(history: dict, catalog: dict, promo_catalog_data: list) -> str:
     """Combine all INSERT statements into a single SQL file.
 
     Order: stores first (no FK dependencies), then products (referenced by
@@ -280,7 +278,7 @@ def generate_seed_sql(history: dict, catalog: dict, promo_catalog_data: list, ve
     sections = [
         generate_store_inserts(history),
         generate_product_inserts(catalog),
-        generate_price_inserts(history, verbose=verbose),
+        generate_price_inserts(history),
         generate_promo_inserts(promo_catalog_data),
     ]
     lines = []
@@ -289,20 +287,15 @@ def generate_seed_sql(history: dict, catalog: dict, promo_catalog_data: list, ve
     return "\n".join(lines) + "\n"
 
 
-def apply_to_d1(seed_sql_path: Path, dry_run: bool):
+def apply_to_d1(seed_sql_path: Path):
     """Apply seed SQL to local D1 via wrangler.
 
     Runs: wrangler d1 execute haqita-db --local --file=<seed_sql_path>
 
     Args:
         seed_sql_path: Path to the generated seed.sql file.
-        dry_run: If True, print the command instead of executing it.
     """
     command = ["wrangler", "d1", "execute", "haqita-db", "--local", "--file=" + str(seed_sql_path)]
-    if dry_run:
-        print("[DRY-RUN] Would execute: " + " ".join(command))
-        return
-
     result = subprocess.run(
         command,
         capture_output=True,
@@ -318,8 +311,6 @@ def apply_to_d1(seed_sql_path: Path, dry_run: bool):
 
 def main():
     parser = argparse.ArgumentParser(description="Haqita D1 Seed Script")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without writing files")
-    parser.add_argument("--verbose", action="store_true", help="Show row counts per table")
     parser.add_argument("--apply", action="store_true", help="Apply directly to local D1 via wrangler")
     args = parser.parse_args()
 
@@ -337,23 +328,14 @@ def main():
     catalog = catalog_raw.get("catalog", {}) if isinstance(catalog_raw, dict) else {}
     promo_catalog_data = load_json(PROMO_CATALOG_SRC, [])
 
-    if args.dry_run:
-        print("[DRY-RUN] No files will be written.")
-        print()
-
     # Generate SQL
-    seed_sql = generate_seed_sql(history, catalog, promo_catalog_data, verbose=args.verbose)
+    seed_sql = generate_seed_sql(history, catalog, promo_catalog_data)
 
-    if args.verbose:
-        print("  Stores:   " + str(len(generate_store_inserts(history))) + " rows")
-        print("  Products: " + str(len(generate_product_inserts(catalog))) + " rows")
-        print("  Prices:   " + str(len(generate_price_inserts(history))) + " rows")
-        print("  Promos:   " + str(len(generate_promo_inserts(promo_catalog_data))) + " rows")
-        print()
-
-    if args.dry_run:
-        print("Would write " + str(len(seed_sql)) + " bytes to " + str(SEED_FILE))
-        return
+    print("  Stores:   " + str(len(generate_store_inserts(history))) + " rows")
+    print("  Products: " + str(len(generate_product_inserts(catalog))) + " rows")
+    print("  Prices:   " + str(len(generate_price_inserts(history))) + " rows")
+    print("  Promos:   " + str(len(generate_promo_inserts(promo_catalog_data))) + " rows")
+    print()
 
     # Write seed.sql
     SEED_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -361,7 +343,7 @@ def main():
     print("Wrote seed SQL to " + str(SEED_FILE))
 
     if args.apply:
-        apply_to_d1(SEED_FILE, args.dry_run)
+        apply_to_d1(SEED_FILE)
 
 
 if __name__ == "__main__":

@@ -174,7 +174,7 @@ wrangler d1 execute haqita-db --remote --file=./web/schema.sql
 ### Seed local D1
 
 ```bash
-python scripts/seed_d1.py --apply --verbose
+python scripts/seed_d1.py --apply
 ```
 
 ### Verify schema

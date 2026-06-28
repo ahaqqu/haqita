@@ -11,7 +11,6 @@ Usage:
 Options:
     --store STORE          Store name: lotte or superindo (default: lotte)
     --image FILENAME       Process specific image only (default: all new)
-    --dry-run              Report products without saving to file
 """
 
 import argparse
@@ -79,15 +78,13 @@ def discover_images(scrape_dir: Path, state: dict, specific: str | None = None) 
     return new, old, len(all_images)
 
 
-def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None = None, dry_run: bool = False) -> None:
+def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None = None) -> None:
     """Run OCR on images from scrape directory."""
     store = cfg.get('store', 'lotte')
     provider = cfg['ocr']['provider']
 
     print("=" * 60)
     print(f"  OCR — {store.title()} ({provider})")
-    if dry_run:
-        print("  Dry-run: YES (no file saved)")
     if specific:
         print(f"  Image: {specific}")
     print("=" * 60)
@@ -179,13 +176,6 @@ def run_ocr(cfg: dict, scrape_dir: Path, output_dir: Path, specific: str | None 
         skipped = len(images_to_process) - len(processed_filenames)
         print(f"[*] {skipped} image(s) skipped due to quota exhaustion")
 
-    if dry_run:
-        print(f"[*] Dry-run complete: {len(all_products)} products, {len(all_rejected)} rejected")
-        print("    No file saved. State not updated.")
-        if quota_exhausted:
-            raise QuotaExhaustedError("Daily quota exhausted — OCR stopped")
-        return
-
     if not all_products and not all_rejected and not quota_exhausted:
         print("[*] No products extracted. Nothing to save.")
         return
@@ -232,14 +222,13 @@ def main():
     parser = argparse.ArgumentParser(description='Run OCR on scraped brochure images')
     parser.add_argument('--store', type=str, default='lotte', help='Store name: lotte or superindo')
     parser.add_argument('--image', type=str, default=None, help='Process specific image only')
-    parser.add_argument('--dry-run', action='store_true', help='Report products without saving')
     args = parser.parse_args()
 
     cfg = load_config(store=args.store)
     scrape_dir = Path(f'database/scrape/{args.store}')
     output_dir = Path(f'database/ocr/{args.store}')
 
-    run_ocr(cfg, scrape_dir, output_dir, args.image, args.dry_run)
+    run_ocr(cfg, scrape_dir, output_dir, args.image)
 
 
 if __name__ == '__main__':

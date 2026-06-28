@@ -21,17 +21,8 @@ Sync is now part of Stage 5 (Deploy + Sync) — `deploy.py` imports and calls th
 # Basic sync (to production)
 python scripts/sync_cloudflare.py
 
-# Preview without sending
-python scripts/sync_cloudflare.py --dry-run
-
-# Detailed output
-python scripts/sync_cloudflare.py --verbose
-
 # Sync to local API
 python scripts/sync_cloudflare.py --api-url http://localhost:8787/api/v1
-
-# Sync with all options
-python scripts/sync_cloudflare.py --api-url http://localhost:8787/api/v1 --verbose --dry-run
 
 # Reconcile R2 bucket against sync_state
 python scripts/sync_cloudflare.py --verify-r2
@@ -41,8 +32,6 @@ python scripts/sync_cloudflare.py --verify-r2
 
 | Flag        | Description                                                   |
 | ----------- | ------------------------------------------------------------- |
-| `--dry-run`   | Preview what would happen without making any changes          |
-| `--verbose`   | Show detailed per-table sync reports                          |
 | `--api-url`   | Override API URL (default: `https://haqita.pages.dev/api/v1`) |
 | `--verify-r2` | List R2 bucket, re-upload missing referenced images, prune stale sync_state entries |
 
@@ -97,7 +86,7 @@ The sync state file at `database/sync_state.json` tracks:
 
 - Image hashes use MD5 (fast, sufficient for change detection)
 - Only images whose hash has changed since the last sync are re-uploaded
-- Sync state is only updated after a successful sync (not on --dry-run)
+- Sync state is only updated after a successful sync
 
 ## Failure Handling
 
@@ -112,5 +101,5 @@ The sync state file at `database/sync_state.json` tracks:
 
 ## Menu Integration
 
-- `haqita.sh` / `haqita.bat`: `[6] Sync to Cloudflare` (standalone; sync also runs as part of `[7] Deploy + Sync`)
+- `haqita.sh`: `[6] Sync to Cloudflare` (standalone; sync also runs as part of `[7] Deploy + Sync`)
 - `orchestrator.py`: `--stage deploy` or `--full` (sync runs as part of deploy). The old `--stage cloudflare-sync` flag is kept for backward compatibility but delegates to deploy with a deprecation warning.

@@ -6,8 +6,6 @@ to output/html/ for the browser-based UI.
 
 Usage:
     python scripts/publish_html.py
-    python scripts/publish_html.py --dry-run
-    python scripts/publish_html.py --verbose
 """
 
 import argparse
@@ -37,13 +35,7 @@ def load_json(path: Path, default=None):
 
 def main():
     parser = argparse.ArgumentParser(description="Haqita Stage 4: Publish HTML")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without making changes")
-    parser.add_argument("--verbose", action="store_true", help="Show detailed file info")
     args = parser.parse_args()
-
-    if args.dry_run:
-        print("[DRY-RUN] No files will be written.")
-        print()
 
     HTML_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -108,50 +100,18 @@ def main():
                 print(f"[WARN] Source not found: {data}")
                 warned += 1
                 continue
-            if args.dry_run:
-                print(f"[WOULD COPY] {name} -> output/html/")
-                if args.verbose:
-                    size = data.stat().st_size
-                    print(f"  Size: {size:,} bytes")
-                    if dst.exists():
-                        dst_size = dst.stat().st_size
-                        print(f"  Destination exists: {dst_size:,} bytes")
-                        print(f"  Would overwrite: {'yes' if dst_size != size else 'no (identical size)'}")
-                    else:
-                        print(f"  Destination: new file")
-                copied += 1
-            else:
-                shutil.copy2(data, dst)
-                print(f"[OK] {name} -> output/html/")
-                if args.verbose:
-                    size = data.stat().st_size
-                    print(f"  Size: {size:,} bytes")
-                copied += 1
+            shutil.copy2(data, dst)
+            size = data.stat().st_size
+            print(f"[OK] {name} -> output/html/ ({size:,} bytes)")
+            copied += 1
         else:
-            if args.dry_run:
-                print(f"[WOULD GENERATE] {name} -> output/html/")
-                if args.verbose:
-                    size = len(json.dumps(data, ensure_ascii=False))
-                    print(f"  Generated size: {size:,} bytes")
-                    if dst.exists():
-                        dst_size = dst.stat().st_size
-                        print(f"  Destination exists: {dst_size:,} bytes")
-                    else:
-                        print(f"  Destination: new file")
-                copied += 1
-            else:
-                with open(dst, "w", encoding="utf-8") as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                print(f"[OK] {name} -> output/html/ (generated from database)")
-                if args.verbose:
-                    size = dst.stat().st_size
-                    print(f"  Size: {size:,} bytes")
-                copied += 1
+            with open(dst, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            size = dst.stat().st_size
+            print(f"[OK] {name} -> output/html/ (generated from database, {size:,} bytes)")
+            copied += 1
 
-    if args.dry_run:
-        print(f"\nDry-run complete. {copied} file(s) would be written, {warned} warning(s).")
-    else:
-        print(f"Publish HTML complete. {copied} file(s) written, {warned} warning(s).")
+    print(f"Publish HTML complete. {copied} file(s) written, {warned} warning(s).")
 
 
 if __name__ == "__main__":
