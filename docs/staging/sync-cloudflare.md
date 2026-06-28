@@ -10,9 +10,10 @@ Sync is now part of Stage 5 (Deploy + Sync) — `deploy.py` imports and calls th
 
 ## What It Does
 
-1. **Batch Sync**: Reads `database/price_history.json`, `database/product_catalog.json`, and `output/html/promo_catalog.json`, builds a batch payload, and sends it to `POST /api/v1/sync/batch`.
-2. **R2 Image Upload**: Checks for new or changed brochure images, uploads them to Cloudflare R2 via the S3-compatible API, and records the R2 URLs via `POST /api/v1/sync/images`.
-3. **State Tracking**: Maintains `database/sync_state.json` with image file hashes and last sync timestamp to avoid re-uploading unchanged images.
+1. **Batch Sync**: Reads `database/price_history.json`, `database/product_catalog.json`, and `output/html/promo_catalog.json`, builds a batch payload, and sends it to `POST /api/v1/sync/batch`. If the API returns errors for **every** row (e.g. remote D1 has no tables), the sync aborts with `status=error` and `error=all_rows_failed` instead of reporting success.
+2. **R2 Image Upload**: Checks for new or changed brochure images (by MD5 hash against `sync_state.json`), uploads them to Cloudflare R2 via the S3-compatible API, and records the R2 URLs via `POST /api/v1/sync/images`.
+3. **R2 Verification** (`--verify-r2`): Lists the R2 bucket via paginated `list_objects_v2`, re-uploads referenced images that are missing from R2 or whose hash is untracked in `sync_state`, and prunes stale `sync_state` entries no longer referenced by `price_history.json`.
+4. **State Tracking**: Maintains `database/sync_state.json` with image file hashes and last sync timestamp to avoid re-uploading unchanged images.
 
 ## Usage
 
@@ -31,15 +32,19 @@ python scripts/sync_cloudflare.py --api-url http://localhost:8787/api/v1
 
 # Sync with all options
 python scripts/sync_cloudflare.py --api-url http://localhost:8787/api/v1 --verbose --dry-run
+
+# Reconcile R2 bucket against sync_state
+python scripts/sync_cloudflare.py --verify-r2
 ```
 
 ## CLI Arguments
 
 | Flag        | Description                                                   |
 | ----------- | ------------------------------------------------------------- |
-| `--dry-run` | Preview what would happen without making any changes          |
-| `--verbose` | Show detailed per-table sync reports                          |
-| `--api-url` | Override API URL (default: `https://haqita.pages.dev/api/v1`) |
+| `--dry-run`   | Preview what would happen without making any changes          |
+| `--verbose`   | Show detailed per-table sync reports                          |
+| `--api-url`   | Override API URL (default: `https://haqita.pages.dev/api/v1`) |
+| `--verify-r2` | List R2 bucket, re-upload missing referenced images, prune stale sync_state entries |
 
 ## Environment Variables
 
@@ -57,7 +62,7 @@ python scripts/sync_cloudflare.py --api-url http://localhost:8787/api/v1 --verbo
 
 ```
 Pipeline Output                 sync_cloudflare.py              Cloudflare
-─────────────────              ──────────────────              ──────────
+────────────────              ──────────────────              ──────────
 database/                       1. Build batch ─────POST────▶  /api/v1/sync/batch
   price_history.json                                      ◀───  200 OK
   product_catalog.json
@@ -67,7 +72,12 @@ output/html/                       │
                                    │                    ◀─── 200 OK
                                    └─ Record URLs ──POST──▶  /api/v1/sync/images
                                                       ◀───  200 OK
-                                3. Save sync_state.json (local)
+                                3. [--verify-r2] List bucket ──GET──▶  R2 (list_objects_v2)
+                                   │                    ◀───  key set
+                                   ├─ Missing/untracked? ─PUT──▶  R2 bucket
+                                   │                        ◀───  200 OK
+                                   └─ Prune stale sync_state (local)
+                                4. Save sync_state.json (local)
 ```
 
 ## Sync State
@@ -94,8 +104,10 @@ The sync state file at `database/sync_state.json` tracks:
 - API returns 401 → Authentication failed. Check `SCRAPER_SECRET`.
 - API returns 400 → Validation error. Check the batch payload structure.
 - API returns 500 → Retryable. `retry_call` retries 3 times with exponential backoff.
+- All rows errored (207 with `errors.length === total_rows`) → Sync aborts with `status=error` and `error=all_rows_failed`. This usually means the remote D1 schema is missing.
 - R2 upload fails for one image → Other images continue uploading. The failed image will be retried on the next sync.
 - Local image file missing → Warning logged, image skipped.
+- R2 listing fails (`--verify-r2`) → Warning logged, reconciliation skipped; sync_state is trusted as-is.
 - API unreachable → Error logged, script exits 1. Local files are NOT modified.
 
 ## Menu Integration

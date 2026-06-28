@@ -36,8 +36,9 @@ Edit `config.yaml`:
 
 ```yaml
 deploy:
-  local: true       # Start local wrangler dev server + http.server 8080
-  cloudflare: false # Deploy to Cloudflare Pages
+  local: true            # Start local wrangler dev server + http.server 8080
+  cloudflare: false      # Deploy to Cloudflare Pages
+  apply_d1_schema: true  # Apply web/schema.sql to remote D1 before every sync (default true)
 ```
 
 Set `deploy.cloudflare: true` to enable production deploys. `deploy.local: true` is
@@ -55,6 +56,8 @@ python scripts/deploy.py
 python scripts/deploy.py --dry-run
 python scripts/deploy.py --target cloudflare
 python scripts/deploy.py --target both
+python scripts/deploy.py --skip-d1-schema          # Skip remote D1 schema apply
+python scripts/deploy.py --verify-r2               # Reconcile R2 bucket vs sync_state
 ```
 
 Stage 5 (Deploy + Sync):
@@ -69,8 +72,9 @@ Stage 5 (Deploy + Sync):
    d. Runs `tsc --noEmit` (fails if type errors)
    e. Runs `wrangler pages deploy . --project-name haqita`
 6. If SHA matches, skips deploy (API is current)
-7. Syncs data to the (now current) API via `run_sync()` from `sync_cloudflare.py`
-8. For local: starts `wrangler pages dev --local` (port 8787) and `python -m http.server 8080`
+7. Applies `web/schema.sql` to the remote D1 (idempotent — `CREATE TABLE/INDEX IF NOT EXISTS`). This guarantees the sync endpoints always have their tables; the Pages static deploy alone does not provision D1. Skipped with `--skip-d1-schema` or `deploy.apply_d1_schema: false`.
+8. Syncs data to the (now current) API via `run_sync()` from `sync_cloudflare.py`
+9. For local: starts `wrangler pages dev --local` (port 8787) and `python -m http.server 8080`
 
 ### Step 4: Verify deployment
 
@@ -188,3 +192,5 @@ You can also run the E2E verification from the pipeline itself by selecting **[1
 | Deployment failed | Authentication or project issue | Check `wrangler whoami`, check project name |
 | CORS errors | Same-origin violation | Verify page and API are on same domain |
 | Sync 404 | Deployed API missing routes | Deploy first (deploy.py now version-checks and deploys before syncing) |
+| Sync all rows errored | Remote D1 has no tables | Stage 5 auto-applies schema; check `wrangler d1 execute haqita-db --remote --file=./web/schema.sql` manually, or re-run with `--verbose` |
+| D1 schema apply failed | Wrangler auth or DB not found | Verify `wrangler whoami` and `wrangler d1 list` show `haqita-db`; use `--skip-d1-schema` to bypass temporarily |
