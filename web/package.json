@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler pages dev --local --port 8787",
-    "deploy": "wrangler pages deploy . --project-name haqita",
+    "deploy": "wrangler pages deploy --project-name haqita",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
