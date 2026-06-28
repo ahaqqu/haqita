@@ -186,10 +186,7 @@ haqita/
 │   ├── orchestrator.py               ← Pipeline orchestrator
 │   ├── health_check.py               ← Pre-flight verification
 │   └── matching/                     ← Matching pipeline (7 gates)
-├── database/                         ← Generated, maintained (source of truth)
-│   ├── price_history.json            ← Append-only price snapshots
-│   ├── product_catalog.json          ← Auto-built product registry
-│   └── review_queue.json             ← Flagged matches for review
+├── database/ ──symlink──▶ ../haqita-database/   ← Pipeline data (separate repo)
 ├── output/
 │   └── html/                         ← Stage 4 output (safe to delete)
 │       ├── active_promo.json         ← Generated from database/
@@ -197,3 +194,21 @@ haqita/
 ├── tests/                            ← Unit and integration tests
 └── docs/                             ← Documentation
 ```
+
+## Setup
+
+### Database repo
+
+Pipeline data lives in a separate repository: [ahaqqu/haqita-database](https://github.com/ahaqqu/haqita-database).
+
+Clone it as a sibling of the main repo and the setup script will create the symlink:
+
+```bash
+# Clone the database repo (as a sibling directory)
+git clone git@github.com:ahaqqu/haqita-database.git ../haqita-database
+
+# Or use the setup script (does the same thing):
+bash scripts/setup_database_repo.sh
+```
+
+The symlink at `database/` points to `../haqita-database/`. All pipeline scripts write through the symlink transparently. The database repo is auto-committed after each pipeline run.

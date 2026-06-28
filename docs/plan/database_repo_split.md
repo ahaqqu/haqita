@@ -2,7 +2,7 @@
 
 ## Extract `database/` into Separate `haqita-database` Repo
 
-**Status:** Plan (ready for implementation)  
+**Status:** Implemented  
 **Target repo:** https://github.com/ahaqqu/haqita-database (exists, has 1 commit with skeleton README)  
 **Main repo:** https://github.com/ahaqqu/haqita  
 **Symlink target:** `../haqita-database` (sibling directory)
