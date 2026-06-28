@@ -57,6 +57,9 @@ python scripts/deploy.py --target cloudflare
 python scripts/deploy.py --target both
 python scripts/deploy.py --skip-d1-schema          # Skip remote D1 schema apply
 python scripts/deploy.py --verify-r2               # Reconcile R2 bucket vs sync_state
+python scripts/deploy.py --detached                # Run local servers in background (non-blocking)
+python scripts/deploy.py --target local --detached # Start local dev servers only, in background
+python scripts/deploy.py --stop-local              # Stop previously started detached servers
 ```
 
 Stage 5 (Deploy + Sync):
@@ -73,7 +76,7 @@ Stage 5 (Deploy + Sync):
 6. If SHA matches, skips deploy (API is current)
 7. Applies `web/schema.sql` to the remote D1 (idempotent — `CREATE TABLE/INDEX IF NOT EXISTS`). This guarantees the sync endpoints always have their tables; the Pages static deploy alone does not provision D1. Skipped with `--skip-d1-schema` or `deploy.apply_d1_schema: false`.
 8. Syncs data to the (now current) API via `run_sync()` from `sync_cloudflare.py`
-9. For local: starts `wrangler pages dev --local` (port 8787) and `python -m http.server 8080`
+9. For local: starts `wrangler pages dev` (port 8787) and `python -m http.server 8080` — in the pipeline, these run in **detached** mode (background, survives script exit). Use `python scripts/deploy.py --stop-local` to shut them down.
 
 ### Step 4: Verify deployment
 
@@ -179,7 +182,7 @@ curl -s "https://haqita.pages.dev/api/v1/products?limit=5" | python3 -m json.too
 # Expected: paginated product list
 ```
 
-You can also run the E2E verification from the pipeline itself by selecting **[1] Run full pipeline**; Stage 5 will leave the local UI running at `http://localhost:8080` and deploy to `https://haqita.pages.dev` when Cloudflare is enabled.
+You can also run the E2E verification from the pipeline itself by selecting **[1] Run full pipeline**; Stage 5 leaves the local UI running in the background at `http://localhost:8080` and deploys to `https://haqita.pages.dev` when Cloudflare is enabled. Use option **[8] Local dev servers → [2] Stop** or `python scripts/deploy.py --stop-local` to shut down the local servers.
 
 ## Troubleshooting
 
@@ -193,3 +196,5 @@ You can also run the E2E verification from the pipeline itself by selecting **[1
 | Sync 404 | Deployed API missing routes | Deploy first (deploy.py now version-checks and deploys before syncing) |
 | Sync all rows errored | Remote D1 has no tables | Stage 5 auto-applies schema; check `wrangler d1 execute haqita-db --remote --file=./web/schema.sql` manually |
 | D1 schema apply failed | Wrangler auth or DB not found | Verify `wrangler whoami` and `wrangler d1 list` show `haqita-db`; use `--skip-d1-schema` to bypass temporarily |
+| Local server port in use | Previous detached servers still running | Run `python scripts/deploy.py --stop-local` to clean up, or use option **[8] → [2] Stop** from the menu |
+| Detached server won't start | Port still bound from orphaned process | Run `python scripts/deploy.py --stop-local`, then retry. If that fails, kill manually: `lsof -ti:8080 -ti:8787 \| xargs kill` |
