@@ -284,8 +284,9 @@ def run_deploy(logger: logging.Logger) -> dict:
             print(f"  {line}")
 
     if result.returncode != 0:
-        logger.error("Stage 5 (deploy+sync) failed: %s", result.stderr.strip()[:200])
-        return {"status": "error", "error": result.stderr.strip()[:200]}
+        error_msg = result.stderr.strip()[:200] or result.stdout.strip()[:200]
+        logger.error("Stage 5 (deploy+sync) failed: %s", error_msg)
+        return {"status": "error", "error": error_msg}
 
     status = {"status": "complete"}
     write_stage_status("deploy", status, logger)

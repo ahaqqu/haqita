@@ -442,18 +442,24 @@ def _deploy_local_detached() -> dict:
     # Check if servers are already running on expected or stored ports
     http_up = _wait_for_port(LOCAL_HTTP_PORT, timeout=1.0)
     wrangler_up = _wait_for_port(LOCAL_WRANGLER_PORT, timeout=1.0)
+    actual_http_port = LOCAL_HTTP_PORT if http_up else None
+    actual_wrangler_port = LOCAL_WRANGLER_PORT if wrangler_up else None
 
     pid_data = load_json(LOCAL_PID_FILE)
     if pid_data and "ports" in pid_data:
         stored = pid_data["ports"]
         if not http_up and len(stored) >= 1:
             http_up = _wait_for_port(stored[0], timeout=1.0)
+            if http_up:
+                actual_http_port = stored[0]
         if not wrangler_up and len(stored) >= 2:
             wrangler_up = _wait_for_port(stored[1], timeout=1.0)
+            if wrangler_up:
+                actual_wrangler_port = stored[1]
 
     if http_up and wrangler_up:
         logger.info("Local dev servers already running. Skipping.")
-        return {"status": "complete", "ports": [LOCAL_HTTP_PORT, LOCAL_WRANGLER_PORT]}
+        return {"status": "complete", "ports": [actual_http_port, actual_wrangler_port]}
     if http_up or wrangler_up:
         logger.warning(
             "One server is already running but the other is not. "
@@ -483,52 +489,59 @@ def _deploy_local_detached() -> dict:
     finally:
         wrangler_fh.close()
 
-    detected_port = _detect_wrangler_port_from_log(
-        wrangler_log, LOCAL_WRANGLER_PORT, timeout=60.0
-    )
-    if detected_port is None:
-        logger.error("wrangler dev did not start in time. Check %s", wrangler_log)
+    http_proc = None
+    try:
+        detected_port = _detect_wrangler_port_from_log(
+            wrangler_log, LOCAL_WRANGLER_PORT, timeout=60.0
+        )
+        if detected_port is None:
+            logger.error("wrangler dev did not start in time. Check %s", wrangler_log)
+            _kill_proc_group(wrangler_proc)
+            return {"status": "error", "error": "wrangler_dev_timeout"}
+
+        logger.info("  wrangler dev ready on http://localhost:%d", detected_port)
+
+        # Start static HTTP server as a detached subprocess.
+        logger.info("Starting static HTTP server on port %d (background)...", LOCAL_HTTP_PORT)
+        http_proc = subprocess.Popen(
+            [
+                sys.executable, "-m", "http.server",
+                str(LOCAL_HTTP_PORT), "--directory", str(ROOT),
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+
+        if not _wait_for_port(LOCAL_HTTP_PORT, timeout=10.0):
+            logger.error("HTTP server did not start on port %d in time.", LOCAL_HTTP_PORT)
+            _kill_proc_group(wrangler_proc)
+            _kill_proc_group(http_proc)
+            return {"status": "error", "error": "http_server_timeout"}
+
+        logger.info("  HTTP server ready on http://localhost:%d", LOCAL_HTTP_PORT)
+
+        # Save PIDs for later cleanup.
+        STAGE_RESULTS.mkdir(parents=True, exist_ok=True)
+        pid_data = {
+            "pids": [wrangler_proc.pid, http_proc.pid],
+            "ports": [LOCAL_HTTP_PORT, detected_port],
+            "started_at": datetime.now().isoformat(),
+        }
+        LOCAL_PID_FILE.write_text(json.dumps(pid_data, indent=2), encoding="utf-8")
+
+        logger.info("")
+        logger.info("Local dev servers running in background:")
+        logger.info("  Static:  http://localhost:%d", LOCAL_HTTP_PORT)
+        logger.info("  API:     http://localhost:%d", detected_port)
+        logger.info("  Stop with: python scripts/deploy.py --stop-local")
+
+        return {"status": "complete", "ports": [LOCAL_HTTP_PORT, detected_port]}
+    except BaseException:
         _kill_proc_group(wrangler_proc)
-        return {"status": "error", "error": "wrangler_dev_timeout"}
-
-    logger.info("  wrangler dev ready on http://localhost:%d", detected_port)
-
-    # Start static HTTP server as a detached subprocess.
-    logger.info("Starting static HTTP server on port %d (background)...", LOCAL_HTTP_PORT)
-    http_proc = subprocess.Popen(
-        [
-            sys.executable, "-m", "http.server",
-            str(LOCAL_HTTP_PORT), "--directory", str(ROOT),
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
-
-    if not _wait_for_port(LOCAL_HTTP_PORT, timeout=10.0):
-        logger.error("HTTP server did not start on port %d in time.", LOCAL_HTTP_PORT)
-        _kill_proc_group(wrangler_proc)
-        _kill_proc_group(http_proc)
-        return {"status": "error", "error": "http_server_timeout"}
-
-    logger.info("  HTTP server ready on http://localhost:%d", LOCAL_HTTP_PORT)
-
-    # Save PIDs for later cleanup.
-    STAGE_RESULTS.mkdir(parents=True, exist_ok=True)
-    pid_data = {
-        "pids": [wrangler_proc.pid, http_proc.pid],
-        "ports": [LOCAL_HTTP_PORT, detected_port],
-        "started_at": datetime.now().isoformat(),
-    }
-    LOCAL_PID_FILE.write_text(json.dumps(pid_data, indent=2), encoding="utf-8")
-
-    logger.info("")
-    logger.info("Local dev servers running in background:")
-    logger.info("  Static:  http://localhost:%d", LOCAL_HTTP_PORT)
-    logger.info("  API:     http://localhost:%d", detected_port)
-    logger.info("  Stop with: python scripts/deploy.py --stop-local")
-
-    return {"status": "complete", "ports": [LOCAL_HTTP_PORT, detected_port]}
+        if http_proc is not None:
+            _kill_proc_group(http_proc)
+        raise
 
 
 def stop_local() -> dict:
