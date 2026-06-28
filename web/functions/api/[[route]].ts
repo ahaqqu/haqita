@@ -193,6 +193,59 @@ function buildHistorySnapshot(
   };
 }
 
+/**
+ * Upsert rows via db.batch() to stay within Cloudflare's per-Worker subrequest
+ * limit. The free Workers plan caps a single invocation at 50 subrequests;
+ * the paid plan caps at 1000. Each db.batch() call counts as ONE subrequest
+ * regardless of how many prepared statements it contains, so this collapses
+ * N individual prepare+bind+run calls (N subrequests) into ceil(N / CHUNK_SIZE)
+ * subrequests.
+ *
+ * D1 batch runs in a single transaction: if any statement in the chunk fails,
+ * the whole chunk rolls back and all rows in that chunk are reported as
+ * errors with the batch error. We deliberately do NOT fall back to per-row
+ * execution because each .run() is its own subrequest — a 100-row fallback
+ * would itself exceed the free-tier 50-subrequest cap. The sync is
+ * idempotent (INSERT OR REPLACE), so the caller can safely re-run to retry
+ * any failed chunk.
+ */
+const D1_BATCH_CHUNK_SIZE = 100;
+
+interface BatchUpsertResult {
+  updated: number;
+  skipped: number;
+  errors: { table: string; key: string; error: string }[];
+}
+
+async function batchUpsert(
+  db: D1Database,
+  statements: D1PreparedStatement[],
+  keys: string[],
+  tableName: string,
+): Promise<BatchUpsertResult> {
+  const result: BatchUpsertResult = { updated: 0, skipped: 0, errors: [] };
+
+  for (let i = 0; i < statements.length; i += D1_BATCH_CHUNK_SIZE) {
+    const chunk = statements.slice(i, i + D1_BATCH_CHUNK_SIZE);
+    const chunkKeys = keys.slice(i, i + D1_BATCH_CHUNK_SIZE);
+
+    if (chunk.length === 0) continue;
+
+    try {
+      await db.batch(chunk);
+      result.updated += chunk.length;
+    } catch (err) {
+      result.skipped += chunk.length;
+      const errMsg = String(err);
+      for (const key of chunkKeys) {
+        result.errors.push({ table: tableName, key, error: errMsg });
+      }
+    }
+  }
+
+  return result;
+}
+
 // Health check (from Phase 1)
 app.get("/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -452,124 +505,113 @@ app.post("/v1/sync/batch", authMiddleware, async (c) => {
     errors: [],
   };
   const db = c.env.DB;
+  const dummyFlag = batch.dummy_data ? 1 : 0;
 
-  for (const store of batch.stores) {
-    try {
-      await db
+  // Build prepared statements for each table, then upsert via db.batch()
+  // (1 subrequest per chunk) to stay within the free-tier 50-subrequest cap.
+
+  if (batch.stores.length > 0) {
+    const stmts = batch.stores.map((s) =>
+      db
         .prepare(
           "INSERT OR REPLACE INTO stores (name, color, dummy_data) VALUES (?, ?, ?)",
         )
-        .bind(store.name, store.color ?? null, batch.dummy_data ? 1 : 0)
-        .run();
-      response.stores.updated += 1;
-    } catch (err) {
-      response.stores.skipped += 1;
-      response.errors.push({
-        table: "stores",
-        key: store.name,
-        error: String(err),
-      });
-    }
+        .bind(s.name, s.color ?? null, dummyFlag)
+    );
+    const keys = batch.stores.map((s) => s.name);
+    const r = await batchUpsert(db, stmts, keys, "stores");
+    response.stores.updated += r.updated;
+    response.stores.skipped += r.skipped;
+    response.errors.push(...r.errors);
   }
 
-  for (const product of batch.products) {
-    try {
-      await db
+  if (batch.products.length > 0) {
+    const stmts = batch.products.map((p) =>
+      db
         .prepare(
           "INSERT OR REPLACE INTO products (key, name, brand, category, unit, unit_type, unit_value_g, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
-          product.key,
-          product.name,
-          product.brand ?? null,
-          product.category ?? null,
-          product.unit,
-          product.unit_type ?? null,
-          product.unit_value_g ?? null,
-          batch.dummy_data ? 1 : 0,
+          p.key,
+          p.name,
+          p.brand ?? null,
+          p.category ?? null,
+          p.unit,
+          p.unit_type ?? null,
+          p.unit_value_g ?? null,
+          dummyFlag,
         )
-        .run();
-      response.products.updated += 1;
-    } catch (err) {
-      response.products.skipped += 1;
-      response.errors.push({
-        table: "products",
-        key: product.key,
-        error: String(err),
-      });
-    }
+    );
+    const keys = batch.products.map((p) => p.key);
+    const r = await batchUpsert(db, stmts, keys, "products");
+    response.products.updated += r.updated;
+    response.products.skipped += r.skipped;
+    response.errors.push(...r.errors);
   }
 
-  for (const price of batch.prices) {
-    try {
-      await db
+  if (batch.prices.length > 0) {
+    const stmts = batch.prices.map((p) =>
+      db
         .prepare(
           "INSERT OR REPLACE INTO prices (product_key, store, price, effective_unit_price, bundle_size, promo, promo_type, valid_from, valid_until, image_path, scrape_time, date, match_method, match_confidence, standardized_promo, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
-          price.product_key,
-          price.store,
-          price.price,
-          price.effective_unit_price,
-          price.bundle_size,
-          price.promo !== undefined && price.promo !== null
-            ? JSON.stringify(price.promo)
+          p.product_key,
+          p.store,
+          p.price,
+          p.effective_unit_price,
+          p.bundle_size,
+          p.promo !== undefined && p.promo !== null
+            ? JSON.stringify(p.promo)
             : null,
-          price.promo_type ?? null,
-          price.valid_from ?? null,
-          price.valid_until ?? null,
-          price.image_path ?? null,
-          price.scrape_time,
-          price.date,
-          price.match_method ?? null,
-          price.match_confidence ?? null,
-          price.standardized_promo !== undefined &&
-            price.standardized_promo !== null
-            ? JSON.stringify(price.standardized_promo)
+          p.promo_type ?? null,
+          p.valid_from ?? null,
+          p.valid_until ?? null,
+          p.image_path ?? null,
+          p.scrape_time,
+          p.date,
+          p.match_method ?? null,
+          p.match_confidence ?? null,
+          p.standardized_promo !== undefined && p.standardized_promo !== null
+            ? JSON.stringify(p.standardized_promo)
             : null,
-          batch.dummy_data ? 1 : 0,
+          dummyFlag,
         )
-        .run();
-      response.prices.updated += 1;
-    } catch (err) {
-      response.prices.skipped += 1;
-      response.errors.push({
-        table: "prices",
-        key: `${price.product_key}:${price.store}:${price.date}`,
-        error: String(err),
-      });
-    }
+    );
+    const keys = batch.prices.map(
+      (p) => `${p.product_key}:${p.store}:${p.date}`,
+    );
+    const r = await batchUpsert(db, stmts, keys, "prices");
+    response.prices.updated += r.updated;
+    response.prices.skipped += r.skipped;
+    response.errors.push(...r.errors);
   }
 
-  for (const promo of batch.promos) {
-    try {
-      await db
+  if (batch.promos.length > 0) {
+    const stmts = batch.promos.map((p) =>
+      db
         .prepare(
           "INSERT OR REPLACE INTO promos (key, display, type, discount_pct, max_qty, product_count, stores, example_products, dummy_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(
-          promo.key,
-          promo.display,
-          promo.type ?? null,
-          promo.discount_pct ?? null,
-          promo.max_qty ?? null,
-          promo.product_count,
-          promo.stores !== undefined ? JSON.stringify(promo.stores) : null,
-          promo.example_products !== undefined
-            ? JSON.stringify(promo.example_products)
+          p.key,
+          p.display,
+          p.type ?? null,
+          p.discount_pct ?? null,
+          p.max_qty ?? null,
+          p.product_count,
+          p.stores !== undefined ? JSON.stringify(p.stores) : null,
+          p.example_products !== undefined
+            ? JSON.stringify(p.example_products)
             : null,
-          batch.dummy_data ? 1 : 0,
+          dummyFlag,
         )
-        .run();
-      response.promos.updated += 1;
-    } catch (err) {
-      response.promos.skipped += 1;
-      response.errors.push({
-        table: "promos",
-        key: promo.key,
-        error: String(err),
-      });
-    }
+    );
+    const keys = batch.promos.map((p) => p.key);
+    const r = await batchUpsert(db, stmts, keys, "promos");
+    response.promos.updated += r.updated;
+    response.promos.skipped += r.skipped;
+    response.errors.push(...r.errors);
   }
 
   const status = response.errors.length > 0 ? 207 : 200;
