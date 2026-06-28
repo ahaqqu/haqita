@@ -350,10 +350,12 @@ def _r2_key_for(local_path_str: str) -> str:
     return r2_key
 
 
-def list_r2_keys(r2_client: Any, bucket_name: str) -> set[str]:
+def list_r2_keys(r2_client: Any, bucket_name: str) -> set[str] | None:
     """List every object key in the R2 bucket (paginated).
 
-    Returns an empty set if listing fails (logged at WARNING). R2 supports S3
+    Returns ``None`` if listing fails (with a warning logged). When ``None``
+    is returned, callers should skip any R2 reconciliation step rather than
+    treating every referenced image as missing. R2 supports S3
     ``list_objects_v2`` with continuation tokens; we page through until
     ``IsTruncated`` is false.
     """
@@ -367,7 +369,7 @@ def list_r2_keys(r2_client: Any, bucket_name: str) -> set[str]:
             resp = r2_client.list_objects_v2(**kwargs)
         except Exception as exc:
             logger.warning("  R2 list_objects_v2 failed: %s", exc)
-            return keys
+            return None
         for obj in resp.get("Contents", []) or []:
             keys.add(obj["Key"])
         if not resp.get("IsTruncated"):
@@ -396,8 +398,9 @@ def reconcile_r2_images(
 
     Args:
         r2_keys: Set of object keys actually present in R2 (from
-            ``list_r2_keys()``). May be empty if listing failed — in that case
-            every referenced image is treated as missing and queued for upload.
+            ``list_r2_keys()``). Callers must ensure this is a valid set
+            (not ``None``); if listing failed they should skip the
+            reconciliation step entirely.
         history: ``database/price_history.json`` dict.
         sync_state: ``database/sync_state.json`` dict.
 
@@ -488,10 +491,7 @@ def get_images_to_upload(history: dict, sync_state: dict) -> list[dict]:
         ):
             continue
 
-        r2_key = local_path_str.replace("database/scrape/", "", 1)
-        # Prefix with dummy/ when DUMMY_DATA is set
-        if os.getenv("DUMMY_DATA") == "1":
-            r2_key = f"dummy/{r2_key}"
+        r2_key = _r2_key_for(local_path_str)
         to_upload.append(
             {
                 "local_path": local_path_str,
@@ -709,14 +709,21 @@ def run_sync(
             r2_client_verify = get_r2_client(cfg)
             bucket_name = os.getenv("R2_BUCKET_NAME", "haqita-images")
             r2_keys = list_r2_keys(r2_client_verify, bucket_name)
-            logger.info(
-                "  R2 bucket %s contains %d object(s).",
-                bucket_name,
-                len(r2_keys),
-            )
-            r2_to_upload, stale_paths = reconcile_r2_images(
-                r2_keys, history, sync_state
-            )
+            r2_to_upload: list[dict] = []
+            if r2_keys is not None:
+                logger.info(
+                    "  R2 bucket %s contains %d object(s).",
+                    bucket_name,
+                    len(r2_keys),
+                )
+                r2_to_upload, stale_paths = reconcile_r2_images(
+                    r2_keys, history, sync_state
+                )
+            else:
+                logger.warning(
+                    "  R2 listing failed — skipping reconciliation. "
+                    "sync_state will be trusted as-is."
+                )
             # Merge: union with get_images_to_upload's results by local_path
             # so any changed-image uploads are preserved. Re-uploads queued by
             # the reconcile run after the hash-based ones.

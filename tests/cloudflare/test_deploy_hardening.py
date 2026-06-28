@@ -373,11 +373,11 @@ class TestR2Reconcile:
         second_kwargs = client.list_objects_v2.call_args_list[1].kwargs
         assert second_kwargs["ContinuationToken"] == "tok"
 
-    def test_list_r2_keys_returns_empty_on_error(self):
+    def test_list_r2_keys_returns_none_on_error(self):
         client = MagicMock()
         client.list_objects_v2.side_effect = RuntimeError("net down")
         keys = sc.list_r2_keys(client, "bucket")
-        assert keys == set()
+        assert keys is None
 
     def test_reconcile_detects_missing_in_r2(self, tmp_path, monkeypatch):
         monkeypatch.setattr(sc, 'ROOT', tmp_path)
