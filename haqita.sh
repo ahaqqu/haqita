@@ -232,7 +232,7 @@ menu() {
         echo "  [5] Stage 4: Publish HTML"
         echo "  [6] Sync to Cloudflare"
         echo "  [7] Stage 5: Deploy + Sync"
-        echo "  [8] Start HTTP server"
+        echo "  [8] Local dev servers"
         echo "  [9] Tests"
         echo "  [10] Health check"
         echo "  [0] Exit"
@@ -246,7 +246,7 @@ menu() {
             5) stage_publish_html ;;
              6) stage_cloudflare_sync ;;
             7) stage_deploy ;;
-            8) http_server ;;
+            8) local_dev_menu ;;
             9) stage_tests ;;
             10) health_check ;;
             0) end_script ;;
@@ -535,7 +535,50 @@ stage_deploy() {
     echo "  Stage 5: Deploy + Sync"
     echo "========================================"
     echo
-    $PYTHON scripts/deploy.py
+    $PYTHON scripts/deploy.py --detached
+    echo
+    pause
+}
+
+local_dev_menu() {
+    while true; do
+        clear
+        echo "========================================"
+        echo "  Local Dev Servers"
+        echo "========================================"
+        echo
+        echo "  [1] Start local dev servers"
+        echo "  [2] Stop local dev servers"
+        echo "  [0] Back"
+        echo
+        read -rp "Your choice: " dev_choice
+        case "$dev_choice" in
+            1) local_dev_start ;;
+            2) local_dev_stop ;;
+            0) break ;;
+            *) echo "Invalid choice. Press any key to try again..."; pause ;;
+        esac
+    done
+}
+
+local_dev_start() {
+    clear
+    echo "========================================"
+    echo "  Starting Local Dev Servers"
+    echo "========================================"
+    echo
+    $PYTHON scripts/deploy.py --target local --detached
+    echo
+    pause
+}
+
+local_dev_stop() {
+    clear
+    echo "========================================"
+    echo "  Stopping Local Dev Servers"
+    echo "========================================"
+    echo
+    $PYTHON scripts/deploy.py --stop-local
     echo
     pause
 }
@@ -596,17 +639,6 @@ health_check() {
     $PYTHON scripts/health_check.py
     echo
     pause
-}
-
-http_server() {
-    clear
-    echo "========================================"
-    echo "  HTTP Server"
-    echo "  Open http://localhost:8080/index.html"
-    echo "  Press Ctrl+C to stop"
-    echo "========================================"
-    echo
-    $PYTHON -m http.server 8080
 }
 
 end_script() {

@@ -46,6 +46,7 @@ DEPLOY_STATUS = STAGE_RESULTS / "deploy_status.json"
 
 LOCAL_HTTP_PORT = 8080
 LOCAL_WRANGLER_PORT = 8787
+LOCAL_PID_FILE = STAGE_RESULTS / "local_dev_pids.json"
 
 logger = logging.getLogger(__name__)
 
@@ -277,6 +278,56 @@ def _detect_wrangler_port(
     return None
 
 
+def _detect_wrangler_port_from_log(
+    log_file: Path,
+    expected_port: int,
+    timeout: float = 60.0,
+) -> int | None:
+    """Poll a wrangler log file to find the port it bound to.
+
+    Used in detached mode where stdout/stderr are redirected to a file
+    instead of a pipe. Returns the detected port, or ``None`` on timeout.
+    """
+    port_pattern = re.compile(r"Ready on http://localhost:(\d+)")
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if log_file.exists():
+            try:
+                content = log_file.read_text(encoding="utf-8", errors="replace")
+                m = port_pattern.search(content)
+                if m:
+                    return int(m.group(1))
+            except OSError:
+                pass
+        time.sleep(0.2)
+
+    # Fall back to expected port if wrangler already bound to it
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(1)
+            sock.connect(("127.0.0.1", expected_port))
+        return expected_port
+    except OSError:
+        pass
+
+    return None
+
+
+def _kill_proc_group(proc: subprocess.Popen) -> None:
+    """Terminate a detached process and its entire process group."""
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+        proc.wait(timeout=5)
+    except Exception:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+
 def deploy_local() -> dict:
     """Start local wrangler dev server and static HTTP server.
 
@@ -355,6 +406,139 @@ def deploy_local() -> dict:
         _terminate_background()
 
     return {"status": "complete", "ports": [LOCAL_HTTP_PORT, wrangler_port]}
+
+
+def _deploy_local_detached() -> dict:
+    """Start local dev servers in the background (non-blocking).
+
+    Starts wrangler pages dev and a static HTTP server as detached
+    background processes, verifies both are ready, saves PIDs for
+    later cleanup, and returns immediately. The servers keep running
+    after the script exits.
+
+    Use ``--stop-local`` to shut them down.
+    """
+    logger.info("=== Local deploy (detached) ===")
+    logger.info(
+        "Target: http://localhost:%d (static) and http://localhost:%d (API)",
+        LOCAL_HTTP_PORT,
+        LOCAL_WRANGLER_PORT,
+    )
+
+    # Check if servers are already running on the expected ports
+    http_up = _wait_for_port(LOCAL_HTTP_PORT, timeout=1.0)
+    wrangler_up = _wait_for_port(LOCAL_WRANGLER_PORT, timeout=1.0)
+    if http_up and wrangler_up:
+        logger.info("Local dev servers already running. Skipping.")
+        return {"status": "complete", "ports": [LOCAL_HTTP_PORT, LOCAL_WRANGLER_PORT]}
+    if http_up or wrangler_up:
+        logger.warning(
+            "One server is already running but the other is not. "
+            "Run `python scripts/deploy.py --stop-local` to clean up, then retry."
+        )
+        return {"status": "error", "error": "partial_server_running"}
+
+    _require_command("npm", "npm")
+    _install_deps_if_needed()
+    _copy_static_files()
+
+    # Start wrangler pages dev detached, logging to a file.
+    logger.info("Starting wrangler pages dev (background)...")
+    log_dir = ROOT / "output" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    wrangler_log = log_dir / "wrangler_dev.log"
+
+    wrangler_fh = open(wrangler_log, "w")
+    try:
+        wrangler_proc = subprocess.Popen(
+            ["npm", "run", "dev"],
+            cwd=WEB_DIR,
+            stdout=wrangler_fh,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    finally:
+        wrangler_fh.close()
+
+    detected_port = _detect_wrangler_port_from_log(
+        wrangler_log, LOCAL_WRANGLER_PORT, timeout=60.0
+    )
+    if detected_port is None:
+        logger.error("wrangler dev did not start in time. Check %s", wrangler_log)
+        _kill_proc_group(wrangler_proc)
+        return {"status": "error", "error": "wrangler_dev_timeout"}
+
+    logger.info("  wrangler dev ready on http://localhost:%d", detected_port)
+
+    # Start static HTTP server as a detached subprocess.
+    logger.info("Starting static HTTP server on port %d (background)...", LOCAL_HTTP_PORT)
+    http_proc = subprocess.Popen(
+        [
+            sys.executable, "-m", "http.server",
+            str(LOCAL_HTTP_PORT), "--directory", str(ROOT),
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+    if not _wait_for_port(LOCAL_HTTP_PORT, timeout=10.0):
+        logger.error("HTTP server did not start on port %d in time.", LOCAL_HTTP_PORT)
+        _kill_proc_group(wrangler_proc)
+        _kill_proc_group(http_proc)
+        return {"status": "error", "error": "http_server_timeout"}
+
+    logger.info("  HTTP server ready on http://localhost:%d", LOCAL_HTTP_PORT)
+
+    # Save PIDs for later cleanup.
+    STAGE_RESULTS.mkdir(parents=True, exist_ok=True)
+    pid_data = {
+        "pids": [wrangler_proc.pid, http_proc.pid],
+        "ports": [LOCAL_HTTP_PORT, detected_port],
+        "started_at": datetime.now().isoformat(),
+    }
+    LOCAL_PID_FILE.write_text(json.dumps(pid_data, indent=2), encoding="utf-8")
+
+    logger.info("")
+    logger.info("Local dev servers running in background:")
+    logger.info("  Static:  http://localhost:%d", LOCAL_HTTP_PORT)
+    logger.info("  API:     http://localhost:%d", detected_port)
+    logger.info("  Stop with: python scripts/deploy.py --stop-local")
+
+    return {"status": "complete", "ports": [LOCAL_HTTP_PORT, detected_port]}
+
+
+def stop_local() -> dict:
+    """Stop previously started detached local dev servers."""
+    pid_data = load_json(LOCAL_PID_FILE)
+    if not pid_data or not pid_data.get("pids"):
+        logger.info("No local dev servers to stop (no PID file found).")
+        return {"status": "complete", "stopped": 0}
+
+    stopped = 0
+    for pid in pid_data.get("pids", []):
+        try:
+            os.killpg(pid, signal.SIGTERM)
+            stopped += 1
+            logger.info("  Sent SIGTERM to process group %d", pid)
+        except ProcessLookupError:
+            logger.info("  PID %d already gone", pid)
+        except OSError as exc:
+            logger.warning("  Could not signal PID %d: %s", pid, exc)
+
+    time.sleep(2)
+
+    # Force kill any still alive
+    for pid in pid_data.get("pids", []):
+        try:
+            os.killpg(pid, signal.SIGKILL)
+            logger.info("  Force killed process group %d", pid)
+        except (ProcessLookupError, OSError):
+            pass
+
+    LOCAL_PID_FILE.unlink(missing_ok=True)
+    logger.info("Stopped %d local dev server(s).", stopped)
+    return {"status": "complete", "stopped": stopped}
 
 
 def _get_local_head_sha() -> str:
@@ -596,9 +780,26 @@ def main() -> None:
         action="store_true",
         help="Reconcile R2 bucket vs sync_state: list R2, re-upload missing referenced images",
     )
+    parser.add_argument(
+        "--detached",
+        action="store_true",
+        help="Start local dev servers in background (non-blocking) instead of foreground",
+    )
+    parser.add_argument(
+        "--stop-local",
+        action="store_true",
+        help="Stop previously started detached local dev servers",
+    )
     args = parser.parse_args()
 
     setup_logging()
+
+    # --stop-local is a standalone action: kill servers and exit.
+    if args.stop_local:
+        result = stop_local()
+        write_status(result.get("status", "complete"), "local", result)
+        return
+
     cfg = load_config()
     deploy_cfg = cfg.get("deploy", {})
 
@@ -621,7 +822,10 @@ def main() -> None:
     details: dict = {"target": target}
     try:
         if target == "local":
-            result = deploy_local()
+            if args.detached:
+                result = _deploy_local_detached()
+            else:
+                result = deploy_local()
         elif target == "cloudflare":
             result = deploy_cloudflare(
                 skip_d1_schema=args.skip_d1_schema,
@@ -636,7 +840,10 @@ def main() -> None:
             if cf_result.get("status") == "error":
                 write_status("error", target, details)
                 sys.exit(1)
-            result = deploy_local()
+            if args.detached:
+                result = _deploy_local_detached()
+            else:
+                result = deploy_local()
             details["local"] = result
         else:
             raise ValueError(f"Unknown target: {target}")

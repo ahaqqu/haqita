@@ -38,6 +38,18 @@ LOG_DIR = ROOT / "output" / "logs"
 ALL_STORES = ["lotte", "superindo"]
 
 
+class LevelFormatter(logging.Formatter):
+    """Only show level prefix for WARNING+ levels (suppresses INFO/DEBUG)."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        message = record.getMessage()
+        if record.exc_info:
+            message = self.formatException(record.exc_info)
+        if record.levelno >= logging.WARNING:
+            return f"[{record.levelname}] {message}"
+        return message
+
+
 def setup_logging() -> logging.Logger:
     """Set up logging to file and to console (always verbose)."""
     LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -54,7 +66,7 @@ def setup_logging() -> logging.Logger:
 
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(logging.DEBUG)
-    ch.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    ch.setFormatter(LevelFormatter())
     logger.addHandler(ch)
 
     logger.info("Log file: %s", log_file)
@@ -263,7 +275,7 @@ def run_deploy(logger: logging.Logger) -> dict:
         logger.error("deploy.py not found at %s", deploy_script)
         return {"status": "error", "error": "deploy script not found"}
 
-    cmd = [sys.executable, str(deploy_script)]
+    cmd = [sys.executable, str(deploy_script), "--detached"]
     logger.debug("Running: %s", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
 
