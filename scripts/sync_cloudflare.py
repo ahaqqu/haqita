@@ -10,8 +10,6 @@ Can be run standalone or called programmatically via ``run_sync()`` from
 
 Usage:
     python scripts/sync_cloudflare.py                          # Sync to default API
-    python scripts/sync_cloudflare.py --dry-run                # Preview without uploading
-    python scripts/sync_cloudflare.py --verbose                # Show detailed sync report
     python scripts/sync_cloudflare.py --api-url http://localhost:8787/api/v1  # Sync to local API
     python scripts/sync_cloudflare.py --verify-r2              # Reconcile R2 vs sync_state
 """
@@ -143,10 +141,9 @@ def get_scraper_secret() -> str:
     return secret
 
 
-def setup_logging(verbose: bool) -> None:
+def setup_logging() -> None:
     """Configure the root logger level and format."""
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(level=level, format="%(message)s", force=True)
+    logging.basicConfig(level=logging.DEBUG, format="%(message)s", force=True)
 
 
 def build_sync_batch(
@@ -237,31 +234,13 @@ def build_sync_batch(
     }
 
 
-def send_batch_sync(api_url: str, secret: str, batch: dict, dry_run: bool) -> dict:
+def send_batch_sync(api_url: str, secret: str, batch: dict) -> dict:
     """Send the batch payload to ``POST /api/v1/sync/batch``.
 
     Uses ``retry_call`` from ``scripts.common.http_client`` for transient HTTP
     errors. Returns the API response dict on success, or an error dict when a
     non-retryable error (401/400) occurs.
     """
-    if dry_run:
-        dummy_flag = batch.get("dummy_data", False)
-        logger.info(
-            "  [DRY-RUN] Would sync: %d stores, %d products, %d prices, %d promos (dummy_data=%s)",
-            len(batch["stores"]),
-            len(batch["products"]),
-            len(batch["prices"]),
-            len(batch["promos"]),
-            dummy_flag,
-        )
-        return {
-            "dry_run": True,
-            "stores": len(batch["stores"]),
-            "products": len(batch["products"]),
-            "prices": len(batch["prices"]),
-            "promos": len(batch["promos"]),
-        }
-
     url = f"{api_url}/sync/batch"
     headers = {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
 
@@ -508,7 +487,6 @@ def upload_images_to_r2(
     images: list[dict],
     r2_client: boto3.client,
     bucket_name: str,
-    dry_run: bool,  # type: ignore[name-defined]
 ) -> dict:
     """Upload images to R2 and return a mapping of local path to public R2 URL.
 
@@ -517,16 +495,6 @@ def upload_images_to_r2(
     """
     results = {}
     for img in images:
-        if dry_run:
-            logger.info(
-                "  [DRY-RUN] Would upload: %s -> r2://%s/%s",
-                img["local_path"],
-                bucket_name,
-                img["r2_key"],
-            )
-            results[img["local_path"]] = f"https://pub-hash.r2.dev/{img['r2_key']}"
-            continue
-
         try:
             r2_client.upload_file(
                 str(img["abs_path"]),
@@ -544,14 +512,8 @@ def upload_images_to_r2(
     return results
 
 
-def send_images_sync(api_url: str, secret: str, manifest: dict, dry_run: bool) -> dict:
+def send_images_sync(api_url: str, secret: str, manifest: dict) -> dict:
     """Send the image manifest to ``POST /api/v1/sync/images``."""
-    if dry_run:
-        logger.info(
-            "  [DRY-RUN] Would record %d image URL(s)", len(manifest.get("images", []))
-        )
-        return {"dry_run": True}
-
     url = f"{api_url}/sync/images"
     headers = {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
 
@@ -587,8 +549,6 @@ def send_images_sync(api_url: str, secret: str, manifest: dict, dry_run: bool) -
 def run_sync(
     api_url: str,
     secret: str,
-    dry_run: bool = False,
-    verbose: bool = False,
     verify_r2: bool = False,
 ) -> dict:
     """Run the full sync pipeline and return a result dict.
@@ -600,9 +560,7 @@ def run_sync(
 
     Args:
         api_url: Base API URL (e.g. ``https://haqita.pages.dev/api/v1``).
-        secret: Bearer token for sync endpoints (empty string for dry-run).
-        dry_run: If True, log what would happen without making changes.
-        verbose: If True, log at DEBUG level.
+        secret: Bearer token for sync endpoints.
         verify_r2: If True, reconcile R2 bucket vs ``sync_state.json`` — list
             R2 objects, re-upload referenced images missing from R2, and prune
             stale ``sync_state`` entries. The default (False) trusts
@@ -613,13 +571,6 @@ def run_sync(
         A dict with keys ``status`` ("ok" or "error") and ``sync_run_id``
         on success, or ``status`` ``"error"`` with ``error`` detail on failure.
     """
-    if verbose:
-        logger.setLevel(logging.DEBUG)
-
-    if dry_run:
-        logger.info("[DRY-RUN] No data will be sent to the API or R2.")
-        logger.info("")
-
     logger.info("API URL: %s", api_url)
 
     # Load source data
@@ -645,7 +596,7 @@ def run_sync(
     logger.info("")
 
     logger.info("Syncing batch to API...")
-    batch_result = send_batch_sync(api_url, secret, batch, dry_run)
+    batch_result = send_batch_sync(api_url, secret, batch)
     if "error" in batch_result:
         logger.error("Batch sync failed. See error above.")
         return {"status": "error", "error": batch_result["error"]}
@@ -654,7 +605,7 @@ def run_sync(
     # don't pretend the sync succeeded. A 207 with errors == total is a hard
     # failure, not a partial one. This previously slipped through as
     # {"status": "ok"} and printed "Sync complete." next to 1155 errors.
-    if not dry_run and not batch_result.get("dry_run"):
+    if not batch_result.get("dry_run"):
         total_rows = (
             len(batch["stores"]) + len(batch["products"])
             + len(batch["prices"]) + len(batch["promos"])
@@ -698,69 +649,55 @@ def run_sync(
     stale_paths: list[str] = []
     if verify_r2:
         logger.info("  [--verify-r2] Listing R2 bucket to reconcile state...")
-        if dry_run:
+        cfg = load_config()
+        r2_client_verify = get_r2_client(cfg)
+        bucket_name = os.getenv("R2_BUCKET_NAME", "haqita-images")
+        r2_keys = list_r2_keys(r2_client_verify, bucket_name)
+        r2_to_upload: list[dict] = []
+        if r2_keys is not None:
             logger.info(
-                "  [DRY-RUN] Would list R2 bucket, identify missing/stale "
-                "images, and prune %d tracked sync_state entries.",
-                len(sync_state.get("uploaded_images", {})),
+                "  R2 bucket %s contains %d object(s).",
+                bucket_name,
+                len(r2_keys),
+            )
+            r2_to_upload, stale_paths = reconcile_r2_images(
+                r2_keys, history, sync_state
             )
         else:
-            cfg = load_config()
-            r2_client_verify = get_r2_client(cfg)
-            bucket_name = os.getenv("R2_BUCKET_NAME", "haqita-images")
-            r2_keys = list_r2_keys(r2_client_verify, bucket_name)
-            r2_to_upload: list[dict] = []
-            if r2_keys is not None:
-                logger.info(
-                    "  R2 bucket %s contains %d object(s).",
-                    bucket_name,
-                    len(r2_keys),
-                )
-                r2_to_upload, stale_paths = reconcile_r2_images(
-                    r2_keys, history, sync_state
-                )
-            else:
-                logger.warning(
-                    "  R2 listing failed — skipping reconciliation. "
-                    "sync_state will be trusted as-is."
-                )
-            # Merge: union with get_images_to_upload's results by local_path
-            # so any changed-image uploads are preserved. Re-uploads queued by
-            # the reconcile run after the hash-based ones.
-            existing_paths = {img["local_path"] for img in images_to_upload}
-            for img in r2_to_upload:
-                if img["local_path"] not in existing_paths:
-                    images_to_upload.append(img)
-                    existing_paths.add(img["local_path"])
-            if stale_paths:
-                logger.info(
-                    "  --verify-r2 found %d stale sync_state entry/entries "
-                    "to prune.",
-                    len(stale_paths),
-                )
-            if r2_to_upload:
-                logger.info(
-                    "  --verify-r2 queued %d image(s) for re-upload "
-                    "(missing from R2 or untracked in sync_state).",
-                    len(r2_to_upload),
-                )
+            logger.warning(
+                "  R2 listing failed — skipping reconciliation. "
+                "sync_state will be trusted as-is."
+            )
+        # Merge: union with get_images_to_upload's results by local_path
+        # so any changed-image uploads are preserved. Re-uploads queued by
+        # the reconcile run after the hash-based ones.
+        existing_paths = {img["local_path"] for img in images_to_upload}
+        for img in r2_to_upload:
+            if img["local_path"] not in existing_paths:
+                images_to_upload.append(img)
+                existing_paths.add(img["local_path"])
+        if stale_paths:
+            logger.info(
+                "  --verify-r2 found %d stale sync_state entry/entries "
+                "to prune.",
+                len(stale_paths),
+            )
+        if r2_to_upload:
+            logger.info(
+                "  --verify-r2 queued %d image(s) for re-upload "
+                "(missing from R2 or untracked in sync_state).",
+                len(r2_to_upload),
+            )
 
     uploaded: dict = {}
     if images_to_upload:
         logger.info("  %d image(s) to upload", len(images_to_upload))
-        if not dry_run:
-            cfg = load_config()
-            r2_client = get_r2_client(cfg)
-            bucket_name = os.getenv("R2_BUCKET_NAME", "haqita-images")
-            uploaded = upload_images_to_r2(
-                images_to_upload, r2_client, bucket_name, dry_run
-            )
-        else:
-            uploaded = upload_images_to_r2(
-                images_to_upload, None, "haqita-images", dry_run
-            )
+        cfg = load_config()
+        r2_client = get_r2_client(cfg)
+        bucket_name = os.getenv("R2_BUCKET_NAME", "haqita-images")
+        uploaded = upload_images_to_r2(images_to_upload, r2_client, bucket_name)
 
-        if uploaded and not dry_run:
+        if uploaded:
             logger.info("Recording R2 URLs in API...")
             image_manifest = {
                 "images": [
@@ -772,9 +709,9 @@ def run_sync(
                     for local_path in uploaded
                 ]
             }
-            send_images_sync(api_url, secret, image_manifest, dry_run)
+            send_images_sync(api_url, secret, image_manifest)
     else:
-        if verify_r2 and not dry_run:
+        if verify_r2:
             logger.info(
                 "  %d image(s) tracked in sync_state; R2 reconciled, all "
                 "present and unchanged.",
@@ -790,7 +727,7 @@ def run_sync(
     logger.info("")
 
     # Update sync state after successful operations
-    if not dry_run and "error" not in batch_result:
+    if "error" not in batch_result:
         # Prune stale sync_state entries surfaced by --verify-r2.
         if stale_paths:
             uploaded_state = sync_state.setdefault("uploaded_images", {})
@@ -824,12 +761,6 @@ def main() -> None:
     """Parse CLI flags and run sync standalone (also callable from deploy.py via ``run_sync()``)."""
     parser = argparse.ArgumentParser(description="Sync pipeline data to the Cloudflare API (also callable from deploy.py via run_sync())")
     parser.add_argument(
-        "--dry-run", action="store_true", help="Preview without uploading"
-    )
-    parser.add_argument(
-        "--verbose", action="store_true", help="Show detailed sync report"
-    )
-    parser.add_argument(
         "--api-url",
         type=str,
         help="Override API URL (default: https://haqita.pages.dev/api/v1)",
@@ -841,13 +772,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    setup_logging(args.verbose)
+    setup_logging()
     cfg = load_config()
 
     api_url = get_api_url(args, cfg)
-    secret = "" if args.dry_run else get_scraper_secret()
+    secret = get_scraper_secret()
 
-    result = run_sync(api_url, secret, args.dry_run, args.verbose, verify_r2=args.verify_r2)
+    result = run_sync(api_url, secret, verify_r2=args.verify_r2)
     if result.get("status") == "error":
         sys.exit(1)
 

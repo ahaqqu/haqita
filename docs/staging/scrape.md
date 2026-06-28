@@ -9,8 +9,6 @@ Downloads current promo brochure images from supermarket websites.
 | **Input** | Superindo / Lotte Mart website URLs (hardcoded in each scraper) |
 | **Output** | Brochure images in `database/scrape/<store>/<YYYYMMDD>/` (JPG/PNG) |
 | **State** | `database/scrape/<store>/state.json` — MD5 tracking to skip already-seen images |
-| **Dry-run** | Reports new images without downloading |
-
 ## How It Works
 
 1. Fetch HTML from hardcoded store URLs
@@ -49,14 +47,13 @@ min_image_size_kb: int = 50
 
 ## Usage
 
-Via `haqita.bat` → Option [2] → Scrape submenu:
+Via `./haqita.sh` → Option [2] → Scrape submenu:
 
 | Choice | Action |
 |---|---|
 | **1** | Scrape all stores |
 | **2** | Scrape Lotte Mart only |
 | **3** | Scrape Superindo only |
-| **4** | Dry-run (report new images only) |
 
 ## Output Structure
 

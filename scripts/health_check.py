@@ -11,7 +11,6 @@ Checks:
 
 Usage:
     python scripts/health_check.py
-    python scripts/health_check.py --verbose
 """
 
 import json
@@ -93,19 +92,17 @@ def check_directories() -> tuple[bool, list[str]]:
     return True, []
 
 
-def check_ocr_provider(cfg: dict, verbose: bool = False) -> tuple[bool, str]:
+def check_ocr_provider(cfg: dict) -> tuple[bool, str]:
     """Check Gemini API key is set."""
     import os
     api_key = cfg.get("ocr", {}).get("gemini", {}).get("api_key") or os.getenv("GEMINI_API_KEY")
     if not api_key:
         return False, "GEMINI_API_KEY not set (required for OCR)"
-    if verbose:
-        masked = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
-        return True, f"Gemini API key set ({masked})"
-    return True, "Gemini API key set"
+    masked = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
+    return True, f"Gemini API key set ({masked})"
 
 
-def check_ai_verifier(cfg: dict, verbose: bool = False) -> tuple[bool, str]:
+def check_ai_verifier(cfg: dict) -> tuple[bool, str]:
     """Check AI verifier (Gemini) is configured."""
     import os
     api_key = cfg.get("ocr", {}).get("gemini", {}).get("api_key") or os.getenv("GEMINI_API_KEY")
@@ -117,7 +114,6 @@ def check_ai_verifier(cfg: dict, verbose: bool = False) -> tuple[bool, str]:
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Haqita Pipeline Health Check")
-    parser.add_argument("--verbose", action="store_true", help="Show detailed results")
     args = parser.parse_args()
 
     print("=" * 60)
@@ -164,13 +160,13 @@ def main():
         all_ok = False
 
     # 5. OCR provider
-    ok, msg = check_ocr_provider(cfg, args.verbose)
+    ok, msg = check_ocr_provider(cfg)
     results.append(("OCR provider", ok, msg))
     if not ok:
         all_ok = False
 
     # 6. AI verifier
-    ok, msg = check_ai_verifier(cfg, args.verbose)
+    ok, msg = check_ai_verifier(cfg)
     results.append(("AI verifier", ok, msg))
     if not ok:
         all_ok = False

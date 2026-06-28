@@ -24,7 +24,7 @@ Run the included verification script to confirm the server and scraper URL overr
 bash agentic_engineering/verify.sh
 ```
 
-This starts the server, runs both scrapers in dry-run mode, and asserts that Lotte and Superindo each discover the expected brochure images.
+This starts the server, runs both scrapers, and asserts that Lotte and Superindo each discover the expected brochure images.
 
 ## Use with the scrapers
 
@@ -35,8 +35,8 @@ export LOTTE_URL=http://localhost:18080/lotte/all-promo-mart
 export SUPERINDO_KATALOG_URL=http://localhost:18080/superindo/promosi/katalog-super-hemat/
 export SUPERINDO_KORAN_URL=http://localhost:18080/superindo/promosi/promo-koran/
 
-python scripts/scrapers/lotte.py --dry-run
-python scripts/scrapers/superindo.py --dry-run
+python scripts/scrapers/lotte.py
+python scripts/scrapers/superindo.py
 ```
 
 ## Image fixtures

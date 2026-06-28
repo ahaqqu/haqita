@@ -9,8 +9,6 @@ Extracts product data from brochure images using Gemini vision models.
 | **Input** | Brochure images in `database/scrape/<store>/<YYYYMMDD>/` |
 | **Output** | `database/ocr/<store>/<store>_promos_YYYYMMDD_HHMMSS.json` |
 | **State** | `database/ocr/<store>/state.json` — tracks OCR'd images to avoid re-processing |
-| **Dry-run** | Prints extracted products without saving JSON |
-
 ## How It Works
 
 1. Scan `database/scrape/<store>/` for image files (JPG/PNG/WebP)
@@ -107,7 +105,7 @@ Products are rejected if:
 
 ## Usage
 
-Via `haqita.bat` → Option [3] → OCR submenu:
+Via `./haqita.sh` → Option [3] → OCR submenu:
 
 | Choice | Action |
 |---|---|
@@ -115,7 +113,6 @@ Via `haqita.bat` → Option [3] → OCR submenu:
 | **2** | OCR Lotte images |
 | **3** | OCR Superindo images |
 | **4** | OCR specific image |
-| **5** | Dry-run (report products without saving) |
 
 ## State File
 

@@ -199,7 +199,7 @@ class TestSendBatchSync:
         mock_response.json.return_value = expected_response
 
         batch = {"stores": [], "products": [], "prices": [], "promos": []}
-        result = sc.send_batch_sync("https://api.example.com/api/v1", "secret", batch, dry_run=False)
+        result = sc.send_batch_sync("https://api.example.com/api/v1", "secret", batch)
 
         assert result == expected_response
         mock_post.assert_called_once_with(
@@ -208,19 +208,6 @@ class TestSendBatchSync:
             headers={"Authorization": "Bearer secret", "Content-Type": "application/json"},
             timeout=30,
         )
-
-    def test_dry_run_does_not_send(self, capsys):
-        sc.setup_logging(False)
-        with patch('scripts.sync_cloudflare.requests.post') as mock_post:
-            batch = {"stores": [1], "products": [1], "prices": [1], "promos": [1]}
-            result = sc.send_batch_sync("https://api.example.com/api/v1", "secret", batch, dry_run=True)
-
-        captured = capsys.readouterr()
-        output = captured.out + captured.err
-        assert "[DRY-RUN]" in output
-        assert result["dry_run"] is True
-        assert result["stores"] == 1
-        mock_post.assert_not_called()
 
     @patch('scripts.sync_cloudflare.requests.post')
     @patch('scripts.sync_cloudflare.retry_call')
@@ -231,7 +218,7 @@ class TestSendBatchSync:
         mock_response.text = "Unauthorized"
 
         batch = {"stores": [], "products": [], "prices": [], "promos": []}
-        result = sc.send_batch_sync("https://api.example.com/api/v1", "secret", batch, dry_run=False)
+        result = sc.send_batch_sync("https://api.example.com/api/v1", "secret", batch)
 
         assert "error" in result
         assert "Authentication failed (401)" in result["error"]
@@ -246,7 +233,7 @@ class TestSendBatchSync:
         mock_response.text = "Bad Request"
 
         batch = {"stores": [], "products": [], "prices": [], "promos": []}
-        result = sc.send_batch_sync("https://api.example.com/api/v1", "secret", batch, dry_run=False)
+        result = sc.send_batch_sync("https://api.example.com/api/v1", "secret", batch)
 
         assert "error" in result
         assert "Validation error (400)" in result["error"]

@@ -61,7 +61,6 @@ class LotteScraper(BaseScraper):
 
 def main():
     parser = argparse.ArgumentParser(description="Lotte Promo Scraper")
-    parser.add_argument("--dry-run", action="store_true", help="Fetch and report new images without downloading")
     args = parser.parse_args()
 
     scraper = LotteScraper()
@@ -70,8 +69,6 @@ def main():
 
     print("=" * 60)
     print(f"  {scraper.store_name} Promo Scraper")
-    if args.dry_run:
-        print("  Dry-run: YES (no download)")
     print("=" * 60)
     print()
 
@@ -80,16 +77,6 @@ def main():
 
     if not image_refs:
         print("[!] No promo images found. Exiting.")
-        return
-
-    if args.dry_run:
-        # Show what would be new without downloading
-        known_hashes = {e["md5"] for e in state.get("processed", [])}
-        new_count = 0
-        for url, orig in image_refs:
-            # Can't compute MD5 without downloading, just report count
-            new_count += 1
-        print(f"[*] Would check {new_count} image(s) for new content.")
         return
 
     new_images, existing_images = scraper.download_and_classify(image_refs, state)

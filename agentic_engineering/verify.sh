@@ -107,14 +107,14 @@ export MOCK_OCR="${MOCK_OCR:-1}"
 export MOCK_AI_VERIFIER="${MOCK_AI_VERIFIER:-1}"
 
 # Run health check first
-"$PYTHON" scripts/health_check.py --verbose || {
+"$PYTHON" scripts/health_check.py || {
     fail "Health check failed"
     exit 1
 }
 pass "Health check passed"
 
 # Run orchestrator
-"$PYTHON" scripts/orchestrator.py --full --verbose || true
+"$PYTHON" scripts/orchestrator.py --full || true
 
 # Check stage statuses
 echo "--- Stage status summary ---"
@@ -166,7 +166,7 @@ done
 if [[ "$SKIP_SYNC" -eq 0 ]]; then
     echo "=== 4. Sync dummy data to Cloudflare ==="
     export DUMMY_DATA=1
-    if "$PYTHON" scripts/sync_cloudflare.py --verbose; then
+    if "$PYTHON" scripts/sync_cloudflare.py; then
         pass "Cloudflare sync completed"
     else
         fail "Cloudflare sync failed"

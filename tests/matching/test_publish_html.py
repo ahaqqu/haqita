@@ -176,7 +176,7 @@ class TestPublishHtml:
             assert data["products"][0]["price_max"] == 12000
             assert len(data["singles"]) == 0
 
-    def test_dry_run_does_not_write(self, capsys):
+    def test_writes_all_files(self, capsys):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             db_dir = root / "database"
@@ -185,44 +185,16 @@ class TestPublishHtml:
             hist_src = db_dir / "price_history.json"
             hist_src.write_text(json.dumps({"snapshots": [], "metadata": {}}))
 
-            self._run_with_root(root, extra_args=["--dry-run"])
+            review_src = db_dir / "review_queue.json"
+            review_src.write_text(json.dumps({"items": []}))
+
+            self._run_with_root(root)
 
             html_dir = root / "output" / "html"
-            assert not (html_dir / "active_promo.json").exists()
-            assert not (html_dir / "price_history.json").exists()
-            out = capsys.readouterr().out
-            assert "[WOULD GENERATE]" in out
-            assert "[DRY-RUN]" in out
-
-    def test_dry_run_shows_verbose_info(self, capsys):
-        with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
-            db_dir = root / "database"
-            db_dir.mkdir(parents=True)
-
-            hist_src = db_dir / "price_history.json"
-            hist_src.write_text(json.dumps({"snapshots": [], "metadata": {}}))
-
-            self._run_with_root(root, extra_args=["--dry-run", "--verbose"])
-
-            out = capsys.readouterr().out
-            assert "Generated size:" in out
-            assert "WOULD GENERATE" in out
-
-    def test_verbose_shows_file_size(self, capsys):
-        with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
-            db_dir = root / "database"
-            db_dir.mkdir(parents=True)
-
-            hist_src = db_dir / "price_history.json"
-            hist_src.write_text(json.dumps({"snapshots": [], "metadata": {}}))
-
-            self._run_with_root(root, extra_args=["--verbose"])
-
-            out = capsys.readouterr().out
-            assert "Size:" in out
-            assert "[OK]" in out
+            assert (html_dir / "active_promo.json").exists()
+            assert (html_dir / "price_history.json").exists()
+            assert (html_dir / "review_queue.json").exists()
+            assert (html_dir / "promo_catalog.json").exists()
 
     def test_summary_shows_counts(self, capsys):
         with tempfile.TemporaryDirectory() as td:
@@ -242,7 +214,7 @@ class TestPublishHtml:
             assert "4 file(s) written" in out
             assert "0 warning(s)" in out
 
-    def test_dry_run_summary(self, capsys):
+    def test_summary_with_missing_source(self, capsys):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             db_dir = root / "database"
@@ -251,13 +223,10 @@ class TestPublishHtml:
             hist_src = db_dir / "price_history.json"
             hist_src.write_text(json.dumps({"snapshots": [], "metadata": {}}))
 
-            review_src = db_dir / "review_queue.json"
-            review_src.write_text(json.dumps({"items": []}))
-
-            self._run_with_root(root, extra_args=["--dry-run"])
+            self._run_with_root(root)
 
             out = capsys.readouterr().out
-            assert "4 file(s) would be written" in out
+            assert "warning(s)" in out
 
     def test_expired_products_excluded(self):
         with tempfile.TemporaryDirectory() as td:

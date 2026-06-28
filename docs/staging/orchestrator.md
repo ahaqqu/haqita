@@ -4,7 +4,7 @@ Chains scrape → OCR → consolidation → publish HTML → deploy+sync stages 
 
 ## Overview
 
-The orchestrator (`scripts/orchestrator.py`) is invoked when you select **[1] Run full pipeline** from `haqita.bat` or `./haqita.sh`. It manages the full pipeline flow:
+The orchestrator (`scripts/orchestrator.py`) is invoked when you select **[1] Run full pipeline** from `./haqita.sh`. It manages the full pipeline flow:
 
 1. **Stage 1** — Scrape all stores
 2. **Stage 2** — OCR only stores with new images (saves API quota)
@@ -20,17 +20,15 @@ Selecting **[1]** from the main menu opens a submenu:
 
 | Choice | Mode | Description |
 |---|---|---|
-| **1** | Verbose | Full run with detailed log in `output/logs/` |
-| **2** | Non-verbose | Normal run (writes to database, auto-commits to haqita-database, no detailed log) |
-| **3** | Dry-run + verbose | Preview all stages, no database changes, detailed log |
-| **4** | Resume | Continue from last failed stage, skip completed stages |
+| **1** | Run | Full pipeline end-to-end |
+| **2** | Resume | Continue from last failed stage, skip completed stages |
 
 ## Resume
 
 If a stage fails during a full pipeline run:
 
 1. Fix the issue (e.g., check API key)
-2. Select **[1] → [4] Resume** from the main menu
+2. Select **[1] → [2] Resume** from the main menu
 3. The orchestrator reads `output/stage_results/` status files and skips already-completed stages
 4. Pipeline continues from the first incomplete stage
 
@@ -118,7 +116,7 @@ Each stage's stdout is printed to the console in real-time, prefixed with `  ` f
 
 ### Log Files
 
-When running in verbose mode, detailed logs are written to:
+Detailed logs are always written to:
 
 | File | Contents |
 |---|---|
@@ -126,9 +124,9 @@ When running in verbose mode, detailed logs are written to:
 | `output/logs/consolidate_<timestamp>.log` | Detailed match results, gate rejections, review items |
 | `output/logs/deploy_<timestamp>.log` | Local dev server startup, Cloudflare Pages deploy output, and Cloudflare API batch sync / R2 image upload results |
 
-### Verbose Log Contents
+### Log Contents
 
-The consolidation verbose log includes:
+The consolidation log includes:
 
 - **Matched pairs**: product names, match method, confidence
 - **Lotte only / Superindo only**: unmatched products per store
@@ -145,11 +143,11 @@ The consolidation verbose log includes:
 
 You can also run single stages via the main menu:
 
-- **Option [2]** → Scrape submenu (all stores, single store, or dry-run)
-- **Option [3]** → OCR submenu (all stores, single store, specific image, or dry-run)
-- **Option [4]** → Consolidation submenu (run or dry-run; auto-commit to `haqita-database` only occurs in full pipeline mode)
-- **Option [5]** → Publish HTML submenu (run, dry-run, or verbose)
-- **Option [6]** → Sync to Cloudflare submenu (run, dry-run, or verbose; standalone sync, also runs as part of deploy)
-- **Option [7]** → Deploy + Sync submenu (run, dry-run, or verbose; version-aware deploy + sync)
+- **Option [2]** → Scrape submenu (all stores or single store)
+- **Option [3]** → OCR submenu (all stores, single store, or specific image)
+- **Option [4]** → Consolidation submenu (run or custom input directory; auto-commit to `haqita-database` only occurs in full pipeline mode)
+- **Option [5]** → Publish HTML
+- **Option [6]** → Sync to Cloudflare
+- **Option [7]** → Deploy + Sync
 
 When running OCR standalone (Option [3]), it checks `scrape_status.json` if available to skip stores with no new images. If no status file exists, it OCRs all requested stores (idempotent — state file prevents re-processing).

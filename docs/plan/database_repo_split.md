@@ -159,7 +159,7 @@ New content: delete these lines entirely. The symlink at `database/` will be tra
 
 Approach A (simpler) — inline after the consolidation call in `main()`:
 
-In the `--full` path (non-resume), after line 430 (`cons_result = run_consolidate(...)`), add a conditional commit. Only when `--full` (not `--stage consolidate` standalone), and only on success, and only when not `--dry-run`.
+In the `--full` path (non-resume), after line 430 (`cons_result = run_consolidate(...)`), add a conditional commit. Only when `--full` (not `--stage consolidate` standalone), and only on success.
 
 In the `--full --resume` path, similarly after line 398.
 
@@ -533,7 +533,7 @@ Switch to the database repo and update its README per section 4.6.
 - Only during `python scripts/orchestrator.py --full` (or `--full --resume`).
 - Only after a successful consolidation stage.
 - NOT triggered during individual stage runs (e.g., `--stage consolidate`).
-- NOT triggered during `--dry-run`.
+- Always triggered on success (never in preview mode).
 
 ### What does it commit?
 
@@ -651,14 +651,14 @@ grep -n "database/" .gitignore
 ### 9.3 Pipeline still works
 
 ```bash
-# Dry-run the pipeline
-python scripts/orchestrator.py --full --dry-run --verbose
+# Run the full pipeline
+python scripts/orchestrator.py --full
 
 # Run a single stage that reads from database/
-python scripts/consolidate.py --dry-run
+python scripts/consolidate.py
 
 # Run publish
-python scripts/publish_html.py --dry-run
+python scripts/publish_html.py
 ```
 
 ### 9.4 All scripts can find database/

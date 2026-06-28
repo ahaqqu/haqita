@@ -12,8 +12,7 @@ Generates `active_promo.json` from the database and copies JSON files to `output
 | **Output** | `output/html/active_promo.json` (generated from database, always overwritten) |
 | | `output/html/price_history.json` (copy from database) |
 | | `output/html/review_queue.json` (copy from database, for admin UI) |
-| **Dry-run** | Shows what would be generated/copied without writing files |
-| **Verbose** | Shows file sizes and destination status |
+
 
 ## Architecture
 
@@ -108,23 +107,10 @@ Same schema as Stage 3's internal consolidated output:
 
 ## Usage
 
-Via `haqita.bat` → Option [5] → Publish HTML submenu:
-
-| Choice | Action |
-|---|---|
-| **1** | Run normally |
-| **2** | Dry-run (preview copies) |
-| **3** | Verbose (show file sizes) |
-| **4** | Verbose + Dry-run |
-| **5** | Docker mode |
-
-### CLI Flags
+Via `./haqita.sh` → Option [5] → Publish HTML (runs immediately):
 
 ```
-python scripts/publish_html.py              # Normal run
-python scripts/publish_html.py --dry-run    # Preview without writing
-python scripts/publish_html.py --verbose    # Show file sizes
-python scripts/publish_html.py --dry-run --verbose  # Both
+python scripts/publish_html.py
 ```
 
 ## Viewing the HTML UI

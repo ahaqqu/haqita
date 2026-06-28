@@ -30,19 +30,11 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
                                                                        └──────────────────┘
 ```
 
-Each stage runs independently. If a stage fails, select **[1] → [4] Resume** to continue from where it left off — completed stages are skipped automatically.
+Each stage runs independently. If a stage fails, select **[1] → [2] Resume** to continue from where it left off — completed stages are skipped automatically.
 
 **Matching pipeline** (inside Stage 3): 7 gates — unit type → brand → token Jaccard → exact match → embedding → price check → AI verifier. Each gate is individually toggleable via `config.yaml`.
 
 ## Quick Start
-
-### Windows
-
-```cmd
-haqita.bat
-```
-
-### Ubuntu / WSL
 
 ```bash
 ./haqita.sh
@@ -54,7 +46,7 @@ On the first run, `haqita.sh` automatically creates a Python virtual environment
 ./haqita.sh --setup
 ```
 
-Launches an interactive menu. Select **[1]** for the full pipeline, or run individual stages ([2]–[7]). Each stage has a dry-run mode.
+Launches an interactive menu. Select **[1]** for the full pipeline, or run individual stages ([2]–[7]).
 
 ## Viewing the HTML UI
 
@@ -77,25 +69,25 @@ Then open `http://localhost:8080` in a browser. Features:
 
 ## Menu
 
-Run `haqita.bat` (Windows) or `./haqita.sh` (Ubuntu/WSL) to access the interactive menu. Options [2]-[7] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
+Run `./haqita.sh` to access the interactive menu. Options [2]-[7] run a **single stage only** — they do not chain to subsequent stages. Only Option [1] runs the full pipeline end-to-end.
 
 ```
- [1] Run full pipeline        → submenu: Normal, Dry-run, Verbose, Verbose+Dry-run, Resume
- [2] Stage 1: Scrape          → scrape only (submenu: All, Lotte, Superindo, Dry-run)
- [3] Stage 2: OCR             → OCR only (submenu: All, Lotte, Superindo, Specific, Dry-run)
- [4] Stage 3: Consolidation   → consolidate only (submenu: Run, Dry-run, Custom dir)
- [5] Stage 4: Publish HTML    → generate active_promo.json + copy for browser (Run, Dry-run, Verbose)
+ [1] Run full pipeline        → submenu: Run, Resume
+ [2] Stage 1: Scrape          → scrape only (submenu: All, Lotte, Superindo)
+ [3] Stage 2: OCR             → OCR only (submenu: All, Lotte, Superindo, Specific)
+ [4] Stage 3: Consolidation   → consolidate only (submenu: Run, Custom dir)
+ [5] Stage 4: Publish HTML    → generate active_promo.json + copy for browser
  [6] Sync to Cloudflare       → sync data to Cloudflare API (standalone; sync also runs as part of deploy)
- [7] Deploy + Sync            → deploy to Cloudflare Pages + sync, or local dev server (Run, Dry-run, Verbose)
+ [7] Deploy + Sync            → deploy to Cloudflare Pages + sync, or local dev server
  [8] Start HTTP server        → start python -m http.server 8080
  [9] Tests                    → submenu: Integration tests, Matching tests
  [10] Health check            → pre-flight verification
  [0] Exit
 ```
 
-### Resume (Option [1] → [4])
+### Resume (Option [1] → [2])
 
-If a stage fails during a full pipeline run, fix the issue and select **[1] → [4] Resume**. The orchestrator reads stage status files and skips already-completed stages, continuing from where it left off. No need to rerun stages one by one.
+If a stage fails during a full pipeline run, fix the issue and select **[1] → [2] Resume**. The orchestrator reads stage status files and skips already-completed stages, continuing from where it left off. No need to rerun stages one by one.
 
 ## OCR Provider
 
@@ -105,7 +97,7 @@ Gemini (cloud) is the only OCR provider. Set `GEMINI_API_KEY` in `.env` (free ti
 
 - Python 3.12+ (3.12 or 3.13 recommended; 3.14+ may not have wheels for all ML packages yet)
 - Gemini API key (free tier)
-- Windows 10+ (for `haqita.bat`) or Linux/WSL with bash (for `haqita.sh`)
+- Linux/WSL with bash (for `haqita.sh`)
 
 On a fresh Ubuntu/WSL system, `haqita.sh` handles Python package installation automatically. You only need Python 3.12+ installed:
 
@@ -116,7 +108,7 @@ sudo apt install python3.12 python3.12-venv python3-pip
 
 ## Testing
 
-Via `haqita.bat`/`./haqita.sh` → Option [9]:
+Via `./haqita.sh` → Option [9]:
 
 | Choice | Action                                   |
 | ------ | ---------------------------------------- |
@@ -165,8 +157,7 @@ For end-to-end verification after a full pipeline run:
 
 ```
 haqita/
-├── haqita.bat                        ← Interactive launch menu (Windows)
-├── haqita.sh                         ← Interactive launch menu (Ubuntu/WSL)
+├── haqita.sh                         ← Interactive launch menu
 ├── agentic_engineering/
 │   ├── prepare.sh                        ← Dependency installer + unit-test gate for agentic runs
 │   ├── verify.sh                         ← End-to-end dummy pipeline verification in temp workspace

@@ -55,7 +55,7 @@ class TestApplyD1SchemaRemote:
         (web / "schema.sql").write_text("-- schema", encoding="utf-8")
 
         with patch.object(deploy, 'WEB_DIR', web):
-            result = deploy._apply_d1_schema_remote(dry_run=False, verbose=False)
+            result = deploy._apply_d1_schema_remote()
 
         assert result is True
         args = mock_run.call_args.args[0]
@@ -71,16 +71,6 @@ class TestApplyD1SchemaRemote:
         ]
         assert mock_run.call_args.kwargs["cwd"] == web
 
-    def test_dry_run_returns_true_without_invoking_wrangler(self, tmp_path):
-        web = tmp_path / "web"
-        web.mkdir()
-        (web / "schema.sql").write_text("-- schema", encoding="utf-8")
-        with patch.object(deploy, 'WEB_DIR', web):
-            with patch('scripts.deploy.subprocess.run') as mock_run:
-                result = deploy._apply_d1_schema_remote(dry_run=True, verbose=False)
-        assert result is True
-        mock_run.assert_not_called()
-
     @patch('scripts.deploy._require_command', return_value="/usr/bin/wrangler")
     @patch('scripts.deploy.subprocess.run')
     def test_returns_false_on_wrangler_failure(self, mock_run, mock_require, tmp_path):
@@ -91,14 +81,14 @@ class TestApplyD1SchemaRemote:
         web.mkdir()
         (web / "schema.sql").write_text("-- schema", encoding="utf-8")
         with patch.object(deploy, 'WEB_DIR', web):
-            result = deploy._apply_d1_schema_remote(dry_run=False, verbose=False)
+            result = deploy._apply_d1_schema_remote()
         assert result is False
 
     def test_returns_false_when_schema_file_missing(self, tmp_path):
         web = tmp_path / "web"
         web.mkdir()
         with patch.object(deploy, 'WEB_DIR', web):
-            result = deploy._apply_d1_schema_remote(dry_run=False, verbose=False)
+            result = deploy._apply_d1_schema_remote()
         assert result is False
 
 
@@ -135,10 +125,10 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                result = deploy.deploy_cloudflare(dry_run=False, verbose=False)
+                result = deploy.deploy_cloudflare()
 
-        mock_apply_schema.assert_called_once_with(False, False)
-        assert result["status"] in ("complete", "dry_run")
+        mock_apply_schema.assert_called_once_with()
+        assert result["status"] in ("complete",)
         assert result.get("d1_schema_applied") is True
 
     @patch('scripts.deploy._apply_d1_schema_remote', return_value=False)
@@ -156,7 +146,7 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                result = deploy.deploy_cloudflare(dry_run=False, verbose=False)
+                result = deploy.deploy_cloudflare()
 
         assert result["status"] == "error"
         assert result["error"] == "d1_schema_apply_failed"
@@ -179,7 +169,7 @@ class TestDeployCloudflareSchemaWiring:
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
                 result = deploy.deploy_cloudflare(
-                    dry_run=False, verbose=False, skip_d1_schema=True,
+                    skip_d1_schema=True,
                 )
 
         mock_apply_schema.assert_not_called()
@@ -203,10 +193,10 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                result = deploy.deploy_cloudflare(dry_run=False, verbose=False)
+                result = deploy.deploy_cloudflare()
 
         mock_apply_schema.assert_not_called()
-        assert result["status"] in ("complete", "dry_run")
+        assert result["status"] == "complete"
 
     @patch('scripts.deploy.run_sync', return_value={"status": "ok", "sync_run_id": "r1"})
     @patch('scripts.deploy._apply_d1_schema_remote', return_value=True)
@@ -230,7 +220,7 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                deploy.deploy_cloudflare(dry_run=False, verbose=False)
+                deploy.deploy_cloudflare()
 
         mock_deploy.assert_not_called()  # SHA matched — Pages deploy skipped
         mock_apply_schema.assert_called_once()  # but schema apply still ran
@@ -278,7 +268,7 @@ class TestAllRowsFailedGuard:
         }
 
         result = sc.run_sync(
-            "https://x/api/v1", "secret", dry_run=False, verbose=False,
+            "https://x/api/v1", "secret",
         )
 
         assert result["status"] == "error"
@@ -320,7 +310,7 @@ class TestAllRowsFailedGuard:
         }
 
         result = sc.run_sync(
-            "https://x/api/v1", "secret", dry_run=False, verbose=False,
+            "https://x/api/v1", "secret",
         )
 
         # total_rows = 1 store + 2 prices = 3; errors = 1 < 3 -> not all failed
@@ -342,7 +332,7 @@ class TestAllRowsFailedGuard:
         mock_send.return_value = {"errors": [], "stores": {"skipped": 0}}
 
         result = sc.run_sync(
-            "https://x/api/v1", "secret", dry_run=False, verbose=False,
+            "https://x/api/v1", "secret",
         )
         assert result["status"] == "ok"
 
@@ -487,8 +477,7 @@ class TestRunSyncVerifyR2:
         }
 
         result = sc.run_sync(
-            "https://x/api/v1", "secret", dry_run=False,
-            verbose=False, verify_r2=True,
+            "https://x/api/v1", "secret", verify_r2=True,
         )
 
         assert result["status"] == "ok"
@@ -501,15 +490,3 @@ class TestRunSyncVerifyR2:
         saved = __import__("json").load(open(tmp_path / "sync_state.json"))
         assert "database/scrape/lotte/OLD/gone.jpg" not in saved["uploaded_images"]
 
-    @patch('scripts.sync_cloudflare.get_r2_client')
-    def test_dry_run_verify_r2_does_not_call_r2(self, mock_r2client, tmp_path, monkeypatch):
-        self._setup(tmp_path, monkeypatch)
-        # Empty sync_state and empty history ensures no upload path is hit.
-        sc.logger.handlers = [logging.NullHandler()]
-        # dry_run should not actually invoke get_r2_client.
-        # send_batch_sync is patched to a no-op through dry_run handling.
-        result = sc.run_sync(
-            "https://x/api/v1", "secret", dry_run=True, verbose=False, verify_r2=True,
-        )
-        assert result["status"] == "ok"
-        mock_r2client.assert_not_called()

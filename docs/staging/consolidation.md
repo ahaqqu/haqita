@@ -10,7 +10,6 @@ Merges OCR results from both stores, matches same products across stores, comput
 | **Output** | `database/price_history.json` — accumulated price snapshots |
 | | `database/product_catalog.json` — auto-built product registry |
 | | `database/review_queue.json` — low-confidence matches for inspection |
-| **Dry-run** | Prints summary to console, skips database update |
 
 ## Consolidated Output Schema
 
@@ -129,16 +128,13 @@ Promo periods are parsed to extract end date (`valid_until`):
 
 ## Usage
 
-Via `haqita.bat` → Option [4] → Consolidation submenu:
+Via `./haqita.sh` → Option [4] → Consolidation submenu:
 
 | Choice | Action |
 |---|---|
 | **1** | Run consolidation |
-| **2** | Dry-run (no database update) |
 
-## Verbose Logging
-
-Run with `--verbose` flag to get detailed match results in `output/logs/consolidate_<timestamp>.log`:
+A detailed match log is always written to `output/logs/consolidate_<timestamp>.log` containing:
 
 - All matched pairs with match method and confidence
 - All lotte-only and superindo-only products
