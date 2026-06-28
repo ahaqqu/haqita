@@ -97,7 +97,8 @@ The deploy stage now runs sync internally; status is written as part of the depl
   "stage": "deploy",
   "timestamp": "2026-05-16T11:05:00",
   "status": "complete",
-  "deploy_needed": true
+  "deploy_needed": true,
+  "d1_schema_applied": true
 }
 ```
 

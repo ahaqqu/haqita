@@ -12,6 +12,14 @@
 | Migration      | `web/migrations/001_add_dummy_data.sql` — adds `dummy_data` column to all tables |
 | Schema version | 1.1                                                                              |
 
+> **Auto-apply:** Stage 5 (`scripts/deploy.py`) applies `web/schema.sql` to
+> the **remote** D1 before every sync (idempotent — every statement is
+> `CREATE TABLE/INDEX IF NOT EXISTS`). This guarantees the sync endpoints
+> always have their tables; the Pages static deploy alone does not provision
+> D1. Disable with `--skip-d1-schema` or by setting
+> `deploy.apply_d1_schema: false` in `config.yaml`. To bootstrap (or
+> repair) the remote DB manually, see "Apply schema to **remote** D1" below.
+
 ## Tables
 
 ### stores
@@ -151,6 +159,16 @@ All `INSERT OR REPLACE` statements ensure re-running the seed script does not cr
 
 ```bash
 wrangler d1 execute haqita-db --local --file=./web/schema.sql
+```
+
+### Apply schema to remote (production) D1
+
+Stage 5 (`scripts/deploy.py`) does this automatically before every sync. Run
+this manually only to bootstrap the remote DB from outside the pipeline, or
+to repair a remote DB whose tables were dropped:
+
+```bash
+wrangler d1 execute haqita-db --remote --file=./web/schema.sql
 ```
 
 ### Seed local D1
