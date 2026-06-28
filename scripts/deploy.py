@@ -11,6 +11,8 @@ Usage:
     python scripts/deploy.py --target local            # Local dev server only
     python scripts/deploy.py --target cloudflare       # Cloudflare Pages only
     python scripts/deploy.py --target both             # Both targets
+    python scripts/deploy.py --skip-d1-schema          # Skip remote D1 schema apply
+    python scripts/deploy.py --verify-r2               # Reconcile R2 vs sync_state
 """
 
 import argparse
@@ -437,6 +439,57 @@ def _set_commit_sha_secret(sha: str, dry_run: bool) -> bool:
     return True
 
 
+def _apply_d1_schema_remote(dry_run: bool, verbose: bool) -> bool:
+    """Apply ``web/schema.sql`` to the remote (production) D1 database.
+
+    The schema uses ``CREATE TABLE IF NOT EXISTS`` / ``CREATE INDEX IF NOT
+    EXISTS``, so running it every deploy is idempotent and safe. This is what
+    actually provisions the tables the sync endpoints write into — the Pages
+    static deploy itself does NOT create D1 tables, and without this step a
+    fresh or reset remote D1 has no schema, so every batch sync row fails with
+    ``no such table … SQLITE_ERROR``.
+
+    Returns True on success (or dry-run), False on failure.
+    """
+    schema_file = WEB_DIR / "schema.sql"
+    if not schema_file.exists():
+        logger.error("D1 schema file not found: %s", schema_file)
+        return False
+
+    # wrangler is launched with cwd=WEB_DIR, so use an absolute path so the
+    # --file argument resolves regardless of the caller's cwd. Wrangler's docs
+    # show `--file=./web/schema.sql` run from the project root, but here we run
+    # from web/, so absolute is the robust choice.
+    schema_arg = f"--file={schema_file.resolve()}"
+    if dry_run:
+        logger.info(
+            "[DRY-RUN] Would run: wrangler d1 execute haqita-db --remote %s",
+            schema_arg,
+        )
+        return True
+
+    wrangler = _require_command("wrangler", "wrangler")
+    logger.info("Applying D1 schema to remote database (idempotent)...")
+    result = subprocess.run(
+        [
+            wrangler, "d1", "execute", "haqita-db",
+            "--remote", schema_arg,
+        ],
+        cwd=WEB_DIR,
+        capture_output=not verbose,
+        text=True,
+    )
+    if result.returncode != 0:
+        logger.error(
+            "D1 schema apply failed (rc=%d):\n%s",
+            result.returncode,
+            (result.stdout or "") + (result.stderr or ""),
+        )
+        return False
+    logger.info("  D1 schema applied (CREATE TABLE/INDEX IF NOT EXISTS).")
+    return True
+
+
 def _deploy_to_cloudflare(dry_run: bool, verbose: bool) -> dict:
     """Deploy static files to Cloudflare Pages (raw deploy — no version check)."""
     _require_command("npm", "npm")
@@ -463,7 +516,12 @@ def _deploy_to_cloudflare(dry_run: bool, verbose: bool) -> dict:
     return {"status": "complete", "url": "https://haqita.pages.dev"}
 
 
-def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
+def deploy_cloudflare(
+    dry_run: bool,
+    verbose: bool,
+    skip_d1_schema: bool = False,
+    verify_r2: bool = False,
+) -> dict:
     """Deploy to Cloudflare Pages if the deployed API is stale, then sync data.
 
     Flow:
@@ -471,7 +529,13 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
     2. Call ``GET {api_url}/version`` on the deployed API.
     3. If the SHA differs or the endpoint is unreachable: set COMMIT_SHA secret,
        copy static files, typecheck, deploy.
-    4. After deploy (or if SHA already matches), sync data via ``run_sync()``.
+    4. Apply ``web/schema.sql`` to the remote D1 (idempotent) so the sync
+       endpoints have their tables. Without this a fresh/reset remote D1 has no
+       schema and every batch row fails with ``no such table``. Skipped when
+       ``--skip-d1-schema`` is passed or ``deploy.apply_d1_schema`` is false
+       in config.
+    5. Sync data via ``run_sync()`` (optionally with R2 verification when
+       ``verify_r2`` is true).
     """
     logger.info("=== Cloudflare Pages deploy + sync ===")
 
@@ -488,6 +552,12 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
     cf_cfg = _cfg.get("cloudflare_sync", {})
     env_url = os.getenv("CLOUDFLARE_API_URL")
     api_url = (env_url or cf_cfg.get("api_url", "https://haqita.pages.dev/api/v1")).rstrip("/")
+
+    # Config flag: deploy.apply_d1_schema (default true). CLI --skip-d1-schema wins.
+    deploy_cfg = _cfg.get("deploy", {})
+    apply_schema = deploy_cfg.get("apply_d1_schema", True)
+    if skip_d1_schema:
+        apply_schema = False
 
     # Read local SHA and check deployed version
     local_sha = _get_local_head_sha()
@@ -515,6 +585,26 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
         if dry_run:
             logger.info("[DRY-RUN] Would skip deploy")
 
+    # Apply D1 schema to remote (idempotent) before syncing, so the batch
+    # endpoints always have their tables. The Pages static deploy alone does
+    # not provision D1 tables.
+    schema_applied = True
+    if apply_schema:
+        logger.info("")
+        logger.info("=== Applying D1 schema to remote database ===")
+        schema_applied = _apply_d1_schema_remote(dry_run, verbose)
+        if not schema_applied and not dry_run:
+            logger.error(
+                "Remote D1 schema apply failed. Aborting sync to avoid a "
+                "100%% 'no such table' failure. Run `wrangler d1 execute "
+                "haqita-db --remote --file=$(pwd)/web/schema.sql` from the "
+                "project root manually, or use --skip-d1-schema to bypass."
+            )
+            return {"status": "error", "error": "d1_schema_apply_failed"}
+    else:
+        logger.info("")
+        logger.info("[SKIP] D1 schema apply disabled ('--skip-d1-schema' or deploy.apply_d1_schema=false).")
+
     # Sync data to the (now current) API
     logger.info("")
     logger.info("=== Syncing data to deployed API ===")
@@ -526,13 +616,18 @@ def deploy_cloudflare(dry_run: bool, verbose: bool) -> dict:
             logger.error("SCRAPER_SECRET not set. Cannot sync.")
             return {"status": "error", "error": "SCRAPER_SECRET not set"}
 
-    sync_result = run_sync(api_url, secret, dry_run=dry_run, verbose=verbose)
+    sync_result = run_sync(api_url, secret, dry_run=dry_run, verbose=verbose, verify_r2=verify_r2)
     if sync_result.get("status") == "error":
         logger.error("Sync after deploy failed: %s", sync_result.get("error"))
         return {"status": "error", "error": sync_result.get("error")}
 
     status = "dry_run" if dry_run else "complete"
-    return {"status": status, "url": "https://haqita.pages.dev", "deploy_needed": needs_deploy}
+    return {
+        "status": status,
+        "url": "https://haqita.pages.dev",
+        "deploy_needed": needs_deploy,
+        "d1_schema_applied": schema_applied if apply_schema else "skipped",
+    }
 
 
 def main() -> None:
@@ -543,6 +638,16 @@ def main() -> None:
         "--target",
         choices=["local", "cloudflare", "both"],
         help="Deployment target (default: from config.yaml deploy section)",
+    )
+    parser.add_argument(
+        "--skip-d1-schema",
+        action="store_true",
+        help="Do not apply web/schema.sql to remote D1 before sync (overrides deploy.apply_d1_schema=true)",
+    )
+    parser.add_argument(
+        "--verify-r2",
+        action="store_true",
+        help="Reconcile R2 bucket vs sync_state: list R2, re-upload missing referenced images",
     )
     args = parser.parse_args()
 
@@ -574,9 +679,17 @@ def main() -> None:
         if target == "local":
             result = deploy_local(args.dry_run, args.verbose)
         elif target == "cloudflare":
-            result = deploy_cloudflare(args.dry_run, args.verbose)
+            result = deploy_cloudflare(
+                args.dry_run, args.verbose,
+                skip_d1_schema=args.skip_d1_schema,
+                verify_r2=args.verify_r2,
+            )
         elif target == "both":
-            cf_result = deploy_cloudflare(args.dry_run, args.verbose)
+            cf_result = deploy_cloudflare(
+                args.dry_run, args.verbose,
+                skip_d1_schema=args.skip_d1_schema,
+                verify_r2=args.verify_r2,
+            )
             details["cloudflare"] = cf_result
             if cf_result.get("status") == "error" and not args.dry_run:
                 write_status("error", target, details)

@@ -13,6 +13,7 @@ Usage:
     python scripts/sync_cloudflare.py --dry-run                # Preview without uploading
     python scripts/sync_cloudflare.py --verbose                # Show detailed sync report
     python scripts/sync_cloudflare.py --api-url http://localhost:8787/api/v1  # Sync to local API
+    python scripts/sync_cloudflare.py --verify-r2              # Reconcile R2 vs sync_state
 """
 
 import argparse
@@ -341,6 +342,111 @@ def get_r2_client(cfg: dict) -> boto3.client:  # type: ignore[name-defined]
     )
 
 
+def _r2_key_for(local_path_str: str) -> str:
+    """Convert a local ``database/scrape/...`` image path to its R2 object key."""
+    r2_key = local_path_str.replace("database/scrape/", "", 1)
+    if os.getenv("DUMMY_DATA") == "1":
+        r2_key = f"dummy/{r2_key}"
+    return r2_key
+
+
+def list_r2_keys(r2_client: Any, bucket_name: str) -> set[str]:
+    """List every object key in the R2 bucket (paginated).
+
+    Returns an empty set if listing fails (logged at WARNING). R2 supports S3
+    ``list_objects_v2`` with continuation tokens; we page through until
+    ``IsTruncated`` is false.
+    """
+    keys: set[str] = set()
+    continuation: str | None = None
+    while True:
+        kwargs: dict = {"Bucket": bucket_name, "MaxKeys": 1000}
+        if continuation:
+            kwargs["ContinuationToken"] = continuation
+        try:
+            resp = r2_client.list_objects_v2(**kwargs)
+        except Exception as exc:
+            logger.warning("  R2 list_objects_v2 failed: %s", exc)
+            return keys
+        for obj in resp.get("Contents", []) or []:
+            keys.add(obj["Key"])
+        if not resp.get("IsTruncated"):
+            break
+        continuation = resp.get("NextContinuationToken")
+    return keys
+
+
+def reconcile_r2_images(
+    r2_keys: set[str],
+    history: dict,
+    sync_state: dict,
+) -> tuple[list[dict], list[str]]:
+    """Reconcile R2 contents against what the pipeline expects to be there.
+
+    Computes the set of image paths referenced by ``price_history.json``, maps
+    each to its R2 key, and partitions them into:
+
+    - ``to_upload``: dicts ready for ``upload_images_to_r2()`` — either missing
+      from R2, present in R2 but absent from ``sync_state`` (i.e. its hash was
+      never recorded so we can't trust it), or whose local file's MD5 differs
+      from the recorded ``sync_state`` hash.
+    - ``stale_state_paths``: local paths in ``sync_state.uploaded_images`` that
+      are NOT referenced by the current price history. They should be pruned
+      from ``sync_state`` so it doesn't grow unbounded.
+
+    Args:
+        r2_keys: Set of object keys actually present in R2 (from
+            ``list_r2_keys()``). May be empty if listing failed — in that case
+            every referenced image is treated as missing and queued for upload.
+        history: ``database/price_history.json`` dict.
+        sync_state: ``database/sync_state.json`` dict.
+
+    Returns:
+        ``(to_upload, stale_state_paths)``.
+    """
+    referenced = {
+        s["image_path"]
+        for s in history.get("snapshots", [])
+        if s.get("image_path")
+    }
+    uploaded_images = sync_state.get("uploaded_images", {})
+
+    to_upload: list[dict] = []
+    for local_path_str in sorted(referenced):
+        local_path = ROOT / local_path_str
+        if not local_path.exists():
+            logger.warning("  Image not found locally: %s", local_path_str)
+            continue
+
+        file_hash = compute_file_hash(local_path)
+        r2_key = _r2_key_for(local_path_str)
+
+        # Re-upload if the object is missing from R2...
+        r2_present = r2_key in r2_keys
+        recorded_hash = uploaded_images.get(local_path_str)
+        # ...or sync_state has no hash for it...
+        state_known = recorded_hash is not None
+        # ...or the local file no longer matches the recorded hash (re-upload
+        # happens anyway in get_images_to_upload, but verify_r2 forces a check
+        # here too so a corrupt sync_state gets corrected).
+        if r2_present and state_known and recorded_hash == file_hash:
+            continue
+
+        to_upload.append(
+            {
+                "local_path": local_path_str,
+                "r2_key": r2_key,
+                "hash": file_hash,
+                "abs_path": local_path,
+            }
+        )
+
+    stale_state_paths = [
+        p for p in list(uploaded_images) if p not in referenced
+    ]
+    return to_upload, stale_state_paths
+
+
 def compute_file_hash(path: Path) -> str:
     """Compute the MD5 hex digest of a file for change detection."""
     h = hashlib.md5()
@@ -479,7 +585,11 @@ def send_images_sync(api_url: str, secret: str, manifest: dict, dry_run: bool) -
 
 
 def run_sync(
-    api_url: str, secret: str, dry_run: bool = False, verbose: bool = False
+    api_url: str,
+    secret: str,
+    dry_run: bool = False,
+    verbose: bool = False,
+    verify_r2: bool = False,
 ) -> dict:
     """Run the full sync pipeline and return a result dict.
 
@@ -493,6 +603,11 @@ def run_sync(
         secret: Bearer token for sync endpoints (empty string for dry-run).
         dry_run: If True, log what would happen without making changes.
         verbose: If True, log at DEBUG level.
+        verify_r2: If True, reconcile R2 bucket vs ``sync_state.json`` — list
+            R2 objects, re-upload referenced images missing from R2, and prune
+            stale ``sync_state`` entries. The default (False) trusts
+            ``sync_state.json`` hashes, which is cheap but cannot detect an
+            R2 object that was deleted out-of-band.
 
     Returns:
         A dict with keys ``status`` ("ok" or "error") and ``sync_run_id``
@@ -534,12 +649,94 @@ def run_sync(
     if "error" in batch_result:
         logger.error("Batch sync failed. See error above.")
         return {"status": "error", "error": batch_result["error"]}
+
+    # Guard: if every single row failed (e.g. remote D1 has no tables yet),
+    # don't pretend the sync succeeded. A 207 with errors == total is a hard
+    # failure, not a partial one. This previously slipped through as
+    # {"status": "ok"} and printed "Sync complete." next to 1155 errors.
+    if not dry_run and not batch_result.get("dry_run"):
+        total_rows = (
+            len(batch["stores"]) + len(batch["products"])
+            + len(batch["prices"]) + len(batch["promos"])
+        )
+        errors = batch_result.get("errors", []) or []
+        if total_rows > 0 and len(errors) == total_rows:
+            sample = errors[:3]
+            logger.error(
+                "Batch sync failed: all %d rows errored (showing 3 of %d):",
+                total_rows,
+                len(errors),
+            )
+            for err in sample:
+                logger.error(
+                    "  %s/%s: %s",
+                    err.get("table", "?"),
+                    err.get("key", "?"),
+                    err.get("error", "unknown"),
+                )
+            logger.error(
+                "Aborting sync. This usually means the remote D1 schema is "
+                "missing — apply it with: wrangler d1 execute haqita-db "
+                "--remote --file=./web/schema.sql"
+            )
+            return {
+                "status": "error",
+                "error": "all_rows_failed",
+                "errors": errors,
+            }
     logger.info("")
 
     # R2 image upload
     logger.info("Checking images for R2 upload...")
     sync_state = load_sync_state()
     images_to_upload = get_images_to_upload(history, sync_state)
+
+    # When verify_r2 is set, reconcile sync_state against R2 itself: list the
+    # bucket, re-upload referenced images missing from R2, and prune sync_state
+    # entries no longer referenced. get_images_to_upload() above only trusts
+    # sync_state hashes, which is cheap but blind to out-of-band R2 deletions.
+    stale_paths: list[str] = []
+    if verify_r2:
+        logger.info("  [--verify-r2] Listing R2 bucket to reconcile state...")
+        if dry_run:
+            logger.info(
+                "  [DRY-RUN] Would list R2 bucket, identify missing/stale "
+                "images, and prune %d tracked sync_state entries.",
+                len(sync_state.get("uploaded_images", {})),
+            )
+        else:
+            cfg = load_config()
+            r2_client_verify = get_r2_client(cfg)
+            bucket_name = os.getenv("R2_BUCKET_NAME", "haqita-images")
+            r2_keys = list_r2_keys(r2_client_verify, bucket_name)
+            logger.info(
+                "  R2 bucket %s contains %d object(s).",
+                bucket_name,
+                len(r2_keys),
+            )
+            r2_to_upload, stale_paths = reconcile_r2_images(
+                r2_keys, history, sync_state
+            )
+            # Merge: union with get_images_to_upload's results by local_path
+            # so any changed-image uploads are preserved. Re-uploads queued by
+            # the reconcile run after the hash-based ones.
+            existing_paths = {img["local_path"] for img in images_to_upload}
+            for img in r2_to_upload:
+                if img["local_path"] not in existing_paths:
+                    images_to_upload.append(img)
+                    existing_paths.add(img["local_path"])
+            if stale_paths:
+                logger.info(
+                    "  --verify-r2 found %d stale sync_state entry/entries "
+                    "to prune.",
+                    len(stale_paths),
+                )
+            if r2_to_upload:
+                logger.info(
+                    "  --verify-r2 queued %d image(s) for re-upload "
+                    "(missing from R2 or untracked in sync_state).",
+                    len(r2_to_upload),
+                )
 
     uploaded: dict = {}
     if images_to_upload:
@@ -570,12 +767,34 @@ def run_sync(
             }
             send_images_sync(api_url, secret, image_manifest, dry_run)
     else:
-        logger.info("  No new or changed images to upload.")
+        if verify_r2 and not dry_run:
+            logger.info(
+                "  %d image(s) tracked in sync_state; R2 reconciled, all "
+                "present and unchanged.",
+                len(sync_state.get("uploaded_images", {})),
+            )
+        else:
+            logger.info(
+                "  No new or changed images to upload (skipped per "
+                "sync_state.json; R2 not verified — use --verify-r2 to "
+                "reconcile against the bucket)."
+            )
 
     logger.info("")
 
     # Update sync state after successful operations
     if not dry_run and "error" not in batch_result:
+        # Prune stale sync_state entries surfaced by --verify-r2.
+        if stale_paths:
+            uploaded_state = sync_state.setdefault("uploaded_images", {})
+            for p in stale_paths:
+                uploaded_state.pop(p, None)
+            logger.info(
+                "  Pruned %d stale sync_state entry/entries (no longer "
+                "referenced by price_history.json).",
+                len(stale_paths),
+            )
+
         if images_to_upload:
             uploaded_hashes = [
                 {"local_path": img["local_path"], "hash": img["hash"]}
@@ -608,6 +827,11 @@ def main() -> None:
         type=str,
         help="Override API URL (default: https://haqita.pages.dev/api/v1)",
     )
+    parser.add_argument(
+        "--verify-r2",
+        action="store_true",
+        help="List R2, re-upload missing referenced images, prune stale sync_state entries",
+    )
     args = parser.parse_args()
 
     setup_logging(args.verbose)
@@ -616,7 +840,7 @@ def main() -> None:
     api_url = get_api_url(args, cfg)
     secret = "" if args.dry_run else get_scraper_secret()
 
-    result = run_sync(api_url, secret, args.dry_run, args.verbose)
+    result = run_sync(api_url, secret, args.dry_run, args.verbose, verify_r2=args.verify_r2)
     if result.get("status") == "error":
         sys.exit(1)
 
