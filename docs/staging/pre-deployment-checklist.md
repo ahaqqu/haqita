@@ -44,8 +44,9 @@ Run through this checklist before each deployment to production.
 ## E2E Pipeline
 
 - [ ] `./haqita.sh` → **[1] Run full pipeline** completes all 5 stages
-- [ ] Local UI at `http://localhost:8080` loads and shows products
+- [ ] Local UI at `http://localhost:8080` loads and shows products (left running in detached mode by the pipeline)
 - [ ] Local API at `http://localhost:8787/api/v1/health` returns {"status":"ok"}
+- [ ] Detached servers cleaned up via option **[8] → [2] Stop** or `python scripts/deploy.py --stop-local`
 - [ ] (Optional) With `deploy.cloudflare: true`, production UI at `https://haqita.pages.dev` loads
 
 ## Post-Deployment

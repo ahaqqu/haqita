@@ -10,7 +10,7 @@ The orchestrator (`scripts/orchestrator.py`) is invoked when you select **[1] Ru
 2. **Stage 2** — OCR only stores with new images (saves API quota)
 3. **Stage 3** — Consolidation (always runs); on success, auto-commits pipeline data to the `haqita-database` repo
 4. **Stage 4** — Publish HTML (generates `active_promo.json` and copies JSON files to `output/html/`)
-5. **Stage 5** — Deploy + Sync (version-aware Cloudflare Pages deploy, then syncs data to the deployed API; also supports local dev server)
+5. **Stage 5** — Deploy + Sync (version-aware Cloudflare Pages deploy, then syncs data to the deployed API; local dev servers run in **detached** background mode and survive after the pipeline exits — stop them with `--stop-local` or the menu option [8])
 
 The old Stage 5 (cloudflare-sync) has been merged into Stage 5 (deploy). The separate `--stage cloudflare-sync` flag is kept for backward compatibility but emits a deprecation warning and delegates to deploy.
 
@@ -104,6 +104,8 @@ The deploy stage now runs sync internally; status is written as part of the depl
 
 The old `cloudflare_sync_status.json` is no longer written by the orchestrator — sync status is reflected inside `deploy_status.json`.
 
+When `deploy.local: true`, the deploy stage runs in detached mode — local wrangler and HTTP servers continue in the background after the orchestrator finishes. A PID file is written at `output/stage_results/local_dev_pids.json` for later cleanup via `python scripts/deploy.py --stop-local`.
+
 ## Smart OCR Skipping
 
 The orchestrator reads `scrape_status.json` after Stage 1 and records per-store status (`new_images` / `no_new` / `complete` / `skipped`) in `ocr_status.json`. Actual per-image skipping is handled by OCR's own state file (`database/ocr/<store>/state.json`), which tracks filenames already processed — so the orchestrator always invokes the OCR script for every requested store, and OCR itself decides what to re-process.
@@ -112,7 +114,7 @@ The orchestrator reads `scrape_status.json` after Stage 1 and records per-store 
 
 ### Console Output
 
-Each stage's stdout is printed to the console in real-time, prefixed with `  ` for readability.
+Each stage's stdout is printed to the console in real-time, prefixed with `  ` for readability. Level prefixes (`[INFO]`, `[DEBUG]`) are suppressed on console output — they only appear for `WARNING+` levels, keeping the display clean.
 
 ### Log Files
 

@@ -50,10 +50,11 @@ Launches an interactive menu. Select **[1]** for the full pipeline, or run indiv
 
 ## Viewing the HTML UI
 
-After a full pipeline run, the local UI is served automatically by **Stage 5: Deploy + Sync** at `http://localhost:8080` (when `deploy.local: true` in `config.yaml`). You can also start the server manually:
+After a full pipeline run, the local UI is served automatically by **Stage 5: Deploy + Sync** at `http://localhost:8080` (when `deploy.local: true` in `config.yaml`). The dev servers run in the background (detached mode) and survive after the pipeline exits. Use the **Local dev servers** submenu (option [8]) to start or stop them manually, or run:
 
-```cmd
-python -m http.server 8080
+```bash
+python scripts/deploy.py --target local --detached   # start
+python scripts/deploy.py --stop-local                 # stop
 ```
 
 Then open `http://localhost:8080` in a browser. Features:
@@ -79,7 +80,7 @@ Run `./haqita.sh` to access the interactive menu. Options [2]-[7] run a **single
  [5] Stage 4: Publish HTML    → generate active_promo.json + copy for browser
  [6] Sync to Cloudflare       → sync data to Cloudflare API (standalone; sync also runs as part of deploy)
  [7] Deploy + Sync            → deploy to Cloudflare Pages + sync, or local dev server
- [8] Start HTTP server        → start python -m http.server 8080
+ [8] Local dev servers        → submenu: Start, Stop local dev servers
  [9] Tests                    → submenu: Integration tests, Matching tests
  [10] Health check            → pre-flight verification
  [0] Exit
