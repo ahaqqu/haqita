@@ -25,6 +25,7 @@ import argparse
 import http.server
 import json
 import logging
+import os
 import socketserver
 import subprocess
 import sys
@@ -315,6 +316,55 @@ def run_deploy(dry_run: bool, logger: logging.Logger) -> dict:
     return status
 
 
+def commit_database(logger: logging.Logger) -> None:
+    """Auto-commit pipeline data to haqita-database repo.
+
+    Runs git add + commit + push on the database repo linked via
+    the database/ symlink. Only commits if there are changes.
+    Fails gracefully (logs warning) if the repo is not set up.
+    """
+    db_path = (ROOT / "database").resolve()
+    git_dir = db_path / ".git"
+
+    if not git_dir.exists():
+        logger.warning("haqita-database repo not found at %s. Skipping auto-commit.", db_path)
+        return
+
+    try:
+        env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+
+        subprocess.run(
+            ["git", "-C", str(db_path), "add", "-A"],
+            check=True, capture_output=True, text=True, env=env,
+        )
+
+        result = subprocess.run(
+            ["git", "-C", str(db_path), "diff", "--staged", "--quiet"],
+            capture_output=True, env=env,
+        )
+        if result.returncode == 0:
+            logger.info("No changes to commit to haqita-database.")
+            return
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        subprocess.run(
+            ["git", "-C", str(db_path), "commit", "-m", f"pipeline run {timestamp}"],
+            check=True, capture_output=True, text=True, env=env,
+        )
+        logger.info("Committed pipeline data to haqita-database.")
+
+        push_result = subprocess.run(
+            ["git", "-C", str(db_path), "push"],
+            capture_output=True, text=True, env=env,
+        )
+        if push_result.returncode != 0:
+            logger.warning("Failed to push haqita-database: %s", push_result.stderr.strip())
+        else:
+            logger.info("Pushed haqita-database.")
+    except subprocess.CalledProcessError as e:
+        logger.warning("Auto-commit to haqita-database failed: %s", e.stderr.strip()[:200])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Haqita Pipeline Orchestrator")
     parser.add_argument("--full", action="store_true", help="Run all stages: scrape, OCR, consolidate, publish-html, deploy (sync runs as part of deploy)")
@@ -396,6 +446,8 @@ def main():
         else:
             print("  [RUN] Consolidation")
             cons_result = run_consolidate(args.dry_run, logger)
+            if not args.dry_run and cons_result.get("status") != "error":
+                commit_database(logger)
 
         print()
 
@@ -428,6 +480,8 @@ def main():
 
         # Stage 3: Consolidation (always runs)
         cons_result = run_consolidate(args.dry_run, logger)
+        if not args.dry_run and cons_result.get("status") != "error":
+            commit_database(logger)
         print()
 
         # Stage 4: Publish HTML (always runs)
