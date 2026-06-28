@@ -796,8 +796,7 @@ def main() -> None:
 
     # --stop-local is a standalone action: kill servers and exit.
     if args.stop_local:
-        result = stop_local()
-        write_status(result.get("status", "complete"), "local", result)
+        stop_local()
         return
 
     cfg = load_config()

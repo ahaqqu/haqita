@@ -44,7 +44,7 @@ class LevelFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         message = record.getMessage()
         if record.exc_info:
-            message = self.formatException(record.exc_info)
+            message = f"{message}\n{self.formatException(record.exc_info)}"
         if record.levelno >= logging.WARNING:
             return f"[{record.levelname}] {message}"
         return message
