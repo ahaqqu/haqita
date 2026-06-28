@@ -310,6 +310,20 @@ def _detect_wrangler_port_from_log(
     except OSError:
         pass
 
+    # Fall back to stored port from PID file if it exists
+    try:
+        if LOCAL_PID_FILE.exists():
+            data = json.loads(LOCAL_PID_FILE.read_text(encoding="utf-8"))
+            ports = data.get("ports", [])
+            if len(ports) >= 2:
+                stored_port = ports[1]
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.settimeout(1)
+                    sock.connect(("127.0.0.1", stored_port))
+                return stored_port
+    except (OSError, ValueError, KeyError, TypeError, IndexError):
+        pass
+
     return None
 
 
@@ -425,9 +439,18 @@ def _deploy_local_detached() -> dict:
         LOCAL_WRANGLER_PORT,
     )
 
-    # Check if servers are already running on the expected ports
+    # Check if servers are already running on expected or stored ports
     http_up = _wait_for_port(LOCAL_HTTP_PORT, timeout=1.0)
     wrangler_up = _wait_for_port(LOCAL_WRANGLER_PORT, timeout=1.0)
+
+    pid_data = load_json(LOCAL_PID_FILE)
+    if pid_data and "ports" in pid_data:
+        stored = pid_data["ports"]
+        if not http_up and len(stored) >= 1:
+            http_up = _wait_for_port(stored[0], timeout=1.0)
+        if not wrangler_up and len(stored) >= 2:
+            wrangler_up = _wait_for_port(stored[1], timeout=1.0)
+
     if http_up and wrangler_up:
         logger.info("Local dev servers already running. Skipping.")
         return {"status": "complete", "ports": [LOCAL_HTTP_PORT, LOCAL_WRANGLER_PORT]}
