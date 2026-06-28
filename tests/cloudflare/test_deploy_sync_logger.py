@@ -8,6 +8,7 @@ Verifies:
 
 import logging
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -264,3 +265,53 @@ class TestRunSyncCallable:
             assert "[DRY-RUN]" in output
 
         sc.logger.handlers = []
+
+
+class TestSetCommitShaSecret:
+    """_set_commit_sha_secret() should pass the value via stdin, not as positional arg."""
+
+    @patch('scripts.deploy._require_command')
+    @patch('scripts.deploy.subprocess.run')
+    def test_passes_sha_via_stdin(self, mock_run, mock_require, tmp_path):
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=["wrangler", "pages", "secret", "put", "COMMIT_SHA"],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+        with patch.object(deploy, 'ROOT', tmp_path):
+            with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
+                (tmp_path / "web").mkdir(parents=True, exist_ok=True)
+                result = deploy._set_commit_sha_secret("abc123def456", dry_run=False)
+
+        assert result is True
+        mock_run.assert_called_once()
+        call_kwargs = mock_run.call_args.kwargs
+        assert call_kwargs.get("input") == "abc123def456"
+        args = mock_run.call_args.args[0]
+        assert args == ["wrangler", "pages", "secret", "put", "COMMIT_SHA"]
+
+    @patch('scripts.deploy._require_command')
+    @patch('scripts.deploy.subprocess.run')
+    def test_returns_false_on_failure(self, mock_run, mock_require, tmp_path):
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=["wrangler", "pages", "secret", "put", "COMMIT_SHA"],
+            returncode=1,
+            stdout="",
+            stderr="error",
+        )
+
+        with patch.object(deploy, 'ROOT', tmp_path):
+            with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
+                (tmp_path / "web").mkdir(parents=True, exist_ok=True)
+                result = deploy._set_commit_sha_secret("abc123", dry_run=False)
+
+        assert result is False
+
+    def test_dry_run_returns_true(self, tmp_path):
+        with patch.object(deploy, 'ROOT', tmp_path):
+            with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
+                (tmp_path / "web").mkdir(parents=True, exist_ok=True)
+                result = deploy._set_commit_sha_secret("abc123", dry_run=True)
+        assert result is True

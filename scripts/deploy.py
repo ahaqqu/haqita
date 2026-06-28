@@ -424,8 +424,9 @@ def _set_commit_sha_secret(sha: str, dry_run: bool) -> bool:
     _require_command("wrangler", "wrangler")
     logger.info("Setting COMMIT_SHA as Cloudflare Pages secret...")
     result = subprocess.run(
-        ["wrangler", "pages", "secret", "put", "COMMIT_SHA", sha],
+        ["wrangler", "pages", "secret", "put", "COMMIT_SHA"],
         cwd=WEB_DIR,
+        input=sha,
         capture_output=True,
         text=True,
     )

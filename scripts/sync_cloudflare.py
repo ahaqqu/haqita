@@ -183,7 +183,7 @@ def build_sync_batch(
                 "name": entry.get("display_name", ""),
                 "brand": entry.get("brand"),
                 "category": None,  # Not currently present in the catalog
-                "unit": entry.get("unit", ""),
+                "unit": entry.get("unit") or "",
                 "unit_type": entry.get("unit_type"),
                 "unit_value_g": entry.get("unit_value_g"),
             }
