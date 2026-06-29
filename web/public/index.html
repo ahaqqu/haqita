@@ -2144,6 +2144,30 @@
             renderBrochures();
           }
         });
+        tab.addEventListener("keydown", (e) => {
+          const tabs = Array.from(document.querySelectorAll(".tab"));
+          const idx = tabs.indexOf(tab);
+          let newIdx = -1;
+          switch (e.key) {
+            case "ArrowLeft":
+              newIdx = (idx - 1 + tabs.length) % tabs.length;
+              break;
+            case "ArrowRight":
+              newIdx = (idx + 1) % tabs.length;
+              break;
+            case "Home":
+              newIdx = 0;
+              break;
+            case "End":
+              newIdx = tabs.length - 1;
+              break;
+            default:
+              return;
+          }
+          e.preventDefault();
+          tabs[newIdx].focus();
+          tabs[newIdx].click();
+        });
       });
 
       loadData();
