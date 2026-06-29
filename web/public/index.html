@@ -1632,7 +1632,7 @@
 
           if (!consOk && !histOk) {
             renderError(
-              "Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080).",
+              "Could not fetch any product data. Make sure the pipeline has run and an HTTP server is serving the files (e.g., python -m http.server 8080 --directory web/public).",
             );
             return;
           }

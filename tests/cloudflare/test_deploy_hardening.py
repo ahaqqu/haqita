@@ -108,7 +108,9 @@ class TestDeployCloudflareSchemaWiring:
         web.mkdir()
         (web / "package.json").write_text("{}", encoding="utf-8")
         (web / "schema.sql").write_text("-- schema", encoding="utf-8")
-        (tmp_path / "index.html").write_text("<html>", encoding="utf-8")
+        public = web / "public"
+        public.mkdir()
+        (public / "index.html").write_text("<html>", encoding="utf-8")
 
     @patch('scripts.deploy._apply_d1_schema_remote', return_value=True)
     @patch('scripts.deploy.run_sync', return_value={"status": "ok", "sync_run_id": "r1"})

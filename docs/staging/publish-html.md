@@ -115,13 +115,13 @@ python scripts/publish_html.py
 
 ## Viewing the HTML UI
 
-After running Stage 4, serve the project root via HTTP:
+The HTML UI lives in `web/public/` (the single source of truth for both local dev and Cloudflare Pages). Stage 5 (`deploy.py`) stages the JSON files into `web/public/output/html/` and serves `web/public/` on port 8080. For a one-off static preview without running the full Stage 5 deploy:
 
-```cmd
-python -m http.server 8080
+```bash
+python -m http.server 8080 --directory web/public
 ```
 
-Then open `http://localhost:8080` in a browser. The `index.html` fetches `output/html/active_promo.json` and `output/html/price_history.json` via `fetch()`.
+Then open `http://localhost:8080` in a browser. The `index.html` fetches `output/html/active_promo.json` and `output/html/price_history.json` via relative `fetch()` — so the JSONs must be staged at `web/public/output/html/` first (run `python scripts/deploy.py --target local --detached` to stage them, or copy them manually from `output/html/`).
 
 > Opening `index.html` directly via `file://` will fail due to CORS. An HTTP server is required.
 

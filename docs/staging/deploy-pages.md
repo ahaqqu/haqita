@@ -63,20 +63,20 @@ python scripts/deploy.py --stop-local              # Stop previously started det
 ```
 
 Stage 5 (Deploy + Sync):
-1. Verifies `web/package.json`, `index.html`, and `output/html/` exist
+1. Verifies `web/package.json`, `web/public/index.html`, and `output/html/` exist
 2. Determines API URL from env `CLOUDFLARE_API_URL` or `config.yaml`
 3. Reads local HEAD SHA via `git rev-parse HEAD`
 4. Calls `GET {api_url}/version` on the deployed API
 5. If SHA differs or endpoint unreachable:
    a. Sets `COMMIT_SHA` as a Cloudflare Pages secret
-   b. Copies `index.html` and `output/html/*.json` into `web/public/`
+   b. Stages `output/html/*.json` into `web/public/output/html/` (the HTML UI files already live in `web/public/` as the single source of truth)
    c. Installs npm dependencies if needed
    d. Runs `tsc --noEmit` (fails if type errors)
    e. Runs `wrangler pages deploy . --project-name haqita`
 6. If SHA matches, skips deploy (API is current)
 7. Applies `web/schema.sql` to the remote D1 (idempotent — `CREATE TABLE/INDEX IF NOT EXISTS`). This guarantees the sync endpoints always have their tables; the Pages static deploy alone does not provision D1. Skipped with `--skip-d1-schema` or `deploy.apply_d1_schema: false`.
 8. Syncs data to the (now current) API via `run_sync()` from `sync_cloudflare.py`
-9. For local: starts `wrangler pages dev` (port 8787) and `python -m http.server 8080` — in the pipeline, these run in **detached** mode (background, survives script exit). Use `python scripts/deploy.py --stop-local` to shut them down.
+9. For local: starts `wrangler pages dev` (port 8787) and `python -m http.server 8080 --directory web/public` — both serve `web/public/` so the API-first UI works identically in local and production. In the pipeline these run in **detached** mode (background, survives script exit). Use `python scripts/deploy.py --stop-local` to shut them down.
 
 ### Step 4: Verify deployment
 
@@ -119,11 +119,12 @@ Open `https://haqita.pages.dev` and verify:
 
 | File | Source | Purpose |
 |------|--------|---------|
-| `public/index.html` | Root `index.html` | Main UI |
-| `public/active_promo.json` | `output/html/active_promo.json` | Static fallback data |
-| `public/price_history.json` | `output/html/price_history.json` | Static fallback history |
-| `public/promo_catalog.json` | `output/html/promo_catalog.json` | Static fallback promos |
-| `public/review_queue.json` | `output/html/review_queue.json` | Admin review data |
+| `public/index.html` | `web/public/index.html` (committed) | Main UI — single source of truth for local + Cloudflare |
+| `public/admin.html` | `web/public/admin.html` (committed) | Admin review queue UI |
+| `public/output/html/active_promo.json` | `output/html/active_promo.json` (staged by deploy) | Static fallback data |
+| `public/output/html/price_history.json` | `output/html/price_history.json` (staged by deploy) | Static fallback history |
+| `public/output/html/promo_catalog.json` | `output/html/promo_catalog.json` (staged by deploy) | Static fallback promos |
+| `public/output/html/review_queue.json` | `output/html/review_queue.json` (staged by deploy) | Admin review data |
 | `functions/api/[[route]].ts` | `web/functions/api/` | API endpoint handlers |
 
 ## API Integration
@@ -131,7 +132,7 @@ Open `https://haqita.pages.dev` and verify:
 The deployed `index.html` loads data using an API-first strategy:
 
 1. Try `GET /api/v1/products` and `GET /api/v1/prices`
-2. If API fails, fall back to static JSON files (`public/*.json`)
+2. If API fails, fall back to static JSON files (`public/output/html/*.json`)
 3. If both fail, show error state
 
 A small data source indicator in the header shows "(API)" or "(static)" to indicate the current data source.
