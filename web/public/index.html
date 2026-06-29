@@ -947,6 +947,10 @@
           .replace(/'/g, "&#39;");
       }
       function escapeAttr(str) { return escapeHtml(str); }
+      function escapeSelector(str) {
+        if (str == null) return "";
+        return String(str).replace(/[!"#$%&'()*+,.\/:;<=>?@[\]^`{|}~\\\s]/g, (c) => "\\" + c);
+      }
       function safeUrl(str) {
         if (!str) return "";
         try {
@@ -1394,11 +1398,13 @@
       }
 
       function expandCard(key) {
-        const card = document.querySelector(`.product-card[data-key="${key}"]`);
+        const escapedKey = escapeSelector(key);
+        const card = document.querySelector(`.product-card[data-key="${escapedKey}"]`);
         if (!card) return;
         if (expandedKey && expandedKey !== key) {
+          const prevEscaped = escapeSelector(expandedKey);
           const prev = document.querySelector(
-            `.product-card[data-key="${expandedKey}"]`,
+            `.product-card[data-key="${prevEscaped}"]`,
           );
           if (prev) {
             prev.classList.remove("expanded");
@@ -1747,8 +1753,11 @@
             updateFreshnessBar(consolidatedData.generated_at);
           }
           if (isRefresh) isRefreshing = true;
-          renderCards();
-          isRefreshing = false;
+          try {
+            renderCards();
+          } finally {
+            isRefreshing = false;
+          }
           renderPromos();
           renderBrochures();
           if (!isRefresh) {
