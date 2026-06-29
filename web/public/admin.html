@@ -4,12 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Haqita — Admin Review Queue</title>
+    <meta name="description" content="Review and resolve product-matching disputes for the Haqita grocery price tracker." />
+    <meta name="theme-color" content="#2d7a4f" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232d7a4f'/><text x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'>H</text></svg>" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232d7a4f'/><text x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'>H</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" /></noscript>
     <style>
       :root {
         --green: #2d7a4f;
@@ -22,6 +29,7 @@
         --gray-50: #f4f4f2;
         --gray-100: #e8e8e4;
         --gray-300: #c0bfb8;
+        --gray-400: #a8a6a0;
         --gray-500: #8a8880;
         --gray-700: #4a4945;
         --gray-900: #1a1916;
@@ -152,7 +160,7 @@
       }
       #empty-state p,
       #error-state p {
-        color: var(--gray-500);
+        color: var(--gray-700);
       }
 
       .summary-bar {
@@ -173,7 +181,7 @@
 
       .summary-card .label {
         font-size: 0.78rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
         text-transform: uppercase;
         letter-spacing: 0.03em;
       }
@@ -264,7 +272,7 @@
 
       .review-time {
         font-size: 0.78rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
       }
 
       .product-compare {
@@ -303,7 +311,7 @@
       }
       .product-col .meta {
         font-size: 0.82rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
         margin-top: 0.15rem;
       }
       .product-col .price {
@@ -425,12 +433,37 @@
         display: block;
       }
 
+      :focus-visible {
+        outline: 2px solid var(--green-mid);
+        outline-offset: 2px;
+      }
+      .tab:focus-visible, .btn:focus-visible, .filter-btn:focus-visible {
+        outline: 2px solid var(--green-mid);
+        outline-offset: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #loading .skeleton-line { animation: none; }
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
       footer {
         background: white;
         border-top: 1px solid var(--gray-100);
         padding: 0.75rem 1.5rem;
         font-size: 0.78rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
         text-align: center;
       }
     </style>
@@ -438,19 +471,17 @@
   <body>
     <header>
       <div class="header-inner">
-        <a class="logo" href="index.html">Haqita</a>
-        <nav class="tab-bar">
-          <a class="tab active" data-tab="review-queue" href="#"
-            >Review Queue</a
-          >
-          <a class="tab" data-tab="promo-data" href="#">Promo Data</a>
-          <a class="tab" data-tab="history" href="#">History</a>
+        <a class="logo" href="index.html"><h1>Haqita</h1></a>
+        <nav class="tab-bar" role="tablist">
+          <button class="tab active" data-tab="review-queue" role="tab" aria-selected="true" aria-controls="view-review-queue" id="tab-review-queue" tabindex="0">Review Queue</button>
+          <button class="tab" data-tab="promo-data" role="tab" aria-selected="false" aria-controls="view-promo-data" id="tab-promo-data" tabindex="-1">Promo Data</button>
+          <button class="tab" data-tab="history" role="tab" aria-selected="false" aria-controls="view-history" id="tab-history" tabindex="-1">History</button>
         </nav>
       </div>
     </header>
 
     <main>
-      <section id="view-review-queue" class="tab-view active">
+      <section id="view-review-queue" class="tab-view active" role="tabpanel" aria-labelledby="tab-review-queue">
         <div id="loading">
           <div style="max-width: 600px; margin: 0 auto">
             <div class="skeleton-line medium"></div>
@@ -459,14 +490,14 @@
           </div>
         </div>
 
-        <div id="error-state">
+        <div id="error-state" aria-live="polite">
           <div class="box">
             <h3>Failed to load review queue</h3>
             <p id="error-message">Could not fetch data.</p>
           </div>
         </div>
 
-        <div id="empty-state">
+        <div id="empty-state" aria-live="polite">
           <div class="box">
             <h3>No items in review queue</h3>
             <p>All matches have been resolved automatically.</p>
@@ -490,12 +521,12 @@
           </div>
 
           <div class="filter-bar">
-            <button class="filter-btn active" data-filter="pending">
+            <button class="filter-btn active" data-filter="pending" aria-pressed="true">
               Pending
             </button>
-            <button class="filter-btn" data-filter="approved">Approved</button>
-            <button class="filter-btn" data-filter="rejected">Rejected</button>
-            <button class="filter-btn" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="approved" aria-pressed="false">Approved</button>
+            <button class="filter-btn" data-filter="rejected" aria-pressed="false">Rejected</button>
+            <button class="filter-btn" data-filter="all" aria-pressed="false">All</button>
           </div>
 
           <div class="review-list" id="review-list"></div>
@@ -509,10 +540,10 @@
         </div>
       </section>
 
-      <section id="view-promo-data" class="tab-view">
+      <section id="view-promo-data" class="tab-view" role="tabpanel" aria-labelledby="tab-promo-data">
         <div id="promo-data-content">
           <div
-            style="text-align: center; padding: 3rem; color: var(--gray-500)"
+            style="text-align: center; padding: 3rem; color: var(--gray-700)"
           >
             <h3>Promo Data Overview</h3>
             <p>Standardized promo analysis will appear here.</p>
@@ -520,10 +551,10 @@
         </div>
       </section>
 
-      <section id="view-history" class="tab-view">
+      <section id="view-history" class="tab-view" role="tabpanel" aria-labelledby="tab-history">
         <div id="history-content">
           <div
-            style="text-align: center; padding: 3rem; color: var(--gray-500)"
+            style="text-align: center; padding: 3rem; color: var(--gray-700)"
           >
             <h3>Price History</h3>
             <p>Historical price trends and change logs will appear here.</p>
@@ -538,6 +569,17 @@
     </footer>
 
     <script>
+      function escapeHtml(str) {
+        if (str == null) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+      function escapeAttr(str) { return escapeHtml(str); }
+
       let reviewItems = [];
       let decisions = {};
       let currentFilter = "pending";
@@ -626,7 +668,7 @@
         });
 
         if (filtered.length === 0) {
-          list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--gray-500)">No ${currentFilter} items</div>`;
+          list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--gray-700)">No ${escapeHtml(currentFilter)} items</div>`;
           return;
         }
 
@@ -643,38 +685,38 @@
             const aName = STORE_NAMES[aStoreKey] || a.store || "Unknown";
             const bName = STORE_NAMES[bStoreKey] || b.store || "Unknown";
 
-            return `<div class="review-item status-${status}">
+            return `<div class="review-item status-${escapeHtml(status)}">
       <div class="review-header">
-        <span class="review-reason">${item.reason || "unknown"}</span>
-        <span class="review-time">${formatDate(item.detected_at)}</span>
+        <span class="review-reason">${escapeHtml(item.reason || "unknown")}</span>
+        <span class="review-time">${escapeHtml(formatDate(item.detected_at))}</span>
       </div>
       <div class="product-compare">
         <div class="product-col">
-          <div><span class="store-dot" style="background:${aColor}"></span><span class="name">${a.name || "Unknown"}</span></div>
-          <div class="meta">${a.brand || ""} ${a.unit || ""}</div>
-          <div class="price">${a.price ? "Rp " + a.price.toLocaleString("id-ID") : "-"}</div>
-          <div class="meta">${aName}</div>
+          <div><span class="store-dot" style="background:${escapeHtml(aColor)}"></span><span class="name">${escapeHtml(a.name || "Unknown")}</span></div>
+          <div class="meta">${escapeHtml(a.brand || "")} ${escapeHtml(a.unit || "")}</div>
+          <div class="price">${a.price ? escapeHtml("Rp " + a.price.toLocaleString("id-ID")) : "-"}</div>
+          <div class="meta">${escapeHtml(aName)}</div>
         </div>
         <div class="compare-arrow">↔</div>
         <div class="product-col">
-          <div><span class="store-dot" style="background:${bColor}"></span><span class="name">${b.name || "Unknown"}</span></div>
-          <div class="meta">${b.brand || ""} ${b.unit || ""}</div>
-          <div class="price">${b.price ? "Rp " + b.price.toLocaleString("id-ID") : "-"}</div>
-          <div class="meta">${bName}</div>
+          <div><span class="store-dot" style="background:${escapeHtml(bColor)}"></span><span class="name">${escapeHtml(b.name || "Unknown")}</span></div>
+          <div class="meta">${escapeHtml(b.brand || "")} ${escapeHtml(b.unit || "")}</div>
+          <div class="price">${b.price ? escapeHtml("Rp " + b.price.toLocaleString("id-ID")) : "-"}</div>
+          <div class="meta">${escapeHtml(bName)}</div>
         </div>
       </div>
-      <div class="review-actions">
+      <div class="review-actions" data-key="${escapeAttr(key)}">
         ${
           status === "pending"
             ? `
-          <button class="btn btn-approve" onclick="setDecision('${key}','approved')">Approve Match</button>
-          <button class="btn btn-reject" onclick="setDecision('${key}','rejected')">Reject Match</button>
+          <button class="btn btn-approve" data-decision="approved">Approve Match</button>
+          <button class="btn btn-reject" data-decision="rejected">Reject Match</button>
         `
             : `
           <span style="font-size:0.85rem;color:${status === "approved" ? "var(--green)" : "var(--red)"};margin-right:auto;padding:0.45rem 0">
             ${status === "approved" ? "✓ Approved" : "✗ Rejected"}
           </span>
-          <button class="btn btn-undo" onclick="setDecision('${key}',null)">Undo</button>
+          <button class="btn btn-undo" data-decision="undo">Undo</button>
         `
         }
       </div>
@@ -694,12 +736,30 @@
         renderList();
       }
 
+      document.getElementById("review-list").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-decision]");
+        if (!btn) return;
+        const actions = btn.closest(".review-actions");
+        if (!actions) return;
+        const key = actions.dataset.key;
+        const decision = btn.dataset.decision;
+        if (decision === "undo") {
+          setDecision(key, null);
+        } else {
+          setDecision(key, decision);
+        }
+      });
+
       document.querySelectorAll(".filter-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           document
             .querySelectorAll(".filter-btn")
-            .forEach((b) => b.classList.remove("active"));
+            .forEach((b) => {
+              b.classList.remove("active");
+              b.setAttribute("aria-pressed", "false");
+            });
           btn.classList.add("active");
+          btn.setAttribute("aria-pressed", "true");
           currentFilter = btn.dataset.filter;
           renderList();
         });
@@ -759,18 +819,47 @@
 
       // Tab navigation
       document.querySelectorAll(".tab").forEach((tab) => {
-        tab.addEventListener("click", (e) => {
-          e.preventDefault();
+        tab.addEventListener("click", () => {
           if (tab.classList.contains("active")) return;
           document
             .querySelectorAll(".tab")
-            .forEach((t) => t.classList.remove("active"));
+            .forEach((t) => {
+              t.classList.remove("active");
+              t.setAttribute("aria-selected", "false");
+              t.setAttribute("tabindex", "-1");
+            });
           document
             .querySelectorAll(".tab-view")
             .forEach((v) => v.classList.remove("active"));
           tab.classList.add("active");
+          tab.setAttribute("aria-selected", "true");
+          tab.setAttribute("tabindex", "0");
           const view = document.getElementById("view-" + tab.dataset.tab);
           if (view) view.classList.add("active");
+        });
+        tab.addEventListener("keydown", (e) => {
+          const tabs = Array.from(document.querySelectorAll(".tab"));
+          const idx = tabs.indexOf(tab);
+          let newIdx = -1;
+          switch (e.key) {
+            case "ArrowLeft":
+              newIdx = (idx - 1 + tabs.length) % tabs.length;
+              break;
+            case "ArrowRight":
+              newIdx = (idx + 1) % tabs.length;
+              break;
+            case "Home":
+              newIdx = 0;
+              break;
+            case "End":
+              newIdx = tabs.length - 1;
+              break;
+            default:
+              return;
+          }
+          e.preventDefault();
+          tabs[newIdx].focus();
+          tabs[newIdx].click();
         });
       });
 
