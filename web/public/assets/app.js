@@ -724,7 +724,7 @@
                 store_colors: storeColors,
                 currency: "IDR",
               },
-              generated_at: new Date().toISOString(),
+              generated_at: apiProducts.generated_at || apiProducts.updated_at || new Date().toISOString(),
             };
             consOk = true;
           }
@@ -1122,7 +1122,7 @@
                     escapeAttr(safeUrl(b.image_path)) +
                     '" alt="' +
                     escapeAttr(b.store) +
-                    ' brochure" loading="lazy" style="width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;object-fit:cover;background:var(--gray-100)" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">';
+                    ' brochure" loading="lazy" style="width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;object-fit:cover;background:var(--gray-100)">';
                   html +=
                     '<div class="brochure-fallback" style="display:none;width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;align-items:center;justify-content:center;font-size:0.75rem;color:var(--gray-700);background:var(--gray-100)">' +
                     escapeHtml(b.store) +
@@ -1152,6 +1152,13 @@
             html += "</div>";
           });
         el.innerHTML = html;
+        el.querySelectorAll(".brochure-card .brochure-img-wrap img").forEach((img) => {
+          img.addEventListener("error", () => {
+            img.style.display = "none";
+            const fallback = img.nextElementSibling;
+            if (fallback) fallback.style.display = "flex";
+          });
+        });
         el.querySelectorAll(".brochure-img-wrap").forEach((wrap) => {
           wrap.addEventListener("click", () => {
             const products = wrap.nextElementSibling;
