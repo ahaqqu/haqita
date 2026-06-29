@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Haqita — Admin Review Queue</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --green: #2d7a4f;
+        --green-light: #e8f5ee;
+        --green-mid: #4a9e6a;
+        --red: #c0392b;
+        --red-light: #fdf0ee;
+        --amber: #b45309;
+        --amber-light: #fef3cd;
+        --gray-50: #f4f4f2;
+        --gray-100: #e8e8e4;
+        --gray-300: #c0bfb8;
+        --gray-500: #8a8880;
+        --gray-700: #4a4945;
+        --gray-900: #1a1916;
+        --off-white: #f9f9f7;
+        --radius: 12px;
+        --radius-sm: 8px;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+        --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+        --lotte: #0057a8;
+        --superindo: #e8211d;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Plus Jakarta Sans",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--off-white);
+        color: var(--gray-900);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        background: white;
+        border-bottom: 1px solid var(--gray-100);
+        padding: 1rem 1.5rem;
+      }
+
+      .header-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--green);
+        text-decoration: none;
+      }
+
+      .logo:hover {
+        color: var(--green-mid);
+      }
+
+      .badge {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.75rem;
+        background: var(--amber-light);
+        color: var(--amber);
+        border-radius: 12px;
+        font-weight: 500;
+      }
+
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem;
+        flex: 1;
+        width: 100%;
+      }
+
+      #loading {
+        text-align: center;
+        padding: 3rem;
+      }
+      #loading .skeleton-line {
+        height: 14px;
+        background: var(--gray-100);
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+      }
+      #loading .skeleton-line.short {
+        width: 60%;
+      }
+      #loading .skeleton-line.medium {
+        width: 80%;
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: -200px 0;
+        }
+        100% {
+          background-position: 200px 0;
+        }
+      }
+      #loading .skeleton-line {
+        background: linear-gradient(
+          90deg,
+          var(--gray-100) 25%,
+          var(--gray-50) 50%,
+          var(--gray-100) 75%
+        );
+        background-size: 400px 100%;
+        animation: shimmer 1.5s infinite;
+      }
+
+      #empty-state,
+      #error-state {
+        display: none;
+        text-align: center;
+        padding: 3rem;
+      }
+      #empty-state .box,
+      #error-state .box {
+        background: white;
+        border-radius: var(--radius);
+        padding: 2rem;
+        box-shadow: var(--shadow-sm);
+      }
+      #empty-state h3,
+      #error-state h3 {
+        margin-bottom: 0.5rem;
+      }
+      #empty-state p,
+      #error-state p {
+        color: var(--gray-500);
+      }
+
+      .summary-bar {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .summary-card {
+        background: white;
+        border-radius: var(--radius-sm);
+        padding: 1rem 1.25rem;
+        box-shadow: var(--shadow-sm);
+        flex: 1;
+        min-width: 150px;
+      }
+
+      .summary-card .label {
+        font-size: 0.78rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .summary-card .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-top: 0.25rem;
+      }
+      .summary-card .value.pending {
+        color: var(--amber);
+      }
+      .summary-card .value.approved {
+        color: var(--green);
+      }
+      .summary-card .value.rejected {
+        color: var(--red);
+      }
+
+      .filter-bar {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .filter-btn {
+        padding: 0.4rem 0.9rem;
+        border-radius: 20px;
+        border: 1px solid var(--gray-100);
+        background: white;
+        font-size: 0.85rem;
+        font-family: inherit;
+        cursor: pointer;
+        color: var(--gray-700);
+        transition: all 0.15s;
+      }
+
+      .filter-btn:hover {
+        border-color: var(--gray-300);
+      }
+      .filter-btn.active {
+        background: var(--gray-700);
+        color: white;
+        border-color: var(--gray-700);
+      }
+
+      .review-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .review-item {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: 1.25rem;
+        transition: box-shadow 0.2s;
+      }
+
+      .review-item:hover {
+        box-shadow: var(--shadow);
+      }
+      .review-item.status-approved {
+        border-left: 4px solid var(--green);
+      }
+      .review-item.status-rejected {
+        border-left: 4px solid var(--red);
+      }
+
+      .review-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .review-reason {
+        font-size: 0.82rem;
+        padding: 0.2rem 0.6rem;
+        background: var(--amber-light);
+        color: var(--amber);
+        border-radius: 8px;
+        font-weight: 500;
+      }
+
+      .review-time {
+        font-size: 0.78rem;
+        color: var(--gray-500);
+      }
+
+      .product-compare {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      @media (max-width: 768px) {
+        .product-compare {
+          grid-template-columns: 1fr;
+        }
+        .compare-arrow {
+          display: none;
+        }
+      }
+
+      .product-col {
+        padding: 0.75rem;
+        border-radius: var(--radius-sm);
+        background: var(--gray-50);
+      }
+
+      .product-col .store-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.4rem;
+      }
+
+      .product-col .name {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .product-col .meta {
+        font-size: 0.82rem;
+        color: var(--gray-500);
+        margin-top: 0.15rem;
+      }
+      .product-col .price {
+        font-family: "DM Mono", monospace;
+        font-size: 1rem;
+        color: var(--green);
+        margin-top: 0.5rem;
+      }
+
+      .compare-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray-300);
+        font-size: 1.5rem;
+        padding-top: 1rem;
+      }
+
+      .review-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        padding: 0.45rem 1rem;
+        border-radius: var(--radius-sm);
+        border: none;
+        font-family: inherit;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .btn-approve {
+        background: var(--green);
+        color: white;
+      }
+      .btn-approve:hover {
+        background: var(--green-mid);
+      }
+      .btn-reject {
+        background: var(--red);
+        color: white;
+      }
+      .btn-reject:hover {
+        background: #e74c3c;
+      }
+      .btn-undo {
+        background: var(--gray-100);
+        color: var(--gray-700);
+      }
+      .btn-undo:hover {
+        background: var(--gray-300);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .export-bar {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+        justify-content: flex-end;
+      }
+
+      .btn-export {
+        padding: 0.5rem 1.2rem;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--gray-100);
+        background: white;
+        font-family: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        color: var(--gray-700);
+      }
+
+      .btn-export:hover {
+        border-color: var(--green-mid);
+        color: var(--green);
+      }
+
+      .tab-bar {
+        max-width: 1200px;
+        margin: 0.75rem auto 0;
+        padding: 0 1.5rem;
+        display: flex;
+        gap: 0.4rem;
+      }
+      .tab {
+        padding: 0.45rem 1.1rem;
+        border-radius: 20px;
+        border: 1px solid var(--gray-100);
+        background: white;
+        font-size: 0.85rem;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: var(--gray-700);
+        text-decoration: none;
+      }
+      .tab:hover {
+        border-color: var(--gray-300);
+      }
+      .tab.active {
+        background: var(--green);
+        color: white;
+        border-color: var(--green);
+      }
+      .tab-view {
+        display: none;
+      }
+      .tab-view.active {
+        display: block;
+      }
+
+      footer {
+        background: white;
+        border-top: 1px solid var(--gray-100);
+        padding: 0.75rem 1.5rem;
+        font-size: 0.78rem;
+        color: var(--gray-500);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <a class="logo" href="index.html">Haqita</a>
+        <nav class="tab-bar">
+          <a class="tab active" data-tab="review-queue" href="#"
+            >Review Queue</a
+          >
+          <a class="tab" data-tab="promo-data" href="#">Promo Data</a>
+          <a class="tab" data-tab="history" href="#">History</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section id="view-review-queue" class="tab-view active">
+        <div id="loading">
+          <div style="max-width: 600px; margin: 0 auto">
+            <div class="skeleton-line medium"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+        </div>
+
+        <div id="error-state">
+          <div class="box">
+            <h3>Failed to load review queue</h3>
+            <p id="error-message">Could not fetch data.</p>
+          </div>
+        </div>
+
+        <div id="empty-state">
+          <div class="box">
+            <h3>No items in review queue</h3>
+            <p>All matches have been resolved automatically.</p>
+          </div>
+        </div>
+
+        <div id="app" style="display: none">
+          <div class="summary-bar">
+            <div class="summary-card">
+              <div class="label">Pending</div>
+              <div class="value pending" id="count-pending">0</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Approved</div>
+              <div class="value approved" id="count-approved">0</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">Rejected</div>
+              <div class="value rejected" id="count-rejected">0</div>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <button class="filter-btn active" data-filter="pending">
+              Pending
+            </button>
+            <button class="filter-btn" data-filter="approved">Approved</button>
+            <button class="filter-btn" data-filter="rejected">Rejected</button>
+            <button class="filter-btn" data-filter="all">All</button>
+          </div>
+
+          <div class="review-list" id="review-list"></div>
+
+          <div class="export-bar">
+            <button class="btn-export" id="btn-export">Export Decisions</button>
+            <button class="btn-export" id="btn-clear">
+              Clear All Decisions
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-promo-data" class="tab-view">
+        <div id="promo-data-content">
+          <div
+            style="text-align: center; padding: 3rem; color: var(--gray-500)"
+          >
+            <h3>Promo Data Overview</h3>
+            <p>Standardized promo analysis will appear here.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-history" class="tab-view">
+        <div id="history-content">
+          <div
+            style="text-align: center; padding: 3rem; color: var(--gray-500)"
+          >
+            <h3>Price History</h3>
+            <p>Historical price trends and change logs will appear here.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Decisions are stored in your browser's localStorage. Run the pipeline
+      again to refresh the queue.
+    </footer>
+
+    <script>
+      let reviewItems = [];
+      let decisions = {};
+      let currentFilter = "pending";
+
+      const STORE_COLORS = { lotte: "#0057A8", superindo: "#E8211D" };
+      const STORE_NAMES = { lotte: "Lotte Mart", superindo: "Superindo" };
+
+      function formatDate(iso) {
+        if (!iso) return "";
+        const d = new Date(iso);
+        const months = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        return (
+          d.getDate() +
+          " " +
+          months[d.getMonth()] +
+          " " +
+          d.getFullYear() +
+          " " +
+          d.getHours().toString().padStart(2, "0") +
+          ":" +
+          d.getMinutes().toString().padStart(2, "0")
+        );
+      }
+
+      function getStoreKey(storeName) {
+        return (storeName || "").toLowerCase().replace(/\s+/g, "");
+      }
+
+      function loadDecisions() {
+        try {
+          decisions = JSON.parse(
+            localStorage.getItem("haqita_review_decisions") || "{}",
+          );
+        } catch {
+          decisions = {};
+        }
+      }
+
+      function saveDecisions() {
+        localStorage.setItem(
+          "haqita_review_decisions",
+          JSON.stringify(decisions),
+        );
+      }
+
+      function makeItemKey(item) {
+        const a = item.product_a?.name || "";
+        const b = item.product_b?.name || "";
+        return a + "|" + b + "|" + (item.detected_at || "");
+      }
+
+      function renderSummary() {
+        const total = reviewItems.length;
+        const approved = Object.values(decisions).filter(
+          (d) => d === "approved",
+        ).length;
+        const rejected = Object.values(decisions).filter(
+          (d) => d === "rejected",
+        ).length;
+        const pending = total - approved - rejected;
+        document.getElementById("count-pending").textContent = pending;
+        document.getElementById("count-approved").textContent = approved;
+        document.getElementById("count-rejected").textContent = rejected;
+      }
+
+      function renderList() {
+        const list = document.getElementById("review-list");
+        const filtered = reviewItems.filter((item) => {
+          const key = makeItemKey(item);
+          const status = decisions[key] || "pending";
+          if (currentFilter === "all") return true;
+          return status === currentFilter;
+        });
+
+        if (filtered.length === 0) {
+          list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--gray-500)">No ${currentFilter} items</div>`;
+          return;
+        }
+
+        list.innerHTML = filtered
+          .map((item) => {
+            const key = makeItemKey(item);
+            const status = decisions[key] || "pending";
+            const a = item.product_a || {};
+            const b = item.product_b || {};
+            const aStoreKey = getStoreKey(a.store);
+            const bStoreKey = getStoreKey(b.store);
+            const aColor = STORE_COLORS[aStoreKey] || "var(--gray-300)";
+            const bColor = STORE_COLORS[bStoreKey] || "var(--gray-300)";
+            const aName = STORE_NAMES[aStoreKey] || a.store || "Unknown";
+            const bName = STORE_NAMES[bStoreKey] || b.store || "Unknown";
+
+            return `<div class="review-item status-${status}">
+      <div class="review-header">
+        <span class="review-reason">${item.reason || "unknown"}</span>
+        <span class="review-time">${formatDate(item.detected_at)}</span>
+      </div>
+      <div class="product-compare">
+        <div class="product-col">
+          <div><span class="store-dot" style="background:${aColor}"></span><span class="name">${a.name || "Unknown"}</span></div>
+          <div class="meta">${a.brand || ""} ${a.unit || ""}</div>
+          <div class="price">${a.price ? "Rp " + a.price.toLocaleString("id-ID") : "-"}</div>
+          <div class="meta">${aName}</div>
+        </div>
+        <div class="compare-arrow">↔</div>
+        <div class="product-col">
+          <div><span class="store-dot" style="background:${bColor}"></span><span class="name">${b.name || "Unknown"}</span></div>
+          <div class="meta">${b.brand || ""} ${b.unit || ""}</div>
+          <div class="price">${b.price ? "Rp " + b.price.toLocaleString("id-ID") : "-"}</div>
+          <div class="meta">${bName}</div>
+        </div>
+      </div>
+      <div class="review-actions">
+        ${
+          status === "pending"
+            ? `
+          <button class="btn btn-approve" onclick="setDecision('${key}','approved')">Approve Match</button>
+          <button class="btn btn-reject" onclick="setDecision('${key}','rejected')">Reject Match</button>
+        `
+            : `
+          <span style="font-size:0.85rem;color:${status === "approved" ? "var(--green)" : "var(--red)"};margin-right:auto;padding:0.45rem 0">
+            ${status === "approved" ? "✓ Approved" : "✗ Rejected"}
+          </span>
+          <button class="btn btn-undo" onclick="setDecision('${key}',null)">Undo</button>
+        `
+        }
+      </div>
+    </div>`;
+          })
+          .join("");
+      }
+
+      function setDecision(key, decision) {
+        if (decision) {
+          decisions[key] = decision;
+        } else {
+          delete decisions[key];
+        }
+        saveDecisions();
+        renderSummary();
+        renderList();
+      }
+
+      document.querySelectorAll(".filter-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document
+            .querySelectorAll(".filter-btn")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          currentFilter = btn.dataset.filter;
+          renderList();
+        });
+      });
+
+      document.getElementById("btn-export").addEventListener("click", () => {
+        const output = Object.entries(decisions).map(([key, decision]) => {
+          const [nameA, nameB, detectedAt] = key.split("|");
+          return {
+            product_a: nameA,
+            product_b: nameB,
+            detected_at: detectedAt,
+            decision,
+          };
+        });
+        const blob = new Blob([JSON.stringify(output, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "review_decisions.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById("btn-clear").addEventListener("click", () => {
+        if (confirm("Clear all review decisions? This cannot be undone.")) {
+          decisions = {};
+          saveDecisions();
+          renderSummary();
+          renderList();
+        }
+      });
+
+      async function loadData() {
+        try {
+          const res = await fetch("output/html/review_queue.json");
+          if (!res.ok) throw new Error("Failed to fetch review queue");
+          const data = await res.json();
+          reviewItems = Array.isArray(data) ? data : data.items || [];
+          loadDecisions();
+          renderSummary();
+          renderList();
+          document.getElementById("loading").style.display = "none";
+          if (reviewItems.length === 0) {
+            document.getElementById("empty-state").style.display = "block";
+          } else {
+            document.getElementById("app").style.display = "block";
+          }
+        } catch (err) {
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("error-state").style.display = "block";
+          document.getElementById("error-message").textContent = err.message;
+        }
+      }
+
+      // Tab navigation
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", (e) => {
+          e.preventDefault();
+          if (tab.classList.contains("active")) return;
+          document
+            .querySelectorAll(".tab")
+            .forEach((t) => t.classList.remove("active"));
+          document
+            .querySelectorAll(".tab-view")
+            .forEach((v) => v.classList.remove("active"));
+          tab.classList.add("active");
+          const view = document.getElementById("view-" + tab.dataset.tab);
+          if (view) view.classList.add("active");
+        });
+      });
+
+      loadData();
+    </script>
+  </body>
+</html>

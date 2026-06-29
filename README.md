@@ -16,18 +16,17 @@ Compare grocery prices across Jakarta supermarkets using AI OCR and web scraping
   └─────────────┘     └──────────────┘     └──────────────────┘     └──────────────────┘
         │                     │                       │                       │
         ▼                     ▼                       ▼                       ▼
-  database/scrape/        database/ocr/           database/                 output/html/
-                                                  (price_history,            active_promo.json
-                                                   catalog, review,          price_history.json
-                                                   consolidated_*)           promo_catalog.json
-                                                                                 review_queue.json
-                                                                                 index.html
-                                                                             │
-                                                                             ▼
-                                                                       ┌──────────────────┐
-                                                                       │  Stage 5         │
-                                                                       │  Deploy + Sync   │
-                                                                       └──────────────────┘
+database/scrape/        database/ocr/           database/                 output/html/
+                                                   (price_history,            active_promo.json
+                                                    catalog, review,          price_history.json
+                                                    consolidated_*)           promo_catalog.json
+                                                                                  review_queue.json
+                                                                              │
+                                                                              ▼
+                                                                        ┌──────────────────┐
+                                                                        │  Stage 5         │  web/public/ ← UI source of truth
+                                                                        │  Deploy + Sync   │  (index.html, admin.html)
+                                                                        └──────────────────┘
 ```
 
 Each stage runs independently. If a stage fails, select **[1] → [2] Resume** to continue from where it left off — completed stages are skipped automatically.
@@ -66,7 +65,7 @@ Then open `http://localhost:8080` in a browser. Features:
 - **Auto-refresh** every 5 minutes when tab is visible
 - **Print-friendly** layout (Ctrl+P)
 
-> Opening `index.html` directly via `file://` will fail due to CORS. An HTTP server is required.
+> Opening `index.html` directly via `file://` will fail due to CORS. An HTTP server is required. The local static server serves `web/public/` (the same directory Cloudflare Pages deploys), so the HTML UI is the single source of truth for both local and production.
 
 ## Menu
 
@@ -138,21 +137,21 @@ For end-to-end verification after a full pipeline run:
 
 ## Documentation
 
-| Doc                                                                         | Description                                                              |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [staging/scrape.md](docs/staging/scrape.md)                                 | Stage 1: Scrape — inputs, outputs, state, configuration                  |
-| [staging/ocr.md](docs/staging/ocr.md)                                       | Stage 2: OCR — provider config, output schema, validation                |
-| [staging/consolidation.md](docs/staging/consolidation.md)                   | Stage 3: Consolidation — matching pipeline, schemas, gate details        |
-| [staging/publish-html.md](docs/staging/publish-html.md)                     | Stage 4: Publish HTML — active_promo.json generation, HTML UI            |
-| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md)               | Sync to Cloudflare — API batch sync, R2 image upload (standalone or via deploy) |
-| [staging/deploy-pages.md](docs/staging/deploy-pages.md)                     | Stage 5: Deploy + Sync — version-aware Cloudflare Pages deploy + sync    |
-| [staging/orchestrator.md](docs/staging/orchestrator.md)                     | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
-| [agentic_engineering/agentic-engineering.md](agentic_engineering/agentic-engineering.md)                            | Agentic pipeline verification with dummy data isolation                  |
-| [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md)         | Cloudflare API sync endpoints and schemas                                |
-| [staging/security-configuration.md](docs/staging/security-configuration.md) | Security headers, secrets, and WAF configuration                         |
-| [database/price_history.md](docs/database/price_history.md)                 | `price_history.json` — append-only price snapshots (schema v1.2)         |
-| [database/product_catalog.md](docs/database/product_catalog.md)             | `product_catalog.json` — auto-built product registry                     |
-| [database/review_queue.md](docs/database/review_queue.md)                   | `review_queue.json` — flagged matches for manual review                  |
+| Doc                                                                                      | Description                                                                     |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [staging/scrape.md](docs/staging/scrape.md)                                              | Stage 1: Scrape — inputs, outputs, state, configuration                         |
+| [staging/ocr.md](docs/staging/ocr.md)                                                    | Stage 2: OCR — provider config, output schema, validation                       |
+| [staging/consolidation.md](docs/staging/consolidation.md)                                | Stage 3: Consolidation — matching pipeline, schemas, gate details               |
+| [staging/publish-html.md](docs/staging/publish-html.md)                                  | Stage 4: Publish HTML — active_promo.json generation, HTML UI                   |
+| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md)                            | Sync to Cloudflare — API batch sync, R2 image upload (standalone or via deploy) |
+| [staging/deploy-pages.md](docs/staging/deploy-pages.md)                                  | Stage 5: Deploy + Sync — version-aware Cloudflare Pages deploy + sync           |
+| [staging/orchestrator.md](docs/staging/orchestrator.md)                                  | Pipeline orchestrator — stage communication, logging, smart OCR skipping        |
+| [agentic_engineering/agentic-engineering.md](agentic_engineering/agentic-engineering.md) | Agentic pipeline verification with dummy data isolation                         |
+| [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md)                      | Cloudflare API sync endpoints and schemas                                       |
+| [staging/security-configuration.md](docs/staging/security-configuration.md)              | Security headers, secrets, and WAF configuration                                |
+| [database/price_history.md](docs/database/price_history.md)                              | `price_history.json` — append-only price snapshots (schema v1.2)                |
+| [database/product_catalog.md](docs/database/product_catalog.md)                          | `product_catalog.json` — auto-built product registry                            |
+| [database/review_queue.md](docs/database/review_queue.md)                                | `review_queue.json` — flagged matches for manual review                         |
 
 ## Project Structure
 
@@ -164,8 +163,6 @@ haqita/
 │   ├── verify.sh                         ← End-to-end dummy pipeline verification in temp workspace
 │   └── agentic-engineering.md            ← Guide for isolated dummy pipeline runs
 ├── requirements.txt                  ← Python dependencies
-├── index.html                        ← Main UI: product browser (search, filter, sort, charts)
-├── admin.html                        ← Admin UI: review queue management
 ├── config.yaml                       ← All tunable settings
 ├── .env                              ← Configuration (API keys, provider toggles)
 ├── scripts/
@@ -180,11 +177,18 @@ haqita/
 │   └── matching/                     ← Matching pipeline (7 gates)
 ├── database/ ──symlink──▶ ../haqita-database/   ← Pipeline data (separate repo)
 ├── output/
-│   └── html/                         ← Stage 4 output (safe to delete)
+│   └── html/                         ← Stage 4 output (safe to delete; deploy stages into web/public/output/html/)
 │       ├── active_promo.json         ← Generated from database/
 │       └── price_history.json        ← Copy from database/
 ├── tests/                            ← Unit and integration tests
-└── docs/                             ← Documentation
+├── docs/                             ← Documentation
+└── web/                              ← Cloudflare Pages project (single deploy root)
+    ├── public/                       ← Cloudflare Pages build output + local dev web root
+    │   ├── index.html                ← Main UI (single source of truth for local + Cloudflare)
+    │   ├── admin.html                ← Admin UI: review queue
+    │   └── output/html/              ← Deploy-staged JSON fallback (mirrors output/html/)
+    ├── functions/api/                ← Cloudflare Pages Functions (API)
+    └── wrangler.toml                 ← Cloudflare Pages config
 ```
 
 ## Setup

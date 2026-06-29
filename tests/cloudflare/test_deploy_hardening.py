@@ -108,7 +108,9 @@ class TestDeployCloudflareSchemaWiring:
         web.mkdir()
         (web / "package.json").write_text("{}", encoding="utf-8")
         (web / "schema.sql").write_text("-- schema", encoding="utf-8")
-        (tmp_path / "index.html").write_text("<html>", encoding="utf-8")
+        public = web / "public"
+        public.mkdir()
+        (public / "index.html").write_text("<html>", encoding="utf-8")
 
     @patch('scripts.deploy._apply_d1_schema_remote', return_value=True)
     @patch('scripts.deploy.run_sync', return_value={"status": "ok", "sync_run_id": "r1"})
@@ -125,7 +127,8 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                result = deploy.deploy_cloudflare()
+                with patch.object(deploy, 'PUBLIC_DIR', tmp_path / "web" / "public"):
+                    result = deploy.deploy_cloudflare()
 
         mock_apply_schema.assert_called_once_with()
         assert result["status"] in ("complete",)
@@ -146,7 +149,8 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                result = deploy.deploy_cloudflare()
+                with patch.object(deploy, 'PUBLIC_DIR', tmp_path / "web" / "public"):
+                    result = deploy.deploy_cloudflare()
 
         assert result["status"] == "error"
         assert result["error"] == "d1_schema_apply_failed"
@@ -168,9 +172,10 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                result = deploy.deploy_cloudflare(
-                    skip_d1_schema=True,
-                )
+                with patch.object(deploy, 'PUBLIC_DIR', tmp_path / "web" / "public"):
+                    result = deploy.deploy_cloudflare(
+                        skip_d1_schema=True,
+                    )
 
         mock_apply_schema.assert_not_called()
         mock_run_sync.assert_called_once()
@@ -193,7 +198,8 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                result = deploy.deploy_cloudflare()
+                with patch.object(deploy, 'PUBLIC_DIR', tmp_path / "web" / "public"):
+                    result = deploy.deploy_cloudflare()
 
         mock_apply_schema.assert_not_called()
         assert result["status"] == "complete"
@@ -220,7 +226,8 @@ class TestDeployCloudflareSchemaWiring:
         self._setup_paths(tmp_path)
         with patch.object(deploy, 'ROOT', tmp_path):
             with patch.object(deploy, 'WEB_DIR', tmp_path / "web"):
-                deploy.deploy_cloudflare()
+                with patch.object(deploy, 'PUBLIC_DIR', tmp_path / "web" / "public"):
+                    deploy.deploy_cloudflare()
 
         mock_deploy.assert_not_called()  # SHA matched — Pages deploy skipped
         mock_apply_schema.assert_called_once()  # but schema apply still ran

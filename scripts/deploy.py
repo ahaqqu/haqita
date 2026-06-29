@@ -144,30 +144,46 @@ def _require_command(name: str, friendly: str) -> str:
 
 
 def _copy_static_files() -> list[str]:
-    """Copy root index.html and output/html/*.json into web/public/."""
+    """Stage output/html/*.json into web/public/output/html/ for static fallback.
+
+    The HTML UI files (index.html, admin.html) already live in web/public/ as
+    the single source of truth for both local dev and Cloudflare Pages. This
+    function only stages the JSON data files the UI fetches via the relative
+    path ``output/html/<name>.json`` so the static fallback works when the API
+    is unreachable. The Cloudflare Pages deploy serves web/public/ verbatim, so
+    the staged JSONs are deployed alongside the HTML.
+    """
+    # Destination mirrors the client's relative fetch path: output/html/<name>.
+    PUBLIC_HTML_DIR = PUBLIC_DIR / "output" / "html"
+
     files_to_copy = [
-        (ROOT / "index.html", PUBLIC_DIR / "index.html"),
-        (OUTPUT_HTML / "active_promo.json", PUBLIC_DIR / "active_promo.json"),
-        (OUTPUT_HTML / "price_history.json", PUBLIC_DIR / "price_history.json"),
-        (OUTPUT_HTML / "promo_catalog.json", PUBLIC_DIR / "promo_catalog.json"),
-        (OUTPUT_HTML / "review_queue.json", PUBLIC_DIR / "review_queue.json"),
+        (OUTPUT_HTML / "active_promo.json", PUBLIC_HTML_DIR / "active_promo.json"),
+        (OUTPUT_HTML / "price_history.json", PUBLIC_HTML_DIR / "price_history.json"),
+        (OUTPUT_HTML / "promo_catalog.json", PUBLIC_HTML_DIR / "promo_catalog.json"),
+        (OUTPUT_HTML / "review_queue.json", PUBLIC_HTML_DIR / "review_queue.json"),
     ]
 
     copied: list[str] = []
     warned: list[str] = []
 
     PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
-    # Remove stale files so the public dir mirrors the latest output.
-    for stale in PUBLIC_DIR.iterdir():
-        if stale.name in {".gitkeep"}:
+    # Only remove the generated JSON staging dir; the HTML files in web/public/
+    # are the source of truth and must not be wiped.
+    if PUBLIC_HTML_DIR.exists():
+        shutil.rmtree(PUBLIC_HTML_DIR)
+    PUBLIC_HTML_DIR.mkdir(parents=True, exist_ok=True)
+
+    # One-time cleanup: remove legacy top-level JSONs staged by the previous
+    # deploy layout (they now live under web/public/output/html/).
+    for legacy in PUBLIC_DIR.iterdir():
+        if legacy.name in {".gitkeep", "index.html", "admin.html", "output"}:
             continue
-        try:
-            if stale.is_file() or stale.is_symlink():
-                stale.unlink()
-            elif stale.is_dir():
-                shutil.rmtree(stale)
-        except OSError as exc:
-            logger.warning("Could not remove stale public file %s: %s", stale, exc)
+        if legacy.is_file() and legacy.suffix == ".json":
+            try:
+                legacy.unlink()
+                logger.info("  [CLEAN] removed legacy %s", legacy.relative_to(ROOT))
+            except OSError as exc:
+                logger.warning("Could not remove legacy %s: %s", legacy, exc)
 
     for src, dst in files_to_copy:
         if not src.exists():
@@ -178,7 +194,7 @@ def _copy_static_files() -> list[str]:
             shutil.copytree(src, dst, dirs_exist_ok=True)
         else:
             shutil.copy2(src, dst)
-        logger.info("  [OK] %s -> %s/", src.name, PUBLIC_DIR.relative_to(ROOT))
+        logger.info("  [OK] %s -> %s/", src.name, PUBLIC_HTML_DIR.relative_to(ROOT))
         copied.append(src.name)
 
     return copied
@@ -384,12 +400,14 @@ def deploy_local() -> dict:
     wrangler_port = detected_port
     logger.info("  wrangler dev ready on http://localhost:%d", wrangler_port)
 
-    # Start static HTTP server in project root on port 8080.
+    # Start static HTTP server serving web/public/ (same dir Cloudflare Pages
+    # deploys) on port 8080. The HTML files live there as the single source of
+    # truth, and the JSON static fallback is staged at web/public/output/html/.
     logger.info("Starting static HTTP server on port %d...", LOCAL_HTTP_PORT)
 
     class QuietHandler(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
-            super().__init__(*args, directory=str(ROOT), **kwargs)
+            super().__init__(*args, directory=str(PUBLIC_DIR), **kwargs)
 
     httpd = socketserver.TCPServer(("", LOCAL_HTTP_PORT), QuietHandler)
     http_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -501,12 +519,12 @@ def _deploy_local_detached() -> dict:
 
         logger.info("  wrangler dev ready on http://localhost:%d", detected_port)
 
-        # Start static HTTP server as a detached subprocess.
+        # Start static HTTP server as a detached subprocess serving web/public/.
         logger.info("Starting static HTTP server on port %d (background)...", LOCAL_HTTP_PORT)
         http_proc = subprocess.Popen(
             [
                 sys.executable, "-m", "http.server",
-                str(LOCAL_HTTP_PORT), "--directory", str(ROOT),
+                str(LOCAL_HTTP_PORT), "--directory", str(PUBLIC_DIR),
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -721,8 +739,8 @@ def deploy_cloudflare(
         logger.error("web/package.json not found. Run setup first.")
         return {"status": "error", "error": "web_package_json_missing"}
 
-    if not (ROOT / "index.html").exists():
-        logger.error("index.html not found at project root.")
+    if not (PUBLIC_DIR / "index.html").exists():
+        logger.error("index.html not found in web/public/.")
         return {"status": "error", "error": "index_html_missing"}
 
     # Determine API URL
