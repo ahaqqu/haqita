@@ -137,21 +137,21 @@ For end-to-end verification after a full pipeline run:
 
 ## Documentation
 
-| Doc                                                                         | Description                                                              |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [staging/scrape.md](docs/staging/scrape.md)                                 | Stage 1: Scrape — inputs, outputs, state, configuration                  |
-| [staging/ocr.md](docs/staging/ocr.md)                                       | Stage 2: OCR — provider config, output schema, validation                |
-| [staging/consolidation.md](docs/staging/consolidation.md)                   | Stage 3: Consolidation — matching pipeline, schemas, gate details        |
-| [staging/publish-html.md](docs/staging/publish-html.md)                     | Stage 4: Publish HTML — active_promo.json generation, HTML UI            |
-| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md)               | Sync to Cloudflare — API batch sync, R2 image upload (standalone or via deploy) |
-| [staging/deploy-pages.md](docs/staging/deploy-pages.md)                     | Stage 5: Deploy + Sync — version-aware Cloudflare Pages deploy + sync    |
-| [staging/orchestrator.md](docs/staging/orchestrator.md)                     | Pipeline orchestrator — stage communication, logging, smart OCR skipping |
-| [agentic_engineering/agentic-engineering.md](agentic_engineering/agentic-engineering.md)                            | Agentic pipeline verification with dummy data isolation                  |
-| [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md)         | Cloudflare API sync endpoints and schemas                                |
-| [staging/security-configuration.md](docs/staging/security-configuration.md) | Security headers, secrets, and WAF configuration                         |
-| [database/price_history.md](docs/database/price_history.md)                 | `price_history.json` — append-only price snapshots (schema v1.2)         |
-| [database/product_catalog.md](docs/database/product_catalog.md)             | `product_catalog.json` — auto-built product registry                     |
-| [database/review_queue.md](docs/database/review_queue.md)                   | `review_queue.json` — flagged matches for manual review                  |
+| Doc                                                                                      | Description                                                                     |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [staging/scrape.md](docs/staging/scrape.md)                                              | Stage 1: Scrape — inputs, outputs, state, configuration                         |
+| [staging/ocr.md](docs/staging/ocr.md)                                                    | Stage 2: OCR — provider config, output schema, validation                       |
+| [staging/consolidation.md](docs/staging/consolidation.md)                                | Stage 3: Consolidation — matching pipeline, schemas, gate details               |
+| [staging/publish-html.md](docs/staging/publish-html.md)                                  | Stage 4: Publish HTML — active_promo.json generation, HTML UI                   |
+| [staging/sync-cloudflare.md](docs/staging/sync-cloudflare.md)                            | Sync to Cloudflare — API batch sync, R2 image upload (standalone or via deploy) |
+| [staging/deploy-pages.md](docs/staging/deploy-pages.md)                                  | Stage 5: Deploy + Sync — version-aware Cloudflare Pages deploy + sync           |
+| [staging/orchestrator.md](docs/staging/orchestrator.md)                                  | Pipeline orchestrator — stage communication, logging, smart OCR skipping        |
+| [agentic_engineering/agentic-engineering.md](agentic_engineering/agentic-engineering.md) | Agentic pipeline verification with dummy data isolation                         |
+| [staging/api-sync-endpoints.md](docs/staging/api-sync-endpoints.md)                      | Cloudflare API sync endpoints and schemas                                       |
+| [staging/security-configuration.md](docs/staging/security-configuration.md)              | Security headers, secrets, and WAF configuration                                |
+| [database/price_history.md](docs/database/price_history.md)                              | `price_history.json` — append-only price snapshots (schema v1.2)                |
+| [database/product_catalog.md](docs/database/product_catalog.md)                          | `product_catalog.json` — auto-built product registry                            |
+| [database/review_queue.md](docs/database/review_queue.md)                                | `review_queue.json` — flagged matches for manual review                         |
 
 ## Project Structure
 

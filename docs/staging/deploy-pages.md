@@ -2,13 +2,13 @@
 
 ## Overview
 
-| Property | Value |
-|----------|-------|
-| Deploy stage | **Stage 5: Deploy + Sync** (`scripts/deploy.py`) |
-| URL | `https://haqita.pages.dev` |
-| Project name | `haqita` |
-| Production branch | `main` |
-| Build output | `web/public/` |
+| Property          | Value                                            |
+| ----------------- | ------------------------------------------------ |
+| Deploy stage      | **Stage 5: Deploy + Sync** (`scripts/deploy.py`) |
+| URL               | `https://haqita.pages.dev`                       |
+| Project name      | `haqita`                                         |
+| Production branch | `main`                                           |
+| Build output      | `web/public/`                                    |
 
 ## Prerequisites
 
@@ -36,9 +36,9 @@ Edit `config.yaml`:
 
 ```yaml
 deploy:
-  local: true            # Start local wrangler dev server + http.server 8080
-  cloudflare: false      # Deploy to Cloudflare Pages
-  apply_d1_schema: true  # Apply web/schema.sql to remote D1 before every sync (default true)
+  local: true # Start local wrangler dev server + http.server 8080
+  cloudflare: false # Deploy to Cloudflare Pages
+  apply_d1_schema: true # Apply web/schema.sql to remote D1 before every sync (default true)
 ```
 
 Set `deploy.cloudflare: true` to enable production deploys. `deploy.local: true` is
@@ -63,6 +63,7 @@ python scripts/deploy.py --stop-local              # Stop previously started det
 ```
 
 Stage 5 (Deploy + Sync):
+
 1. Verifies `web/package.json`, `web/public/index.html`, and `output/html/` exist
 2. Determines API URL from env `CLOUDFLARE_API_URL` or `config.yaml`
 3. Reads local HEAD SHA via `git rev-parse HEAD`
@@ -117,15 +118,15 @@ Open `https://haqita.pages.dev` and verify:
 
 ## What Gets Deployed
 
-| File | Source | Purpose |
-|------|--------|---------|
-| `public/index.html` | `web/public/index.html` (committed) | Main UI — single source of truth for local + Cloudflare |
-| `public/admin.html` | `web/public/admin.html` (committed) | Admin review queue UI |
-| `public/output/html/active_promo.json` | `output/html/active_promo.json` (staged by deploy) | Static fallback data |
-| `public/output/html/price_history.json` | `output/html/price_history.json` (staged by deploy) | Static fallback history |
-| `public/output/html/promo_catalog.json` | `output/html/promo_catalog.json` (staged by deploy) | Static fallback promos |
-| `public/output/html/review_queue.json` | `output/html/review_queue.json` (staged by deploy) | Admin review data |
-| `functions/api/[[route]].ts` | `web/functions/api/` | API endpoint handlers |
+| File                                    | Source                                              | Purpose                                                 |
+| --------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
+| `public/index.html`                     | `web/public/index.html` (committed)                 | Main UI — single source of truth for local + Cloudflare |
+| `public/admin.html`                     | `web/public/admin.html` (committed)                 | Admin review queue UI                                   |
+| `public/output/html/active_promo.json`  | `output/html/active_promo.json` (staged by deploy)  | Static fallback data                                    |
+| `public/output/html/price_history.json` | `output/html/price_history.json` (staged by deploy) | Static fallback history                                 |
+| `public/output/html/promo_catalog.json` | `output/html/promo_catalog.json` (staged by deploy) | Static fallback promos                                  |
+| `public/output/html/review_queue.json`  | `output/html/review_queue.json` (staged by deploy)  | Admin review data                                       |
+| `functions/api/[[route]].ts`            | `web/functions/api/`                                | API endpoint handlers                                   |
 
 ## API Integration
 
@@ -187,15 +188,15 @@ You can also run the E2E verification from the pipeline itself by selecting **[1
 
 ## Troubleshooting
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Blank page | Static files not copied | Re-run `python scripts/deploy.py` |
-| API returns 404 | Pages Functions not deployed | Check `web/functions/api/` exists, re-deploy |
-| Static JSON 404 | Pipeline not run | Run `python scripts/publish_html.py` first |
-| Deployment failed | Authentication or project issue | Check `wrangler whoami`, check project name |
-| CORS errors | Same-origin violation | Verify page and API are on same domain |
-| Sync 404 | Deployed API missing routes | Deploy first (deploy.py now version-checks and deploys before syncing) |
-| Sync all rows errored | Remote D1 has no tables | Stage 5 auto-applies schema; check `wrangler d1 execute haqita-db --remote --file=./web/schema.sql` manually |
-| D1 schema apply failed | Wrangler auth or DB not found | Verify `wrangler whoami` and `wrangler d1 list` show `haqita-db`; use `--skip-d1-schema` to bypass temporarily |
-| Local server port in use | Previous detached servers still running | Run `python scripts/deploy.py --stop-local` to clean up, or use option **[8] → [2] Stop** from the menu |
-| Detached server won't start | Port still bound from orphaned process | Run `python scripts/deploy.py --stop-local`, then retry. If that fails, kill manually: `lsof -ti:8080 -ti:8787 \| xargs kill` |
+| Issue                       | Cause                                   | Solution                                                                                                                      |
+| --------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Blank page                  | Static files not copied                 | Re-run `python scripts/deploy.py`                                                                                             |
+| API returns 404             | Pages Functions not deployed            | Check `web/functions/api/` exists, re-deploy                                                                                  |
+| Static JSON 404             | Pipeline not run                        | Run `python scripts/publish_html.py` first                                                                                    |
+| Deployment failed           | Authentication or project issue         | Check `wrangler whoami`, check project name                                                                                   |
+| CORS errors                 | Same-origin violation                   | Verify page and API are on same domain                                                                                        |
+| Sync 404                    | Deployed API missing routes             | Deploy first (deploy.py now version-checks and deploys before syncing)                                                        |
+| Sync all rows errored       | Remote D1 has no tables                 | Stage 5 auto-applies schema; check `wrangler d1 execute haqita-db --remote --file=./web/schema.sql` manually                  |
+| D1 schema apply failed      | Wrangler auth or DB not found           | Verify `wrangler whoami` and `wrangler d1 list` show `haqita-db`; use `--skip-d1-schema` to bypass temporarily                |
+| Local server port in use    | Previous detached servers still running | Run `python scripts/deploy.py --stop-local` to clean up, or use option **[8] → [2] Stop** from the menu                       |
+| Detached server won't start | Port still bound from orphaned process  | Run `python scripts/deploy.py --stop-local`, then retry. If that fails, kill manually: `lsof -ti:8080 -ti:8787 \| xargs kill` |

@@ -4,15 +4,14 @@ Generates `active_promo.json` from the database and copies JSON files to `output
 
 ## Overview
 
-| | |
-|---|---|
-| **Input** | `database/price_history.json` — accumulated price snapshots |
-| | `database/product_catalog.json` — product metadata |
-| | `database/review_queue.json` — for flagged count |
+|            |                                                                               |
+| ---------- | ----------------------------------------------------------------------------- |
+| **Input**  | `database/price_history.json` — accumulated price snapshots                   |
+|            | `database/product_catalog.json` — product metadata                            |
+|            | `database/review_queue.json` — for flagged count                              |
 | **Output** | `output/html/active_promo.json` (generated from database, always overwritten) |
-| | `output/html/price_history.json` (copy from database) |
-| | `output/html/review_queue.json` (copy from database, for admin UI) |
-
+|            | `output/html/price_history.json` (copy from database)                         |
+|            | `output/html/review_queue.json` (copy from database, for admin UI)            |
 
 ## Architecture
 
@@ -65,7 +64,10 @@ Same schema as Stage 3's internal consolidated output:
 ```json
 {
   "generated_at": "2026-05-17T15:30:00",
-  "scrape_dates": { "Lotte": "2026-05-17T08:00:00", "Superindo": "2026-05-17T08:15:00" },
+  "scrape_dates": {
+    "Lotte": "2026-05-17T08:00:00",
+    "Superindo": "2026-05-17T08:15:00"
+  },
   "source_files": ["lotte_promos.json", "superindo_promos.json"],
   "display_hints": {
     "stores": ["Lotte", "Superindo"],
@@ -79,8 +81,23 @@ Same schema as Stage 3's internal consolidated output:
       "brand": "Indomie",
       "unit": "85 g",
       "stores": [
-        { "store": "Lotte", "price": 15500, "effective_unit_price": 3100, "bundle_size": 5, "promo": ["DAPAT 5 pcs"], "valid_until": "2026-05-20", "image_path": "database/scrape/lotte/..." },
-        { "store": "Superindo", "price": 3500, "effective_unit_price": 3500, "promo": null, "valid_until": null, "image_path": "database/scrape/superindo/..." }
+        {
+          "store": "Lotte",
+          "price": 15500,
+          "effective_unit_price": 3100,
+          "bundle_size": 5,
+          "promo": ["DAPAT 5 pcs"],
+          "valid_until": "2026-05-20",
+          "image_path": "database/scrape/lotte/..."
+        },
+        {
+          "store": "Superindo",
+          "price": 3500,
+          "effective_unit_price": 3500,
+          "promo": null,
+          "valid_until": null,
+          "image_path": "database/scrape/superindo/..."
+        }
       ],
       "price_min": 3100,
       "price_max": 3500,
@@ -92,7 +109,13 @@ Same schema as Stage 3's internal consolidated output:
     }
   ],
   "singles": [
-    { "key": "...", "name": "...", "store": "Lotte", "price": 18900, "valid_until": null }
+    {
+      "key": "...",
+      "name": "...",
+      "store": "Lotte",
+      "price": 18900,
+      "valid_until": null
+    }
   ],
   "stats": {
     "total_products_lotte": 42,
