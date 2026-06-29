@@ -4,12 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Haqita — Grocery Price Tracker</title>
+    <meta name="description" content="Compare grocery prices across Lotte Mart and Superindo in real time. Find the cheapest store, track price trends, and browse weekly brochures." />
+    <meta name="theme-color" content="#2d7a4f" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232d7a4f'/><text x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'>H</text></svg>" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232d7a4f'/><text x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'>H</text></svg>" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Haqita — Grocery Price Tracker" />
+    <meta property="og:description" content="Compare grocery prices across Lotte Mart and Superindo in real time. Find the cheapest store, track price trends, and browse weekly brochures." />
+    <meta property="og:url" content="https://haqita.pages.dev" />
+    <meta property="og:image" content="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232d7a4f'/><text x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'>H</text></svg>" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Haqita — Grocery Price Tracker" />
+    <meta name="twitter:description" content="Compare grocery prices across Lotte Mart and Superindo in real time. Find the cheapest store, track price trends, and browse weekly brochures." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" /></noscript>
     <style>
       :root {
         --green: #2d7a4f;
@@ -22,6 +37,7 @@
         --gray-50: #f4f4f2;
         --gray-100: #e8e8e4;
         --gray-300: #c0bfb8;
+        --gray-400: #a8a6a0;
         --gray-500: #8a8880;
         --gray-700: #4a4945;
         --gray-900: #1a1916;
@@ -81,7 +97,7 @@
 
       .freshness-bar {
         font-size: 0.8rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
         display: flex;
         align-items: center;
         gap: 0.4rem;
@@ -283,7 +299,7 @@
         margin: 0 auto;
         padding: 0.5rem 1.5rem 2rem;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 1rem;
         flex: 1;
         align-content: start;
@@ -315,7 +331,6 @@
         flex-direction: column;
         min-height: 180px;
         max-height: 200px;
-        min-width: 320px;
       }
 
       .product-card:hover {
@@ -343,7 +358,7 @@
 
       .product-unit {
         font-size: 0.8rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
         margin-top: 0.2rem;
       }
 
@@ -368,8 +383,7 @@
         font-size: 0.68rem;
         font-family: "Plus Jakarta Sans", sans-serif;
         font-weight: 400;
-        color: var(--gray-500);
-        display: block;
+        color: var(--gray-700);
         margin-bottom: 2px;
         letter-spacing: 0.02em;
         display: none;
@@ -380,7 +394,7 @@
         align-items: center;
         gap: 5px;
         font-size: 0.78rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
         text-align: right;
       }
 
@@ -546,7 +560,7 @@
 
       .no-history {
         font-size: 0.85rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
         text-align: center;
         padding: 1.5rem;
       }
@@ -556,7 +570,7 @@
         border-top: 1px solid var(--gray-100);
         padding: 1rem 1.5rem;
         font-size: 0.82rem;
-        color: var(--gray-500);
+        color: var(--gray-700);
       }
 
       .footer-inner {
@@ -651,7 +665,7 @@
       #error-state p,
       #empty-state p,
       #no-results p {
-        color: var(--gray-500);
+        color: var(--gray-700);
         margin-bottom: 1rem;
       }
 
@@ -715,6 +729,36 @@
         margin-right: 0.5rem;
       }
 
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--green-mid);
+        outline-offset: 2px;
+      }
+      .product-card:focus-visible {
+        box-shadow: var(--shadow);
+        outline: 2px solid var(--green-mid);
+        outline-offset: 2px;
+      }
+      .tab:focus-visible, .chip:focus-visible, .btn:focus-visible, .filter-btn:focus-visible, .filter-chips .chip:focus-visible {
+        outline: 2px solid var(--green-mid);
+        outline-offset: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .freshness-dot, .skeleton-line { animation: none; }
+      }
+
       @media print {
         #search-bar,
         #controls,
@@ -748,31 +792,32 @@
     <header>
       <div class="header-inner">
         <div style="display: flex; align-items: center">
-          <div class="logo">Haqita</div>
+          <h1 class="logo">Haqita</h1>
           <span class="dummy-badge" id="dummy-badge">DUMMY DATA</span>
         </div>
         <div class="freshness-bar">
           <span class="freshness-dot"></span>
-          <span id="freshness-text">Loading...</span>
+          <span id="freshness-text" aria-live="polite">Loading...</span>
           <span
             id="data-source"
-            style="
-              font-size: 0.75rem;
-              color: var(--gray-500);
-              margin-left: 0.3rem;
+              style="
+                font-size: 0.75rem;
+                color: var(--gray-700);
+                margin-left: 0.3rem;
             "
           ></span>
         </div>
       </div>
-      <nav class="tab-bar">
-        <button class="tab active" data-tab="products">Products</button>
-        <button class="tab" data-tab="promos">Promos</button>
-        <button class="tab" data-tab="brochures">Brochures</button>
+      <nav class="tab-bar" role="tablist">
+        <button class="tab active" data-tab="products" role="tab" aria-selected="true" aria-controls="view-products" id="tab-products" tabindex="0">Products</button>
+        <button class="tab" data-tab="promos" role="tab" aria-selected="false" aria-controls="view-promos" id="tab-promos" tabindex="-1">Promos</button>
+        <button class="tab" data-tab="brochures" role="tab" aria-selected="false" aria-controls="view-brochures" id="tab-brochures" tabindex="-1">Brochures</button>
       </nav>
     </header>
 
-    <section id="view-products" class="tab-view active">
+    <section id="view-products" class="tab-view active" role="tabpanel" aria-labelledby="tab-products">
       <div id="search-bar">
+        <label for="search-input" class="sr-only">Search products</label>
         <input
           type="text"
           id="search-input"
@@ -783,22 +828,20 @@
 
       <div id="controls">
         <div style="display: flex; align-items: center; gap: 0.6rem">
-          <span style="font-size: 0.78rem; color: var(--gray-500)">Store</span>
+          <span style="font-size: 0.78rem; color: var(--gray-700)">Store</span>
           <div class="filter-chips">
-            <button class="chip active" data-filter="all">All</button>
-            <button class="chip" data-filter="lotte">
+            <button class="chip active" data-filter="all" aria-pressed="true">All</button>
+            <button class="chip" data-filter="lotte" aria-pressed="false">
               <span class="filter-dot" style="background: #0057a8"></span> Lotte
             </button>
-            <button class="chip" data-filter="superindo">
+            <button class="chip" data-filter="superindo" aria-pressed="false">
               <span class="filter-dot" style="background: #e8211d"></span>
               Superindo
             </button>
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 0.6rem">
-          <span style="font-size: 0.78rem; color: var(--gray-500)"
-            >Sort by</span
-          >
+          <label for="sort-select" style="font-size: 0.78rem; color: var(--gray-700)">Sort by</label>
           <select class="sort-select" id="sort-select">
             <option value="name" selected>Name</option>
             <option value="cheapest">Cheapest</option>
@@ -817,7 +860,7 @@
         Displaying sample data for development/testing.
         <a
           href="#"
-          onclick="location.reload()"
+          id="sample-reload"
           style="color: var(--amber); margin-left: 0.5rem"
           >Refresh to load real data</a
         >
@@ -843,22 +886,22 @@
         </div>
       </div>
 
-      <div id="error-state">
+      <div id="error-state" aria-live="polite">
         <div class="error-box">
           <h3>Failed to load data</h3>
           <p id="error-message">Could not fetch product data.</p>
-          <button class="retry-btn" onclick="loadData()">Retry</button>
+          <button class="retry-btn" id="retry-btn">Retry</button>
         </div>
       </div>
 
-      <div id="empty-state">
+      <div id="empty-state" aria-live="polite">
         <div class="empty-box">
           <h3>No data yet</h3>
           <p>Run the pipeline to scrape and consolidate product prices.</p>
         </div>
       </div>
 
-      <div id="no-results">
+      <div id="no-results" aria-live="polite">
         <div class="no-results-box">
           <h3>No products match "<span id="no-results-query"></span>"</h3>
           <p>Try a different search term.</p>
@@ -868,21 +911,21 @@
       <div id="load-more-sentinel" style="height: 1px"></div>
     </section>
 
-    <section id="view-promos" class="tab-view">
+    <section id="view-promos" class="tab-view" role="tabpanel" aria-labelledby="tab-promos">
       <div
         id="promos-content"
         style="max-width: 1200px; margin: 1rem auto; padding: 0 1.5rem"
       >
-        <p style="color: var(--gray-500)">Loading promos...</p>
+        <p style="color: var(--gray-700)">Loading promos...</p>
       </div>
     </section>
 
-    <section id="view-brochures" class="tab-view">
+    <section id="view-brochures" class="tab-view" role="tabpanel" aria-labelledby="tab-brochures">
       <div
         id="brochures-content"
         style="max-width: 1200px; margin: 1rem auto; padding: 0 1.5rem"
       >
-        <p style="color: var(--gray-500)">Loading brochures...</p>
+        <p style="color: var(--gray-700)">Loading brochures...</p>
       </div>
     </section>
 
@@ -894,6 +937,24 @@
     </footer>
 
     <script>
+      function escapeHtml(str) {
+        if (str == null) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+      function escapeAttr(str) { return escapeHtml(str); }
+      function safeUrl(str) {
+        if (!str) return "";
+        try {
+          const url = new URL(str, window.location.origin);
+          return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
+        } catch { return ""; }
+      }
+
       let consolidatedData = null;
       let priceHistoryData = null;
       let displayHints = null;
@@ -904,6 +965,7 @@
       const PAGE_SIZE = 20;
       let expandedKey = null;
       let isLoadingMore = false;
+      let isRefreshing = false;
       let showDummy = false;
 
       // Parse URL for show_dummy=true
@@ -1098,7 +1160,7 @@
         return filtered
           .map(
             (p) =>
-              `<span class="promo-badge ${getPromoColorClass(p)}">${p}</span>`,
+              `<span class="promo-badge ${getPromoColorClass(p)}">${escapeHtml(p)}</span>`,
           )
           .join(" ");
       }
@@ -1120,9 +1182,9 @@
                 ? s.effective_unit_price
                 : s.price;
             return `<div class="store-row">
-      <span class="store-dot" style="background:${color}"></span>
-      <span class="store-name">${storeName}</span>
-      <span class="store-price">${formatIDR(displayPrice)}</span>
+      <span class="store-dot" style="background:${escapeHtml(color)}"></span>
+      <span class="store-name">${escapeHtml(storeName)}</span>
+      <span class="store-price">${escapeHtml(formatIDR(displayPrice))}</span>
       ${promoBadges}
     </div>`;
           })
@@ -1140,15 +1202,15 @@
           : "";
         const confBadge =
           product.match_confidence != null && product.match_confidence < 0.8
-            ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>`
+            ? `<div class="low-conf-badge">Match: ${escapeHtml(Math.round(product.match_confidence * 100))}%</div>`
             : "";
         const promoBadge = savingsText
-          ? `<div class="promo-top-badge promo-green">${savingsText}</div>`
+          ? `<div class="promo-top-badge promo-green">${escapeHtml(savingsText)}</div>`
           : "";
-        return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
+        return `<div class="product-card" data-key="${escapeAttr(key)}" role="button" tabindex="0">
     <div class="card-body">
-      <div class="product-name">${product.name || "Unknown"}</div>
-      <div class="product-unit">${product.unit || ""}</div>
+      <div class="product-name">${escapeHtml(product.name || "Unknown")}</div>
+      <div class="product-unit">${escapeHtml(product.unit || "")}</div>
       <div class="store-rows">${buildStoreRows(product)}</div>
       ${confBadge}
       ${promoBadge}
@@ -1156,11 +1218,11 @@
     <div class="card-footer">
       <div class="price-tag">
         <span class="price-label">from</span>
-        ${formatIDR(product.price_min)}
+        ${escapeHtml(formatIDR(product.price_min))}
       </div>
-      ${shortDate ? `<div class="store-meta">${shortDate} left</div>` : ""}
+      ${shortDate ? `<div class="store-meta">${escapeHtml(shortDate)} left</div>` : ""}
     </div>
-    <div class="detail-panel" id="detail-${key}"></div>
+    <div class="detail-panel" id="detail-${escapeAttr(key)}"></div>
   </div>`;
       }
 
@@ -1179,7 +1241,7 @@
           : "";
         const confBadge =
           product.match_confidence != null && product.match_confidence < 0.8
-            ? `<div class="low-conf-badge">Match: ${Math.round(product.match_confidence * 100)}%</div>`
+            ? `<div class="low-conf-badge">Match: ${escapeHtml(Math.round(product.match_confidence * 100))}%</div>`
             : "";
         const displayPrice =
           s.effective_unit_price && s.effective_unit_price < s.price
@@ -1188,24 +1250,24 @@
         const hasPromo =
           s.effective_unit_price && s.effective_unit_price < s.price;
         const promoBadgesSingle = hasPromo ? buildPromoBadges(s.promo) : "";
-        return `<div class="product-card" data-key="${key}" role="button" tabindex="0">
+        return `<div class="product-card" data-key="${escapeAttr(key)}" role="button" tabindex="0">
     <div class="card-body">
-      <div class="product-name">${product.name || "Unknown"}</div>
-      <div class="product-unit">${product.unit || ""}</div>
+      <div class="product-name">${escapeHtml(product.name || "Unknown")}</div>
+      <div class="product-unit">${escapeHtml(product.unit || "")}</div>
       ${confBadge}
       ${promoBadgesSingle}
     </div>
     <div class="card-footer">
       <div class="price-tag">
         <span class="price-label">price</span>
-        ${formatIDR(displayPrice)}
+        ${escapeHtml(formatIDR(displayPrice))}
       </div>
       <div class="store-meta">
-        <span class="store-dot" style="background:${color}"></span>
-        ${storeName}${shortDate ? ` · ${shortDate}` : ""}
+        <span class="store-dot" style="background:${escapeHtml(color)}"></span>
+        ${escapeHtml(storeName)}${shortDate ? ` · ${escapeHtml(shortDate)}` : ""}
       </div>
     </div>
-    <div class="detail-panel" id="detail-${key}"></div>
+    <div class="detail-panel" id="detail-${escapeAttr(key)}"></div>
   </div>`;
       }
 
@@ -1229,24 +1291,24 @@
               s.effective_unit_price && s.effective_unit_price < s.price;
             const displayPrice = hasPromo ? s.effective_unit_price : s.price;
             const originalPrice = hasPromo
-              ? `<span class="original-price">${formatIDR(s.price)}</span> `
+              ? `<span class="original-price">${escapeHtml(formatIDR(s.price))}</span> `
               : "";
             const unitPrice =
               s.effective_unit_price && s.effective_unit_price !== displayPrice
-                ? ` · ${formatIDR(s.effective_unit_price)}/pc`
+                ? ` · ${escapeHtml(formatIDR(s.effective_unit_price))}/pc`
                 : "";
             const brochureLink = s.image_path
-              ? `<a class="brochure-link" href="${s.image_path}" target="_blank" onclick="event.stopPropagation(); fetch(this.href).then(r=>{if(!r.ok)this.style.display='none'}).catch(()=>this.style.display='none')">View Brochure</a>`
+              ? `<a class="brochure-link" href="${escapeAttr(safeUrl(s.image_path))}" target="_blank" rel="noopener noreferrer">View Brochure</a>`
               : "";
             const diff =
               product.price_gap && !isCheapest
-                ? ` +${formatIDR(product.price_gap)}`
+                ? ` +${escapeHtml(formatIDR(product.price_gap))}`
                 : "";
             const cheapestBadge = isCheapest ? ` ✓ Cheapest` : "";
             return `<div class="detail-store-row ${isCheapest ? "cheapest" : ""}">
-      <span class="store-dot" style="background:${color}"></span>
-      <span class="store-name">${storeName}${cheapestBadge}</span>
-      <span class="store-price">${originalPrice}${formatIDR(displayPrice)}${unitPrice}${diff}</span>
+      <span class="store-dot" style="background:${escapeHtml(color)}"></span>
+      <span class="store-name">${escapeHtml(storeName)}${cheapestBadge}</span>
+      <span class="store-price">${originalPrice}${escapeHtml(formatIDR(displayPrice))}${unitPrice}${diff}</span>
       ${brochureLink}
     </div>`;
           })
@@ -1254,7 +1316,7 @@
 
         const confText =
           product.match_confidence != null
-            ? `Match confidence: ${Math.round(product.match_confidence * 100)}% (${product.match_method || "unknown"})`
+            ? `Match confidence: ${Math.round(product.match_confidence * 100)}% (${escapeHtml(product.match_method || "unknown")})`
             : "";
 
         return `<div class="detail-section">
@@ -1264,10 +1326,10 @@
   <div class="detail-section">
     <h4>Price Trend</h4>
     <div class="chart-container">
-      <canvas id="chart-${key}"></canvas>
+      <canvas id="chart-${escapeAttr(key)}" role="img" aria-label="${escapeAttr("Price trend chart for " + (product.name || "Unknown product"))}"></canvas>
     </div>
   </div>
-  ${confText ? `<div class="detail-section"><p style="font-size:0.82rem;color:var(--gray-500)">${confText}</p></div>` : ""}`;
+  ${confText ? `<div class="detail-section"><p style="font-size:0.82rem;color:var(--gray-700)">${escapeHtml(confText)}</p></div>` : ""}`;
       }
 
       function drawBarChart(canvas, productKey, history) {
@@ -1302,7 +1364,6 @@
         const barWidth = Math.min(30, (chartW / snapshots.length) * 0.6);
         const gap =
           (chartW - barWidth * snapshots.length) / (snapshots.length + 1);
-        ctx.fillStyle = "var(--green-mid)";
         snapshots.forEach((s, i) => {
           const effective =
             s.effective_unit_price && s.effective_unit_price < s.price
@@ -1410,7 +1471,8 @@
         const pageItems = filtered.slice(0, end);
 
         // Only rebuild grid if filter/search changed (page === 1), otherwise append
-        const shouldRebuild = currentPage === 1;
+        // Also rebuild on auto-refresh to prevent stale cards
+        const shouldRebuild = currentPage === 1 || isRefreshing;
 
         if (shouldRebuild) {
           grid.innerHTML = "";
@@ -1473,7 +1535,7 @@
           `Lotte: ${lotteCount} products · Superindo: ${superindoCount} · Matched: ${matchedCount}`;
         const reviewEl = document.getElementById("footer-review");
         if (stats.flagged_for_review > 0) {
-          reviewEl.innerHTML = `<a href="admin.html" style="color:var(--amber);text-decoration:none">⚠ ${stats.flagged_for_review} items need review →</a>`;
+          reviewEl.innerHTML = `<a href="admin.html" style="color:var(--amber);text-decoration:none">⚠ ${escapeHtml(stats.flagged_for_review)} items need review →</a>`;
           reviewEl.className = "review-warning";
         } else {
           reviewEl.textContent = "";
@@ -1661,7 +1723,7 @@
             const banner = document.getElementById("sample-banner");
             banner.style.display = "flex";
             banner.innerHTML =
-              "Displaying sample data. <a href='#' onclick='location.reload()' style='color:var(--amber);margin-left:0.5rem'>Refresh to try real data</a>";
+              'Displaying sample data. <a href="#" id="sample-reload" style="color:var(--amber);margin-left:0.5rem">Refresh to try real data</a>';
           }
           displayHints =
             consolidatedData?.display_hints || getDefaultDisplayHints();
@@ -1684,7 +1746,9 @@
           if (consolidatedData?.generated_at) {
             updateFreshnessBar(consolidatedData.generated_at);
           }
+          if (isRefresh) isRefreshing = true;
           renderCards();
+          isRefreshing = false;
           renderPromos();
           renderBrochures();
           if (!isRefresh) {
@@ -1709,8 +1773,12 @@
         chip.addEventListener("click", () => {
           document
             .querySelectorAll(".chip")
-            .forEach((c) => c.classList.remove("active"));
+            .forEach((c) => {
+              c.classList.remove("active");
+              c.setAttribute("aria-pressed", "false");
+            });
           chip.classList.add("active");
+          chip.setAttribute("aria-pressed", "true");
           currentFilter = chip.dataset.filter;
           currentPage = 1;
           renderCards();
@@ -1750,6 +1818,17 @@
         loadData();
       });
 
+      document.getElementById("retry-btn").addEventListener("click", () => {
+        loadData();
+      });
+
+      document.getElementById("sample-banner").addEventListener("click", (e) => {
+        if (e.target.id === "sample-reload") {
+          e.preventDefault();
+          location.reload();
+        }
+      });
+
       function renderPromos() {
         const el = document.getElementById("promos-content");
         if (!el || !consolidatedData) return;
@@ -1778,10 +1857,10 @@
         });
         let html = '<div class="filter-chips" style="margin-bottom:1rem">';
         html +=
-          '<button class="chip active" data-promo-filter="all">All</button>';
-        html += '<button class="chip" data-promo-filter="lotte">Lotte</button>';
+          '<button class="chip active" data-promo-filter="all" aria-pressed="true">All</button>';
+        html += '<button class="chip" data-promo-filter="lotte" aria-pressed="false">Lotte</button>';
         html +=
-          '<button class="chip" data-promo-filter="superindo">Superindo</button>';
+          '<button class="chip" data-promo-filter="superindo" aria-pressed="false">Superindo</button>';
         html += "</div>";
         const order = [
           "Discount %",
@@ -1807,18 +1886,18 @@
                   '<span class="promo-store-badge" style="background:' +
                   (s === "Lotte" ? "var(--lotte)" : "var(--superindo)") +
                   ';color:white;padding:2px 6px;border-radius:4px;font-size:0.75rem">' +
-                  s +
+                  escapeHtml(s) +
                   " " +
-                  c +
+                  escapeHtml(c) +
                   "</span>",
               )
               .join(" ");
-            html += '<div class="promo-card" data-promo-key="' + p.key + '">';
+            html += '<div class="promo-card" data-promo-key="' + escapeAttr(p.key) + '">';
             html +=
               '<div class="promo-card-header"><strong>' +
-              p.display +
+              escapeHtml(p.display) +
               '</strong> <span class="promo-count-badge">' +
-              p.product_count +
+              escapeHtml(p.product_count) +
               " products</span></div>";
             html += '<div class="promo-card-meta">' + storeHtml + "</div>";
             if (p.example_products && p.example_products.length) {
@@ -1827,7 +1906,7 @@
               p.example_products.forEach((name) => {
                 html +=
                   '<div class="promo-product-link" style="cursor:pointer;padding:0.2rem 0;font-size:0.85rem;color:var(--green)">' +
-                  name +
+                  escapeHtml(name) +
                   "</div>";
               });
               html += "</div>";
@@ -1849,10 +1928,12 @@
         // Store filter
         el.querySelectorAll("[data-promo-filter]").forEach((chip) => {
           chip.addEventListener("click", () => {
-            el.querySelectorAll("[data-promo-filter]").forEach((c) =>
-              c.classList.remove("active"),
-            );
+            el.querySelectorAll("[data-promo-filter]").forEach((c) => {
+              c.classList.remove("active");
+              c.setAttribute("aria-pressed", "false");
+            });
             chip.classList.add("active");
+            chip.setAttribute("aria-pressed", "true");
             const filter = chip.dataset.promoFilter;
             el.querySelectorAll(".promo-card").forEach((card) => {
               if (filter === "all") {
@@ -1923,27 +2004,27 @@
         });
         let html = '<div class="filter-chips" style="margin-bottom:1rem">';
         html +=
-          '<button class="chip active" data-brochure-filter="all">All</button>';
+          '<button class="chip active" data-brochure-filter="all" aria-pressed="true">All</button>';
         html +=
-          '<button class="chip" data-brochure-filter="Lotte">Lotte</button>';
+          '<button class="chip" data-brochure-filter="Lotte" aria-pressed="false">Lotte</button>';
         html +=
-          '<button class="chip" data-brochure-filter="Superindo">Superindo</button>';
+          '<button class="chip" data-brochure-filter="Superindo" aria-pressed="false">Superindo</button>';
         html += "</div>";
         Object.keys(storeGroups)
           .sort()
           .forEach((storeName) => {
             html +=
               '<div class="brochure-store-group" data-brochure-store="' +
-              storeName +
+              escapeAttr(storeName) +
               '">';
-            html += '<h3 class="promo-type-header">' + storeName + "</h3>";
+            html += '<h3 class="promo-type-header">' + escapeHtml(storeName) + "</h3>";
             Object.keys(storeGroups[storeName])
               .sort()
               .reverse()
               .forEach((dateStr) => {
                 html +=
-                  '<h4 style="font-size:0.82rem;color:var(--gray-600);margin:0.5rem 0 0.3rem">' +
-                  dateStr +
+                  '<h4 style="font-size:0.82rem;color:var(--gray-700);margin:0.5rem 0 0.3rem">' +
+                  escapeHtml(dateStr) +
                   "</h4>";
                 html += '<div class="brochure-grid">';
                 storeGroups[storeName][dateStr].forEach((b) => {
@@ -1952,21 +2033,21 @@
                     '<div class="brochure-img-wrap" style="cursor:pointer">';
                   html +=
                     '<img src="' +
-                    b.image_path +
+                    escapeAttr(safeUrl(b.image_path)) +
                     '" alt="' +
-                    b.store +
+                    escapeAttr(b.store) +
                     ' brochure" loading="lazy" style="width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;object-fit:cover;background:var(--gray-100)" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">';
                   html +=
-                    '<div class="brochure-fallback" style="display:none;width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;align-items:center;justify-content:center;font-size:0.75rem;color:var(--gray-500);background:var(--gray-100)">' +
-                    b.store +
+                    '<div class="brochure-fallback" style="display:none;width:100%;border-radius:var(--radius-sm);aspect-ratio:3/4;align-items:center;justify-content:center;font-size:0.75rem;color:var(--gray-700);background:var(--gray-100)">' +
+                    escapeHtml(b.store) +
                     " (" +
-                    b.count +
+                    escapeHtml(b.count) +
                     " products)</div>";
                   html +=
                     '<div style="margin-top:0.3rem;font-size:0.78rem;color:var(--gray-700);font-weight:500">' +
-                    b.store +
-                    ' <span style="color:var(--gray-500);font-weight:400">(' +
-                    b.count +
+                    escapeHtml(b.store) +
+                    ' <span style="color:var(--gray-700);font-weight:400">(' +
+                    escapeHtml(b.count) +
                     ")</span></div>";
                   html += "</div>";
                   html +=
@@ -2011,10 +2092,12 @@
         );
         el.querySelectorAll("[data-brochure-filter]").forEach((chip) => {
           chip.addEventListener("click", () => {
-            el.querySelectorAll("[data-brochure-filter]").forEach((c) =>
-              c.classList.remove("active"),
-            );
+            el.querySelectorAll("[data-brochure-filter]").forEach((c) => {
+              c.classList.remove("active");
+              c.setAttribute("aria-pressed", "false");
+            });
             chip.classList.add("active");
+            chip.setAttribute("aria-pressed", "true");
             const filter = chip.dataset.brochureFilter;
             el.querySelectorAll(".brochure-store-group").forEach((group) => {
               group.style.display =
@@ -2032,11 +2115,17 @@
           if (tab.classList.contains("active")) return;
           document
             .querySelectorAll(".tab")
-            .forEach((t) => t.classList.remove("active"));
+            .forEach((t) => {
+              t.classList.remove("active");
+              t.setAttribute("aria-selected", "false");
+              t.setAttribute("tabindex", "-1");
+            });
           document
             .querySelectorAll(".tab-view")
             .forEach((v) => v.classList.remove("active"));
           tab.classList.add("active");
+          tab.setAttribute("aria-selected", "true");
+          tab.setAttribute("tabindex", "0");
           const view = document.getElementById("view-" + tab.dataset.tab);
           if (view) view.classList.add("active");
           if (tab.dataset.tab === "promos") {
