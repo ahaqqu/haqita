@@ -954,7 +954,7 @@
       function safeUrl(str) {
         if (!str) return "";
         try {
-          const url = new URL(str, window.location.origin);
+          const url = new URL(str, window.location.href);
           return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
         } catch { return ""; }
       }
