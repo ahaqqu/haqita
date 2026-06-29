@@ -28,8 +28,9 @@ Run through this checklist before each deployment to production.
 ## Security
 
 - [ ] SCRAPER_SECRET is set in Cloudflare and .env
-- [ ] Security headers middleware is active (verify with `curl -I`)
+- [ ] `_headers` file is deployed (verify CSP with `curl -sI https://haqita.pages.dev/ | grep -i content-security-policy`)
 - [ ] WAF rate limiting rules are configured (if available on plan)
+- [ ] Service worker registers without errors (check browser console)
 
 ## Deployment
 

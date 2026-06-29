@@ -120,6 +120,12 @@ Open `https://haqita.pages.dev` and verify:
 
 | File                                    | Source                                              | Purpose                                                 |
 | --------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
+| `public/_headers`                       | `web/public/_headers` (committed)                   | Strict CSP, security headers, asset cache-control       |
+| `public/sw.js`                          | `web/public/sw.js` (committed)                      | Service worker for offline resilience                   |
+| `public/assets/app.css`                 | `web/public/assets/app.css` (committed)             | Main UI styles (externalized from index.html)           |
+| `public/assets/admin.css`               | `web/public/assets/admin.css` (committed)           | Admin UI styles (externalized from admin.html)          |
+| `public/assets/app.js`                  | `web/public/assets/app.js` (committed)              | Main UI logic (externalized from index.html)            |
+| `public/assets/admin.js`                | `web/public/assets/admin.js` (committed)            | Admin UI logic (externalized from admin.html)           |
 | `public/index.html`                     | `web/public/index.html` (committed)                 | Main UI — single source of truth for local + Cloudflare |
 | `public/admin.html`                     | `web/public/admin.html` (committed)                 | Admin review queue UI                                   |
 | `public/output/html/active_promo.json`  | `output/html/active_promo.json` (staged by deploy)  | Static fallback data                                    |

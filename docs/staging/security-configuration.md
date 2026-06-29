@@ -43,12 +43,15 @@ echo "SCRAPER_SECRET=your_secret" >> .env
 
 ### Security Headers
 
+Headers are served via Cloudflare Pages' `_headers` file at `web/public/_headers`:
+
 | Header | Value | Purpose |
 |--------|-------|---------|
+| Content-Security-Policy | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'` | Strict CSP — blocks inline scripts, limits origins for all resources |
 | X-Content-Type-Options | nosniff | Prevents MIME type sniffing |
-| X-Frame-Options | DENY | Prevents clickjacking |
 | Referrer-Policy | strict-origin-when-cross-origin | Limits referrer information |
-| X-XSS-Protection | 1; mode=block | Enables XSS filtering |
+
+Asset files (`/assets/*`) are served with `Cache-Control: public, max-age=31536000, immutable` for long-term caching.
 
 ### Rate Limiting (WAF Rules)
 

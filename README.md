@@ -64,6 +64,8 @@ Then open `http://localhost:8080` in a browser. Features:
 - **Expand** cards for price comparison, trend charts, and brochure links
 - **Auto-refresh** every 5 minutes when tab is visible
 - **Print-friendly** layout (Ctrl+P)
+- **Dark theme** — automatically matches system preference (`prefers-color-scheme`)
+- **Offline** — service worker caches shell for resilience
 
 > Opening `index.html` directly via `file://` will fail due to CORS. An HTTP server is required. The local static server serves `web/public/` (the same directory Cloudflare Pages deploys), so the HTML UI is the single source of truth for both local and production.
 
@@ -184,8 +186,15 @@ haqita/
 ├── docs/                             ← Documentation
 └── web/                              ← Cloudflare Pages project (single deploy root)
     ├── public/                       ← Cloudflare Pages build output + local dev web root
+    │   ├── _headers                  ← Security headers (CSP, HSTS, cache-control)
+    │   ├── sw.js                     ← Service worker for offline resilience
     │   ├── index.html                ← Main UI (single source of truth for local + Cloudflare)
     │   ├── admin.html                ← Admin UI: review queue
+    │   ├── assets/
+    │   │   ├── app.css               ← Main UI styles (externalized from index.html)
+    │   │   ├── admin.css             ← Admin UI styles (externalized from admin.html)
+    │   │   ├── app.js                ← Main UI logic (externalized from index.html)
+    │   │   └── admin.js              ← Admin UI logic (externalized from admin.html)
     │   └── output/html/              ← Deploy-staged JSON fallback (mirrors output/html/)
     ├── functions/api/                ← Cloudflare Pages Functions (API)
     └── wrangler.toml                 ← Cloudflare Pages config
