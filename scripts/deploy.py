@@ -480,10 +480,9 @@ def _deploy_local_detached() -> dict:
         return {"status": "complete", "ports": [actual_http_port, actual_wrangler_port]}
     if http_up or wrangler_up:
         logger.warning(
-            "One server is already running but the other is not. "
-            "Run `python scripts/deploy.py --stop-local` to clean up, then retry."
+            "One server is already running but the other is not. Stopping the old servers first, then redeploying."
         )
-        return {"status": "error", "error": "partial_server_running"}
+        stop_local()
 
     _require_command("npm", "npm")
     _install_deps_if_needed()

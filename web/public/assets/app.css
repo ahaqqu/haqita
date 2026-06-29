@@ -305,7 +305,6 @@ main#product-grid {
   display: flex;
   flex-direction: column;
   min-height: 180px;
-  max-height: 200px;
 }
 
 .product-card:hover {
